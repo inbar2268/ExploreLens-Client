@@ -7,10 +7,10 @@ android {
     compileSdkVersion 35
     buildToolsVersion "30.0.3"
 
-    namespace "com.google.ar.core.examples.java.ml"
+    namespace "com.example.explorelens.ml"
 
     defaultConfig {
-        applicationId "com.google.ar.core.examples.java.ml"
+        applicationId "com.example.explorelens"
         minSdkVersion 24
         targetSdkVersion 35
         versionCode 1
