@@ -4,13 +4,15 @@ plugins {
 }
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 35
     buildToolsVersion "30.0.3"
+
+    namespace "com.google.ar.core.examples.java.ml"
 
     defaultConfig {
         applicationId "com.google.ar.core.examples.java.ml"
         minSdkVersion 24
-        targetSdkVersion 30
+        targetSdkVersion 35
         versionCode 1
         versionName "1.0"
     }
