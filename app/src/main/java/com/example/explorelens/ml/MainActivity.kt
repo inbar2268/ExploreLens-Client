@@ -1,5 +1,4 @@
 package com.example.explorelens.ml
-
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
