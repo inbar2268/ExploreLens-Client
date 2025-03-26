@@ -39,14 +39,28 @@ class MLKitObjectDetector(context: Activity) : ObjectDetector(context) {
 
     val inputImage = InputImage.fromBitmap(rotatedImage, 0)
 
+    val mockResults = listOf(
+      DetectedObjectResult(
+        confidence = 0.98f,
+        label = "Eiffel Tower",
+        centerCoordinate = Pair(300, 700)  // Mock coordinates
+      ),
+      DetectedObjectResult(
+        confidence = 0.87f,
+        label = "London eye",
+        centerCoordinate = Pair(200, 500)  // Mock coordinates
+      )
+    )
+    return mockResults
 
-    val mlKitDetectedObjects = detector.process(inputImage).asDeferred().await()
-    return mlKitDetectedObjects.mapNotNull { obj ->
-      val bestLabel = obj.labels.maxByOrNull { label -> label.confidence } ?: return@mapNotNull null
-      val coords = obj.boundingBox.exactCenterX().toInt() to obj.boundingBox.exactCenterY().toInt()
-      val rotatedCoordinates = coords.rotateCoordinates(rotatedImage.width, rotatedImage.height, imageRotation)
-      DetectedObjectResult(bestLabel.confidence, bestLabel.text, rotatedCoordinates)
-    }
+
+//    val mlKitDetectedObjects = detector.process(inputImage).asDeferred().await()
+//    return mlKitDetectedObjects.mapNotNull { obj ->
+//      val bestLabel = obj.labels.maxByOrNull { label -> label.confidence } ?: return@mapNotNull null
+//      val coords = obj.boundingBox.exactCenterX().toInt() to obj.boundingBox.exactCenterY().toInt()
+//      val rotatedCoordinates = coords.rotateCoordinates(rotatedImage.width, rotatedImage.height, imageRotation)
+//      DetectedObjectResult(bestLabel.confidence, bestLabel.text, rotatedCoordinates)
+//    }
   }
 
   @Suppress("USELESS_IS_CHECK")
