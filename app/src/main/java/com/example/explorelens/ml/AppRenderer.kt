@@ -1,17 +1,22 @@
 package com.example.explorelens.ml
 
+import android.graphics.Bitmap
 import android.opengl.Matrix
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.example.explorelens.Extensions.convertYuv
+import com.example.explorelens.Extensions.toFile
 import com.example.explorelens.Model.Snapshot
 import com.google.ar.core.Frame
 import com.google.ar.core.TrackingState
 import com.example.explorelens.common.helpers.DisplayRotationHelper
 import com.example.explorelens.common.samplerender.SampleRender
 import com.example.explorelens.common.samplerender.arcore.BackgroundRenderer
+import com.example.explorelens.ml.classification.utils.ImageUtils
 import com.example.explorelens.ml.render.LabelRender
 import com.example.explorelens.ml.render.PointCloudRender
+import com.google.ar.core.Session
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.NotYetAvailableException
 import kotlinx.coroutines.CoroutineScope
@@ -96,11 +101,11 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 
         if (scanButtonWasPressed) {
             scanButtonWasPressed = false
-            takeSnapshot(frame)
+            takeSnapshot(frame, session)
         }
     }
 
-    private fun takeSnapshot(frame: Frame) {
+    private fun takeSnapshot(frame: Frame, session: Session) {
         val camera = frame.camera
         val viewMatrix = FloatArray(16)
         val projectionMatrix = FloatArray(16)
@@ -108,15 +113,17 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         camera.getViewMatrix(viewMatrix, 0)
         camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
         val context = activity.applicationContext
+        var rotatedImage: Bitmap? = null;
         try {
 
             val cameraImage = frame.tryAcquireCameraImage()
             if (cameraImage != null) {
-                //TODO: AIMAGE_FORMAT_YUV_420_888 to  bitmap
-//                val bitmap = imageToBitmap(cameraImage)
-//                val imageBitmap = cameraImage.toBitmap()
-//                val file = bitmap.toFile(context, "snapshot")
-//                Log.d("Snapshot", "Image saved at: ${file.absolutePath}")
+                val cameraId = session.cameraConfig.cameraId
+                val imageRotation = displayRotationHelper.getCameraSensorToDisplayRotation(cameraId)
+                val convertYuv = convertYuv(context, cameraImage)
+                rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
+                val file = rotatedImage.toFile(context, "snapshot")
+                Log.d("Snapshot", "Image saved at: ${file.absolutePath}")
                 cameraImage.close()
             }
         } catch (e: NotYetAvailableException) {
@@ -124,20 +131,12 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         }
 
         val snapshot = Snapshot(
+            image = rotatedImage,
             timestamp = frame.timestamp,
             cameraPose = camera.pose,
             viewMatrix = viewMatrix,
             projectionMatrix = projectionMatrix
         )
-
-        Log.i("Snapshot", "Snapshot taken: $snapshot")
-        Log.i("Snapshot", "time stamp: ${snapshot.timestamp}")
-        Log.i("Snapshot", "pose x: ${snapshot.cameraPose.tx()}")
-        Log.i("Snapshot", "pose y: ${snapshot.cameraPose.ty()}")
-        Log.i("Snapshot", "pose z: ${snapshot.cameraPose.tz()}")
-        Log.i("Snapshot", "projection matrix: ${snapshot.projectionMatrix[1]}")
-        Log.i("Snapshot", "viewMatrix: ${snapshot.viewMatrix[1]}")
-
 
         launch(Dispatchers.Main) {
             view.setScanningActive(false)

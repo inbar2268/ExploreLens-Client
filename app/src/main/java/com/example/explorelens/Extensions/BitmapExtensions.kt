@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.Image
 import android.util.Log
+import com.example.android.camera.utils.YuvToRgbConverter
 import com.google.ar.core.ImageFormat
 import java.io.File
 import java.io.FileOutputStream
@@ -20,6 +21,11 @@ fun Bitmap.toFile(context: Context, name: String): File {
     return file
 }
 
-
+fun convertYuv(context: Context,image: Image): Bitmap {
+    val yuvConverter = YuvToRgbConverter(context)
+    return Bitmap.createBitmap(image.width, image.height, Bitmap.Config.ARGB_8888).apply {
+        yuvConverter.yuvToRgb(image, this)
+    }
+}
 
 
