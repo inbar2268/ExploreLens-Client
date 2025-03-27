@@ -17,9 +17,7 @@ class MainActivityView(val activity: MainActivity, renderer: AppRenderer) : Defa
   val surfaceView = root.findViewById<GLSurfaceView>(R.id.surfaceview).apply {
     SampleRender(this, renderer, activity.assets)
   }
-  val useCloudMlSwitch = root.findViewById<SwitchCompat>(R.id.useCloudMlSwitch)
-  val scanButton = root.findViewById<AppCompatButton>(R.id.scanButton)
-  val resetButton = root.findViewById<AppCompatButton>(R.id.clearButton)
+  val snapshotButton = root.findViewById<AppCompatButton>(R.id.cameraButton)
   val snackbarHelper = SnackbarHelper().apply {
     setParentView(root.findViewById(R.id.coordinatorLayout))
     setMaxLines(6)
@@ -40,12 +38,12 @@ class MainActivityView(val activity: MainActivity, renderer: AppRenderer) : Defa
    */
   fun setScanningActive(active: Boolean) = when(active) {
     true -> {
-      scanButton.isEnabled = false
-      scanButton.setText(activity.getString(R.string.scan_busy))
+      snapshotButton.isEnabled = false
+//      snapshotButton.setText(activity.getString(R.string.scan_busy))
     }
     false -> {
-      scanButton.isEnabled = true
-      scanButton.setText(activity.getString(R.string.scan_available))
+      snapshotButton.isEnabled = true
+//      snapshotButton.setText(activity.getString(R.string.scan_available))
     }
   }
 }

@@ -52,7 +52,7 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 
     fun bindView(view: MainActivityView) {
         this.view = view
-        view.scanButton.setOnClickListener {
+        view.snapshotButton.setOnClickListener {
             scanButtonWasPressed = true
             view.setScanningActive(true)
         }
