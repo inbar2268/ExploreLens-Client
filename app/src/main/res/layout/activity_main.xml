@@ -7,41 +7,19 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-  <android.opengl.GLSurfaceView
-      android:id="@+id/surfaceview"
-      android:layout_width="fill_parent"
-      android:layout_height="fill_parent" />
-
-  <LinearLayout
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginBottom="80dp"
-      android:layout_gravity="bottom|center_horizontal"
-      app:layout_dodgeInsetEdges="bottom">
+    <android.opengl.GLSurfaceView
+        android:id="@+id/surfaceview"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent" />
 
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/scanButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="60dp"
-        android:text="@string/scan_available" />
+        android:id="@+id/cameraButton"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="40dp"
+        android:background="@drawable/camera_button_background"
+        android:elevation="4dp" />
 
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/clearButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="60dp"
-        android:text="@string/clear" />
-
-  </LinearLayout>
-
-  <androidx.appcompat.widget.SwitchCompat
-      android:id="@+id/useCloudMlSwitch"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_gravity="top|end"
-      android:padding="16dp"
-      android:background="#55FFFFFF"
-      android:text="@string/use_cloud_ml" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
