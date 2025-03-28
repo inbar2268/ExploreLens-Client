@@ -13,6 +13,8 @@ import com.example.explorelens.common.samplerender.SampleRender
  * Wraps [R.layout.activity_main] and controls lifecycle operations for [GLSurfaceView].
  */
 class MainActivityView(val activity: MainActivity, renderer: AppRenderer) : DefaultLifecycleObserver {
+  var width: Int = 0
+  var height: Int = 0
   val root = View.inflate(activity, R.layout.activity_main, null)
   val surfaceView = root.findViewById<GLSurfaceView>(R.id.surfaceview).apply {
     SampleRender(this, renderer, activity.assets)
@@ -20,9 +22,19 @@ class MainActivityView(val activity: MainActivity, renderer: AppRenderer) : Defa
   val useCloudMlSwitch = root.findViewById<SwitchCompat>(R.id.useCloudMlSwitch)
   val scanButton = root.findViewById<AppCompatButton>(R.id.scanButton)
   val resetButton = root.findViewById<AppCompatButton>(R.id.clearButton)
+  val placeBehindMeButton = root.findViewById<AppCompatButton>(R.id.placeBehindMeButton)
   val snackbarHelper = SnackbarHelper().apply {
     setParentView(root.findViewById(R.id.coordinatorLayout))
     setMaxLines(6)
+  }
+
+  init {
+    // Set the width when the view is attached
+    root.viewTreeObserver.addOnPreDrawListener {
+      width = root.width
+      height = root.height
+      true  // return true to allow the drawing pass to continue
+    }
   }
 
   override fun onResume(owner: LifecycleOwner) {

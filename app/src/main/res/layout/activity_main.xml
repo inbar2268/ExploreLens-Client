@@ -33,6 +33,12 @@
         android:paddingHorizontal="60dp"
         android:text="@string/clear" />
 
+    <Button
+        android:id="@+id/placeBehindMeButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Place Label Behind Me" />
+
   </LinearLayout>
 
   <androidx.appcompat.widget.SwitchCompat

@@ -1,6 +1,7 @@
 
 package com.example.explorelens.ml.render
 
+import android.util.Log
 import com.google.ar.core.Pose
 import com.example.explorelens.common.samplerender.Mesh
 import com.example.explorelens.common.samplerender.SampleRender
@@ -79,6 +80,7 @@ class LabelRender {
       VertexBuffer(render, 2, SQUARE_TEX_COORDS_BUFFER),
     )
     mesh = Mesh(render, Mesh.PrimitiveMode.TRIANGLE_STRIP, null, vertexBuffers)
+    Log.d(TAG, "LabelRender surface created")
   }
 
   val labelOrigin = FloatArray(3)
@@ -93,14 +95,49 @@ class LabelRender {
     cameraPose: Pose,
     label: String
   ) {
-    labelOrigin[0] = pose.tx()
-    labelOrigin[1] = pose.ty()
-    labelOrigin[2] = pose.tz()
+    // Get or create texture
+    val texture = cache.get(render, label)
+
+    if (texture == null) {
+      Log.e(TAG, "CRITICAL: No texture generated for label: $label")
+      return
+    }
+
+    // Calculate face direction (billboard effect)
+    val lookAt = FloatArray(3)
+    val up = floatArrayOf(0f, 1f, 0f)
+    val forward = FloatArray(3)
+
+    // Vector from camera to label
+    forward[0] = pose.tx() - cameraPose.tx()
+    forward[1] = pose.ty() - cameraPose.ty()
+    forward[2] = pose.tz() - cameraPose.tz()
+
+    // Normalize the forward vector
+    val length = Math.sqrt((forward[0]*forward[0] + forward[1]*forward[1] + forward[2]*forward[2]).toDouble()).toFloat()
+    forward[0] /= length
+    forward[1] /= length
+    forward[2] /= length
+
+    // Adjust label origin to be closer to camera
+    val labelOrigin = FloatArray(3)
+    val scaleFactor = 0.5f  // Adjust this to control label distance
+    labelOrigin[0] = cameraPose.tx() + (forward[0] * scaleFactor)
+    labelOrigin[1] = cameraPose.ty() + (forward[1] * scaleFactor)
+    labelOrigin[2] = cameraPose.tz() + (forward[2] * scaleFactor)
+
+    // Log adjusted label position
+    Log.d(TAG, "Adjusted Label Origin:")
+    Log.d(TAG, "  X: ${labelOrigin[0]}")
+    Log.d(TAG, "  Y: ${labelOrigin[1]}")
+    Log.d(TAG, "  Z: ${labelOrigin[2]}")
+
     shader
       .setMat4("u_ViewProjection", viewProjectionMatrix)
       .setVec3("u_LabelOrigin", labelOrigin)
       .setVec3("u_CameraPos", cameraPose.translation)
-      .setTexture("uTexture", cache.get(render, label))
+      .setTexture("uTexture", texture)
+
     render.draw(mesh, shader)
   }
 }

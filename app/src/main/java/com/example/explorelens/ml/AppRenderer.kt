@@ -25,7 +25,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-
+import com.google.ar.core.Pose // Import Pose for position manipulation
+import com.google.ar.core.Session
 
 class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, SampleRender.Renderer, CoroutineScope by MainScope() {
   companion object {
@@ -45,11 +46,14 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 
   val arLabeledAnchors = Collections.synchronizedList(mutableListOf<ARLabeledAnchor>())
   var scanButtonWasPressed = false
+  var renderBehindMeButtonPressed = false // Add this line
 
   val mlKitAnalyzer = MLKitObjectDetector(activity)
   val gcpAnalyzer = GoogleCloudVisionDetector(activity)
 
   var currentAnalyzer: ObjectDetector = gcpAnalyzer
+  private var lastSnapshotData: SnapshotData? = null
+
 
   override fun onResume(owner: LifecycleOwner) {
     displayRotationHelper.onResume()
@@ -63,8 +67,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     this.view = view
 
     view.scanButton.setOnClickListener {
-      // frame.acquireCameraImage is dependent on an ARCore Frame, which is only available in onDrawFrame.
-      // Use a boolean and check its state in onDrawFrame to interact with the camera image.
       scanButtonWasPressed = true
       view.setScanningActive(true)
       hideSnackbar()
@@ -88,6 +90,11 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
       view.resetButton.isEnabled = false
       hideSnackbar()
     }
+
+    view.placeBehindMeButton.setOnClickListener { // Add this block
+      renderBehindMeButtonPressed = true
+      hideSnackbar()
+    }
   }
 
   override fun onSurfaceCreated(render: SampleRender) {
@@ -108,8 +115,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     val session = activity.arCoreSessionHelper.sessionCache ?: return
     session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.textureId))
 
-    // Notify ARCore session that the view size changed so that the perspective matrix and
-    // the video background can be properly adjusted.
     displayRotationHelper.updateSessionIfNeeded(session)
 
     val frame = try {
@@ -123,48 +128,69 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     backgroundRenderer.updateDisplayGeometry(frame)
     backgroundRenderer.drawBackground(render)
 
-    // Get camera and projection matrices.
     val camera = frame.camera
     camera.getViewMatrix(viewMatrix, 0)
     camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
     Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
 
-    // Handle tracking failures.
     if (camera.trackingState != TrackingState.TRACKING) {
       Log.w(TAG, "Camera is not tracking. Unable to place anchors.")
       return
     }
 
-    // Draw point cloud.
     frame.acquirePointCloud().use { pointCloud ->
       pointCloudRender.drawPointCloud(render, pointCloud, viewProjectionMatrix)
     }
 
-    // Frame.acquireCameraImage must be used on the GL thread.
-    // Check if the button was pressed last frame to start processing the camera image.
     if (scanButtonWasPressed) {
       scanButtonWasPressed = false
       val cameraImage = frame.tryAcquireCameraImage()
       if (cameraImage != null) {
-        // Call our ML model on an IO thread.
+        val cameraId = session.cameraConfig.cameraId
+        val imageRotation = displayRotationHelper.getCameraSensorToDisplayRotation(cameraId)
+
+        lastSnapshotData = SnapshotData(
+          viewMatrix = viewMatrix.copyOf(),
+          projectionMatrix = projectionMatrix.copyOf(),
+          cameraPose = camera.pose,
+          imageRotation = imageRotation
+        )
+
         launch(Dispatchers.IO) {
-          val cameraId = session.cameraConfig.cameraId
-          val imageRotation = displayRotationHelper.getCameraSensorToDisplayRotation(cameraId)
+          sleep(2000)
           objectResults = currentAnalyzer.analyze(cameraImage, imageRotation)
           cameraImage.close()
         }
       }
     }
 
-    /** If results were completed this frame, create [Anchor]s from model results. */
     val objects = objectResults
     if (objects != null) {
       objectResults = null
+      val snapshotData = lastSnapshotData
+      val cameraPose = snapshotData?.cameraPose ?:  frame.camera.pose// Get the camera pose from the frame
+
       Log.i(TAG, "$currentAnalyzer got objects: $objects")
       val anchors = objects.mapNotNull { obj ->
         val (atX, atY) = obj.centerCoordinate
-        val anchor = createAnchor(atX.toFloat(), atY.toFloat(), frame) ?: return@mapNotNull null
-        Log.i(TAG, "Created anchor ${anchor.pose} from hit test")
+        val snapshotData = lastSnapshotData
+
+        if (snapshotData == null) {
+          Log.e(TAG, "No snapshot data available for anchor creation")
+          return@mapNotNull null
+        }
+
+        val anchor = createAnchorAtPoseXY(
+          session,
+          snapshotData.cameraPose,
+          atX.toFloat(),
+          atY.toFloat(),
+          frame
+        ) ?: return@mapNotNull null
+
+        Log.d(TAG, "Anchor created for ${obj.label}")
+        Log.d(TAG, "Anchor Pose: x=${anchor.pose.tx()}, y=${anchor.pose.ty()}, z=${anchor.pose.tz()}")
+
         ARLabeledAnchor(anchor, obj.label)
       }
       arLabeledAnchors.addAll(anchors)
@@ -174,19 +200,32 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         when {
           objects.isEmpty() && currentAnalyzer == mlKitAnalyzer && !mlKitAnalyzer.hasCustomModel() ->
             showSnackbar("Default ML Kit classification model returned no results. " +
-              "For better classification performance, see the README to configure a custom model.")
+                    "For better classification performance, see the README to configure a custom model.")
           objects.isEmpty() ->
             showSnackbar("Classification model returned no results.")
           anchors.size != objects.size ->
             showSnackbar("Objects were classified, but could not be attached to an anchor. " +
-              "Try moving your device around to obtain a better understanding of the environment.")
+                    "Try moving your device around to obtain a better understanding of the environment.")
         }
       }
     }
 
-    // Draw labels at their anchor position.
+    if (renderBehindMeButtonPressed) {
+      renderBehindMeButtonPressed = false
+      val cameraPose = camera.pose
+      val behindCamera = cameraPose.compose(Pose.makeTranslation(0f, 0f, 1f)) // Corrected: positive Z for behind.
+      val anchor = session.createAnchor(behindCamera)
+      arLabeledAnchors.add(ARLabeledAnchor(anchor, "Behind Me"))
+      view.post {
+        view.resetButton.isEnabled = arLabeledAnchors.isNotEmpty()
+      }
+    }
+
     for (arDetectedObject in arLabeledAnchors) {
       val anchor = arDetectedObject.anchor
+
+      Log.d(TAG, "Anchor tracking state111: ${anchor.trackingState}")
+      Log.d(TAG, "Label222: ${arDetectedObject.label}")
       if (anchor.trackingState != TrackingState.TRACKING) continue
       labelRenderer.draw(
         render,
@@ -198,9 +237,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     }
   }
 
-  /**
-   * Utility method for [Frame.acquireCameraImage] that maps [NotYetAvailableException] to `null`.
-   */
   fun Frame.tryAcquireCameraImage() = try {
     acquireCameraImage()
   } catch (e: NotYetAvailableException) {
@@ -214,15 +250,10 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 
   private fun hideSnackbar() = activity.view.snackbarHelper.hide(activity)
 
-  /**
-   * Temporary arrays to prevent allocations in [createAnchor].
-   */
   private val convertFloats = FloatArray(4)
   private val convertFloatsOut = FloatArray(4)
 
-  /** Create an anchor using (x, y) coordinates in the [Coordinates2d.IMAGE_PIXELS] coordinate space. */
   fun createAnchor(xImage: Float, yImage: Float, frame: Frame): Anchor? {
-    // IMAGE_PIXELS -> VIEW
     convertFloats[0] = xImage
     convertFloats[1] = yImage
     frame.transformCoordinates2d(
@@ -232,11 +263,154 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
       convertFloatsOut
     )
 
-    // Conduct a hit test using the VIEW coordinates
     val hits = frame.hitTest(convertFloatsOut[0], convertFloatsOut[1])
     val result = hits.getOrNull(0) ?: return null
     return result.trackable.createAnchor(result.hitPose)
   }
+  private fun createAnchorAtPoseXY2(
+    session: Session,
+    snapshotPose: Pose,
+    xImage: Float,
+    yImage: Float,
+    frame: Frame
+  ): Anchor? {
+    // Transform image coordinates to view coordinates
+    convertFloats[0] = xImage
+    convertFloats[1] = yImage
+    frame.transformCoordinates2d(
+      Coordinates2d.IMAGE_PIXELS,
+      convertFloats,
+      Coordinates2d.VIEW,
+      convertFloatsOut
+    )
+
+    // Create a translation vector based on the view coordinates
+    val translationVector = FloatArray(3)
+
+    // Use a smaller scaling factor to keep the object closer
+    val scaleFactor = 0.3f
+    translationVector[0] = convertFloatsOut[0] * scaleFactor
+    translationVector[1] = convertFloatsOut[1] * scaleFactor
+    translationVector[2] = -0.5f  // Adjust depth placement
+
+    // Create a new pose by combining the snapshot pose with the translation
+    val anchorPose = snapshotPose.compose(
+      Pose.makeTranslation(translationVector[0], translationVector[1], translationVector[2])
+    )
+
+    // Logging to understand the positioning
+    Log.d(TAG, "Snapshot Pose: x=${snapshotPose.tx()}, y=${snapshotPose.ty()}, z=${snapshotPose.tz()}")
+    Log.d(TAG, "Translation Vector: x=${translationVector[0]}, y=${translationVector[1]}, z=${translationVector[2]}")
+    Log.d(TAG, "Resulting Anchor Pose: x=${anchorPose.tx()}, y=${anchorPose.ty()}, z=${anchorPose.tz()}")
+
+    // Create and return the anchor
+    return session.createAnchor(anchorPose)
+  }
+
+  private fun createAnchorAtPoseXY1(
+    session: Session,
+    snapshotPose: Pose,
+    xImage: Float,
+    yImage: Float,
+    frame: Frame
+  ): Anchor? {
+    // Log input coordinates
+    Log.d(TAG, "Input image coordinates: x=$xImage, y=$yImage")
+
+    // Transform image coordinates to view coordinates
+    convertFloats[0] = xImage
+    convertFloats[1] = yImage
+    frame.transformCoordinates2d(
+      Coordinates2d.IMAGE_PIXELS,
+      convertFloats,
+      Coordinates2d.VIEW,
+      convertFloatsOut
+    )
+
+    // Log transformed coordinates
+    Log.d(TAG, "Transformed view coordinates: x=${convertFloatsOut[0]}, y=${convertFloatsOut[1]}")
+
+    // Log snapshot pose details
+    Log.d(TAG, "Snapshot Pose: " +
+            "tx=${snapshotPose.tx()}, " +
+            "ty=${snapshotPose.ty()}, " +
+            "tz=${snapshotPose.tz()}")
+
+    // Perform hit test
+    val hits = frame.hitTest(convertFloatsOut[0], convertFloatsOut[1])
+    val hitResult = hits.firstOrNull()
+
+    if (hitResult == null) {
+      Log.e(TAG, "No hit test results found")
+      return null
+    }
+
+    // Log hit pose details
+    val hitPose = hitResult.hitPose
+    Log.d(TAG, "Hit Pose: " +
+            "tx=${hitPose.tx()}, " +
+            "ty=${hitPose.ty()}, " +
+            "tz=${hitPose.tz()}")
+
+    // Create anchor at hit pose
+    return session.createAnchor(hitPose)
+  }
+
+  private fun createAnchorAtPoseXY(
+    session: Session,
+    snapshotPose: Pose,
+    xImage: Float,
+    yImage: Float,
+    frame: Frame
+  ): Anchor? {
+    // Log the input image coordinates
+    Log.d(TAG, "Input Image Coordinates: x=$xImage, y=$yImage")
+
+    // Transform image coordinates to view coordinates
+    convertFloats[0] = xImage
+    convertFloats[1] = yImage
+    frame.transformCoordinates2d(
+      Coordinates2d.IMAGE_PIXELS,
+      convertFloats,
+      Coordinates2d.VIEW,
+      convertFloatsOut
+    )
+
+    Log.d(TAG, "Transformed View Coordinates: x=${convertFloatsOut[0]}, y=${convertFloatsOut[1]}")
+
+    // Create a more controlled translation based on the snapshot pose
+    // Use the transformed view coordinates to create an offset
+    val translationVector = FloatArray(3)
+
+    // Scale factor to control distance from the snapshot camera
+    val scaleFactor = 0.5f
+
+    translationVector[0] = convertFloatsOut[0] * scaleFactor
+    translationVector[1] = convertFloatsOut[1] * scaleFactor
+    translationVector[2] = -0.5f  // Bring the object slightly closer
+
+    // Create a new pose by combining the snapshot pose with the translation
+    val anchorPose = snapshotPose.compose(
+      Pose.makeTranslation(translationVector[0], translationVector[1], translationVector[2])
+    )
+
+    // Extensive logging for debugging
+    Log.d(TAG, "Snapshot Pose: x=${snapshotPose.tx()}, y=${snapshotPose.ty()}, z=${snapshotPose.tz()}")
+    Log.d(TAG, "Translation Vector: x=${translationVector[0]}, y=${translationVector[1]}, z=${translationVector[2]}")
+    Log.d(TAG, "Resulting Anchor Pose: x=${anchorPose.tx()}, y=${anchorPose.ty()}, z=${anchorPose.tz()}")
+
+    // Create and return the anchor
+    return session.createAnchor(anchorPose)
+  }
 }
+
+
+
+data class SnapshotData(
+  val viewMatrix: FloatArray,
+  val projectionMatrix: FloatArray,
+  val cameraPose: Pose,
+  val imageRotation: Int
+)
 
 data class ARLabeledAnchor(val anchor: Anchor, val label: String)
