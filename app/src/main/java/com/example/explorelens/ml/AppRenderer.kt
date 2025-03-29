@@ -133,19 +133,16 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                 val rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
 
                 val file = rotatedImage.toFile(context, "snapshot")
-                Log.d("NetworkDebug", "File exists: ${file.exists()}, Size: ${file.length()}")
-                if (!file.exists() || file.length() == 0L) {
-                    Log.e("NetworkDebug", "File saving failed!")
-                }
                 path=file.absolutePath
 
             }
         } catch (e: NotYetAvailableException) {
             Log.e("takeSnapshot", "No image available yet")
         }
-        Log.d("Snapshot", "Image saved at: ${serverResult?.get(0)?.label}")
-
-        path?.let { getAnalyzedResult( it) }
+        path?.let {
+            Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
+            getAnalyzedResult(it)
+        }
         val snapshot = Snapshot(
             timestamp = frame.timestamp,
             cameraPose = camera.pose,
@@ -167,6 +164,10 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     }
 
     fun getAnalyzedResult(path:String) {
+        Log.e(
+            "IM HERE",
+            "HERE"
+        )
         launch(Dispatchers.IO) {
             try {
        val file = File(path)
