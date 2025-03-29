@@ -1,5 +1,5 @@
-import com.example.explorelens.model.networking.AnalyzedResultApi
-import com.idz.colman24class1.model.networking.AnalyzedResultInterceptor
+import com.example.explorelens.networking.AnalyzedResultApi
+import com.example.explorelens.networking.AnalyzedResultInterceptor
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory

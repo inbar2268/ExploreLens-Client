@@ -1,4 +1,4 @@
-package com.idz.colman24class1.model.networking
+package com.example.explorelens.networking
 import okhttp3.Interceptor
 import okhttp3.Response
 

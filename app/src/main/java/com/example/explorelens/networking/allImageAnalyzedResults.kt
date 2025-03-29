@@ -1,6 +1,6 @@
 package com.example.explorelens.networking
 
-import com.example.shareeat.model.networking.ImageAnalyzedResult
+import com.example.explorelens.networking.ImageAnalyzedResult
 import com.google.gson.annotations.SerializedName
 
 class allImageAnalyzedResults(

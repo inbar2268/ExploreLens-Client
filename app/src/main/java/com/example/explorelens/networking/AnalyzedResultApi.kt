@@ -1,4 +1,4 @@
-package com.example.explorelens.model.networking
+package com.example.explorelens.networking
 
 import com.example.explorelens.networking.allImageAnalyzedResults
 import okhttp3.MultipartBody

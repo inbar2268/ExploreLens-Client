@@ -18,7 +18,7 @@ import com.example.explorelens.ml.classification.utils.ImageUtils
 import com.example.explorelens.ml.render.LabelRender
 import com.example.explorelens.ml.render.PointCloudRender
 import com.example.explorelens.networking.allImageAnalyzedResults
-import com.example.shareeat.model.networking.ImageAnalyzedResult
+import com.example.explorelens.networking.ImageAnalyzedResult
 import com.google.ar.core.Session
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.NotYetAvailableException
@@ -27,10 +27,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
-import java.io.File
 import okhttp3.RequestBody.Companion.asRequestBody
-import com.example.explorelens.model.networking.AnalyzedResultApi
+import com.example.explorelens.networking.AnalyzedResultApi
 import okhttp3.MediaType.Companion.toMediaType
+import java.io.File
 
 
 class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, SampleRender.Renderer,
@@ -124,20 +124,28 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         camera.getViewMatrix(viewMatrix, 0)
         camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
         val context = activity.applicationContext
-        var rotatedImage: Bitmap? = null;
+        var path: String? = null;
         try {
             frame.tryAcquireCameraImage()?.use { cameraImage ->
                 val cameraId = session.cameraConfig.cameraId
                 val imageRotation = displayRotationHelper.getCameraSensorToDisplayRotation(cameraId)
                 val convertYuv = convertYuv(context, cameraImage)
-                 rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
+                val rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
+
+                val file = rotatedImage.toFile(context, "snapshot")
+                Log.d("NetworkDebug", "File exists: ${file.exists()}, Size: ${file.length()}")
+                if (!file.exists() || file.length() == 0L) {
+                    Log.e("NetworkDebug", "File saving failed!")
+                }
+                path=file.absolutePath
+
             }
         } catch (e: NotYetAvailableException) {
             Log.e("takeSnapshot", "No image available yet")
         }
         Log.d("Snapshot", "Image saved at: ${serverResult?.get(0)?.label}")
 
-        rotatedImage?.let { getAnalyzedResult(context, it) }
+        path?.let { getAnalyzedResult( it) }
         val snapshot = Snapshot(
             timestamp = frame.timestamp,
             cameraPose = camera.pose,
@@ -158,15 +166,14 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         throw e
     }
 
-    fun getAnalyzedResult(context:Context,image: Bitmap) {
+    fun getAnalyzedResult(path:String) {
         launch(Dispatchers.IO) {
             try {
-                val file = image.toFile(context, "snapshot")
-                Log.d("NetworkDebug", "File exists: ${file.exists()}, Size: ${file.length()}")
-                if (!file.exists() || file.length() == 0L) {
-                    Log.e("NetworkDebug", "File saving failed!")
-                    return@launch
-                }
+       val file = File(path)
+                Log.e(
+                    "TAG",
+                    "Fetched analyzed result! Total objects: ${file.path ?: 0}"
+                )
                 val requestBody = file.asRequestBody("application/octet-stream".toMediaType())
                 val multipartBody = MultipartBody.Part.createFormData("image", file.name, requestBody)
                 val request =

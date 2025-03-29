@@ -1,4 +1,4 @@
-package com.example.shareeat.model.networking
+package com.example.explorelens.networking
 
 import com.example.explorelens.networking.boundingBox
 import com.example.explorelens.networking.center
