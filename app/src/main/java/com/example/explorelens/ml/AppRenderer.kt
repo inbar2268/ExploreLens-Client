@@ -1,5 +1,6 @@
 package com.example.explorelens.ml
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.opengl.Matrix
 import android.util.Log
@@ -16,6 +17,8 @@ import com.example.explorelens.common.samplerender.arcore.BackgroundRenderer
 import com.example.explorelens.ml.classification.utils.ImageUtils
 import com.example.explorelens.ml.render.LabelRender
 import com.example.explorelens.ml.render.PointCloudRender
+import com.example.explorelens.networking.allImageAnalyzedResults
+import com.example.shareeat.model.networking.ImageAnalyzedResult
 import com.google.ar.core.Session
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.NotYetAvailableException
@@ -23,6 +26,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import okhttp3.MultipartBody
+import java.io.File
+import okhttp3.RequestBody.Companion.asRequestBody
+import com.example.explorelens.model.networking.AnalyzedResultApi
+import okhttp3.MediaType.Companion.toMediaType
+
 
 class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, SampleRender.Renderer,
     CoroutineScope by MainScope() {
@@ -40,7 +49,9 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     val projectionMatrix = FloatArray(16)
     val viewProjectionMatrix = FloatArray(16)
 
+    var serverResult: List<ImageAnalyzedResult>? = listOf()
     var scanButtonWasPressed = false
+
 
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
@@ -115,23 +126,19 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         val context = activity.applicationContext
         var rotatedImage: Bitmap? = null;
         try {
-
-            val cameraImage = frame.tryAcquireCameraImage()
-            if (cameraImage != null) {
+            frame.tryAcquireCameraImage()?.use { cameraImage ->
                 val cameraId = session.cameraConfig.cameraId
                 val imageRotation = displayRotationHelper.getCameraSensorToDisplayRotation(cameraId)
                 val convertYuv = convertYuv(context, cameraImage)
-                rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
-                val file = rotatedImage.toFile(context, "snapshot")
-                Log.d("Snapshot", "Image saved at: ${file.absolutePath}")
-                cameraImage.close()
+                 rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
             }
         } catch (e: NotYetAvailableException) {
             Log.e("takeSnapshot", "No image available yet")
         }
+        Log.d("Snapshot", "Image saved at: ${serverResult?.get(0)?.label}")
 
+        rotatedImage?.let { getAnalyzedResult(context, it) }
         val snapshot = Snapshot(
-            image = rotatedImage,
             timestamp = frame.timestamp,
             cameraPose = camera.pose,
             viewMatrix = viewMatrix,
@@ -150,4 +157,48 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     } catch (e: Throwable) {
         throw e
     }
+
+    fun getAnalyzedResult(context:Context,image: Bitmap) {
+        launch(Dispatchers.IO) {
+            try {
+                val file = image.toFile(context, "snapshot")
+                Log.d("NetworkDebug", "File exists: ${file.exists()}, Size: ${file.length()}")
+                if (!file.exists() || file.length() == 0L) {
+                    Log.e("NetworkDebug", "File saving failed!")
+                    return@launch
+                }
+                val requestBody = file.asRequestBody("application/octet-stream".toMediaType())
+                val multipartBody = MultipartBody.Part.createFormData("image", file.name, requestBody)
+                val request =
+                    AnalyzedResultsClient.analyzedResultApiClient.getAnalyzedResult(multipartBody)
+                val response = request.execute()
+
+                if (response.isSuccessful) {
+                    val result: allImageAnalyzedResults? = response.body()
+                    Log.e(
+                        "TAG",
+                        "Fetched analyzed result! Total objects: ${result?.result?.size ?: 0}"
+                    )
+                    val objects = result?.result ?: emptyList()
+                    launch(Dispatchers.Main) {
+                        serverResult = objects
+                        if (serverResult?.isNotEmpty() == true) {
+                            Log.d(
+                                "Snapshot",
+                                "Image analyzed: ${serverResult?.firstOrNull()?.label ?: "No label found"}"
+                            )
+                        } else {
+                            Log.d("Snapshot", "No objects detected in the image")
+                        }
+                    }
+                } else {
+                    Log.e("TAG", "Failed to analyze result!")
+                }
+            } catch (e: Exception) {
+                Log.e("TAG", "Failed to analyze result! Exception: ${e.message}")
+            }
+        }
+    }
+
 }
+
