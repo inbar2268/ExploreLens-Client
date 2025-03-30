@@ -1,5 +1,6 @@
 package com.example.explorelens.ml
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.opengl.Matrix
 import android.util.Log
@@ -19,6 +20,8 @@ import com.example.explorelens.ml.classification.ObjectDetector
 import com.example.explorelens.ml.classification.utils.ImageUtils
 import com.example.explorelens.ml.render.LabelRender
 import com.example.explorelens.ml.render.PointCloudRender
+import com.example.explorelens.networking.allImageAnalyzedResults
+import com.example.explorelens.networking.ImageAnalyzedResult
 import com.google.ar.core.Anchor
 import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Pose
@@ -29,6 +32,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import com.example.explorelens.networking.AnalyzedResultApi
+import okhttp3.MediaType.Companion.toMediaType
+import java.io.File
 import java.lang.Thread.sleep
 import java.util.Collections
 
@@ -48,7 +56,9 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     val projectionMatrix = FloatArray(16)
     val viewProjectionMatrix = FloatArray(16)
 
+    var serverResult: List<ImageAnalyzedResult>? = listOf()
     var scanButtonWasPressed = false
+
 
     private var lastSnapshotData: Snapshot? = null
     val mlKitAnalyzer = MLKitObjectDetector(activity)
@@ -214,25 +224,26 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         camera.getViewMatrix(viewMatrix, 0)
         camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
         val context = activity.applicationContext
-        var rotatedImage: Bitmap? = null;
+        var path: String? = null;
         try {
-
-            val cameraImage = frame.tryAcquireCameraImage()
-            if (cameraImage != null) {
+            frame.tryAcquireCameraImage()?.use { cameraImage ->
                 val cameraId = session.cameraConfig.cameraId
                 val imageRotation = displayRotationHelper.getCameraSensorToDisplayRotation(cameraId)
                 val convertYuv = convertYuv(context, cameraImage)
-                rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
+                val rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
+
                 val file = rotatedImage.toFile(context, "snapshot")
-                Log.d("Snapshot", "Image saved at: ${file.absolutePath}")
-                cameraImage.close()
+                path=file.absolutePath
+
             }
         } catch (e: NotYetAvailableException) {
             Log.e("takeSnapshot", "No image available yet")
         }
-
+        path?.let {
+            Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
+            getAnalyzedResult(it)
+        }
         val snapshot = Snapshot(
-            image = rotatedImage,
             timestamp = frame.timestamp,
             cameraPose = camera.pose,
             viewMatrix = viewMatrix,
@@ -254,6 +265,52 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         throw e
     }
 
+    fun getAnalyzedResult(path:String) {
+        Log.e(
+            "IM HERE",
+            "HERE"
+        )
+        launch(Dispatchers.IO) {
+            try {
+       val file = File(path)
+                Log.e(
+                    "TAG",
+                    "Fetched analyzed result! Total objects: ${file.path ?: 0}"
+                )
+                val requestBody = file.asRequestBody("application/octet-stream".toMediaType())
+                val multipartBody = MultipartBody.Part.createFormData("image", file.name, requestBody)
+                val request =
+                    AnalyzedResultsClient.analyzedResultApiClient.getAnalyzedResult(multipartBody)
+                val response = request.execute()
+
+                if (response.isSuccessful) {
+                    val result: allImageAnalyzedResults? = response.body()
+                    Log.e(
+                        "TAG",
+                        "Fetched analyzed result! Total objects: ${result?.result?.size ?: 0}"
+                    )
+                    val objects = result?.result ?: emptyList()
+                    launch(Dispatchers.Main) {
+                        serverResult = objects
+                        if (serverResult?.isNotEmpty() == true) {
+                            Log.d(
+                                "Snapshot",
+                                "Image analyzed: ${serverResult?.firstOrNull()?.label ?: "No label found"}"
+                            )
+                        } else {
+                            Log.d("Snapshot", "No objects detected in the image")
+                        }
+                    }
+                } else {
+                    Log.e("TAG", "Failed to analyze result!")
+                }
+            } catch (e: Exception) {
+                Log.e("TAG", "Failed to analyze result! Exception: ${e.message}")
+            }
+        }
+    }
+
+}
 
     private val convertFloats = FloatArray(4)
     private val convertFloatsOut = FloatArray(4)
@@ -316,3 +373,4 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 }
 
 data class ARLabeledAnchor(val anchor: Anchor, val label: String)
+
