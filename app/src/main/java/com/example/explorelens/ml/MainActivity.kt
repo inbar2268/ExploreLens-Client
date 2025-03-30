@@ -13,7 +13,14 @@ import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException
 import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
-
+import android.hardware.camera2.CameraManager
+import android.content.Context
+import android.hardware.camera2.CameraAccessException
+import android.view.MotionEvent
+import com.google.ar.core.Camera
+import com.google.ar.core.TrackingState
+import kotlin.math.max
+import kotlin.math.min
 
 class MainActivity : AppCompatActivity() {
   val TAG = "MainActivity"
@@ -73,6 +80,7 @@ class MainActivity : AppCompatActivity() {
     setContentView(view.root)
     renderer.bindView(view)
     lifecycle.addObserver(view)
+
   }
 
   override fun onRequestPermissionsResult(
@@ -88,4 +96,14 @@ class MainActivity : AppCompatActivity() {
     super.onWindowFocusChanged(hasFocus)
     FullScreenHelper.setFullScreenOnWindowFocusChanged(this, hasFocus)
   }
+
+  override fun onTouchEvent(event: MotionEvent): Boolean {
+    if (event.action == MotionEvent.ACTION_DOWN) {
+      val x = event.x
+      val y = event.y
+      renderer.handleTouch(x, y)
+    }
+    return super.onTouchEvent(event)
+  }
+
 }

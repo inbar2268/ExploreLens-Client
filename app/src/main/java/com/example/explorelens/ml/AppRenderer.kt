@@ -1,10 +1,12 @@
 package com.example.explorelens.ml
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.opengl.Matrix
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.example.explorelens.DetailActivity
 import com.example.explorelens.Extensions.convertYuv
 import com.example.explorelens.Extensions.toFile
 import com.example.explorelens.Model.Snapshot
@@ -31,6 +33,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import java.lang.Thread.sleep
 import java.util.Collections
+import kotlin.math.sqrt
 
 class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, SampleRender.Renderer,
     CoroutineScope by MainScope() {
@@ -149,6 +152,25 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
             Log.d(TAG, "Anchor tracking state111: ${anchor.trackingState}")
             Log.d(TAG, "Label222: ${arDetectedObject.label}")
             if (anchor.trackingState != TrackingState.TRACKING) continue
+
+            val containerWidth = 249.0f
+            val containerHeight = 80.0f
+            val containerPose = anchor.pose
+
+            labelRenderer.drawContainerSimple(
+                render,
+                viewProjectionMatrix,
+                containerWidth,
+                containerHeight
+            )
+
+            labelRenderer.drawContainer(
+                render,
+                viewProjectionMatrix,
+                containerPose,
+                containerWidth,
+                containerHeight
+            )
             labelRenderer.draw(
                 render,
                 viewProjectionMatrix,
@@ -312,6 +334,38 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         activity.view.snackbarHelper.showError(activity, message)
 
     private fun hideSnackbar() = activity.view.snackbarHelper.hide(activity)
+
+    fun handleTouch(x: Float, y: Float) {
+        val session = activity.arCoreSessionHelper.sessionCache ?: return
+        val frame = session.update()
+
+        val hitResults = frame.hitTest(x, y)  // Perform a hit test
+        for (hit in hitResults) {
+            val hitPose = hit.hitPose
+            val clickedAnchor = arLabeledAnchors.find { anchor ->
+                val distance = distanceBetween(anchor.anchor.pose, hitPose)
+                distance < 0.1f // Threshold distance (adjust as needed)
+            }
+
+            if (clickedAnchor != null) {
+                openDetailActivity(clickedAnchor.label)
+                return
+            }
+        }
+    }
+    private fun openDetailActivity(label: String) {
+        val intent = Intent(activity, DetailActivity::class.java)
+        intent.putExtra("LABEL_KEY", label)
+        activity.startActivity(intent)
+    }
+    private fun distanceBetween(pose1: Pose, pose2: Pose): Float {
+        val dx = pose1.tx() - pose2.tx()
+        val dy = pose1.ty() - pose2.ty()
+        val dz = pose1.tz() - pose2.tz()
+        return sqrt(dx * dx + dy * dy + dz * dz)
+    }
+
+
 
 }
 

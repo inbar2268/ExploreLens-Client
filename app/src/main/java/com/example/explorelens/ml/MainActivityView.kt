@@ -1,13 +1,18 @@
 
 package com.example.explorelens.ml
 import android.opengl.GLSurfaceView
+import android.util.Log
 import android.view.View
 import androidx.appcompat.widget.AppCompatButton
+import androidx.appcompat.widget.AppCompatImageButton
 import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.example.explorelens.common.helpers.SnackbarHelper
 import com.example.explorelens.common.samplerender.SampleRender
+import android.view.ScaleGestureDetector
+import android.view.MotionEvent
+import com.example.explorelens.ml.AppRenderer.Companion.TAG
 
 /**
  * Wraps [R.layout.activity_main] and controls lifecycle operations for [GLSurfaceView].
@@ -24,6 +29,7 @@ class MainActivityView(val activity: MainActivity, renderer: AppRenderer) : Defa
   }
 
   override fun onResume(owner: LifecycleOwner) {
+    super.onResume(owner)
     surfaceView.onResume()
   }
 

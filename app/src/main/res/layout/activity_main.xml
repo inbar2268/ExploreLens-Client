@@ -12,13 +12,22 @@
         android:layout_width="fill_parent"
         android:layout_height="fill_parent" />
 
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/flashButton"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:background="@drawable/flash_icon"
+        android:contentDescription="Toggle Flash"/>
+
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/cameraButton"
         android:layout_width="80dp"
         android:layout_height="80dp"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="40dp"
-        android:background="@drawable/camera_button_background"
+        android:background="@drawable/camera_icon"
         android:elevation="4dp" />
 
 

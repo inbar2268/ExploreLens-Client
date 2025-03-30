@@ -1,9 +1,13 @@
 plugins {
     id 'com.android.application'
-    id 'kotlin-android'
+    id 'org.jetbrains.kotlin.android'
 }
 
 android {
+
+    buildFeatures {
+        compose true
+    }
     compileSdkVersion 35
     buildToolsVersion "30.0.3"
 
@@ -24,11 +28,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '11'
     }
     packagingOptions {
         exclude 'META-INF/DEPENDENCIES'
@@ -39,7 +43,7 @@ android {
 android.sourceSets.main.java.srcDirs += ['../third_party']
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.8.20"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.22"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3"
@@ -65,4 +69,16 @@ dependencies {
     // Obj - a simple Wavefront OBJ file loader
     // https://github.com/javagl/Obj
     implementation 'de.javagl:obj:0.2.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.7'
+    implementation 'androidx.activity:activity-compose:1.10.1'
+    implementation platform('androidx.compose:compose-bom:2024.04.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.material3:material3'
+    androidTestImplementation platform('androidx.compose:compose-bom:2024.04.01')
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    debugImplementation 'androidx.compose.ui:ui-test-manifest'
+    implementation "androidx.compose.compiler:compiler:1.5.11"
 }
