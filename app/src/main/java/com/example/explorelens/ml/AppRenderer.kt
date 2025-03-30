@@ -158,7 +158,7 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     private fun processObjectResults(frame: Frame, session: Session) {
         val objects = serverResult
         if (objects != null) {
-            objectResults = null
+            serverResult = null
             val snapshotData = lastSnapshotData
 
             Log.i(TAG, "$currentAnalyzer got objects: $objects")
