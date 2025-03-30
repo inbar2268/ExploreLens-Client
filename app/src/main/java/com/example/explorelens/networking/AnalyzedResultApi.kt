@@ -10,7 +10,7 @@ import retrofit2.http.Part
 
 interface AnalyzedResultApi {
     @Multipart
-    @POST("/site-info/mock-data")
+    @POST("/site-info/detect-site")
     fun getAnalyzedResult(
         @Part image: MultipartBody.Part
     ): Call<allImageAnalyzedResults>

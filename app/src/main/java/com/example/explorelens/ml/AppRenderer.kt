@@ -159,8 +159,8 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 
             Log.i(TAG, " Analyzer got objects: $objects")
             val anchors = objects.mapNotNull { obj ->
-                val atX = obj.center?.x
-                val atY = obj.center?.y
+                val atX = obj.siteInformation?.x
+                val atY = obj.siteInformation?.y
 
                 if(atX == null || atY == null){
                     return@mapNotNull null
@@ -179,13 +179,13 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                     frame
                 ) ?: return@mapNotNull null
 
-                Log.d(TAG, "Anchor created for ${obj.label}")
+                Log.d(TAG, "Anchor created for ${obj.siteInformation?.label}")
                 Log.d(
                     TAG,
                     "Anchor Pose: x=${anchor.pose.tx()}, y=${anchor.pose.ty()}, z=${anchor.pose.tz()}"
                 )
+                ARLabeledAnchor(anchor, obj.siteInformation!!.label)
 
-                ARLabeledAnchor(anchor, obj.label)
             }
             arLabeledAnchors.addAll(anchors)
             view.post {
@@ -366,47 +366,55 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     }
 
     fun getAnalyzedResult(path: String) {
-        Log.e(
-            "IM HERE",
-            "HERE"
-        )
+        Log.e("IM HERE", "HERE")
         launch(Dispatchers.IO) {
             try {
                 val file = File(path)
-                Log.e(
-                    "TAG",
-                    "Fetched analyzed result! Total objects: ${file.path ?: 0}"
-                )
+                Log.d("TAG", "Fetching analyzed result for image: ${file.path}")
+
                 val requestBody = file.asRequestBody("application/octet-stream".toMediaType())
-                val multipartBody =
-                    MultipartBody.Part.createFormData("image", file.name, requestBody)
-                val request =
-                    AnalyzedResultsClient.analyzedResultApiClient.getAnalyzedResult(multipartBody)
+                val multipartBody = MultipartBody.Part.createFormData("image", file.name, requestBody)
+                val request = AnalyzedResultsClient.analyzedResultApiClient.getAnalyzedResult(multipartBody)
                 val response = request.execute()
+
+                Log.d("TAG", "Response: ${response}")
 
                 if (response.isSuccessful) {
                     val result: allImageAnalyzedResults? = response.body()
-                    Log.e(
-                        "TAG",
-                        "Fetched analyzed result! Total objects: ${result?.result?.size ?: 0}"
-                    )
-                    val objects = result?.result ?: emptyList()
-                    launch(Dispatchers.Main) {
-                        serverResult = objects
-                        if (serverResult?.isNotEmpty() == true) {
-                            Log.d(
-                                "Snapshot",
-                                "Image analyzed: ${serverResult?.firstOrNull()?.label ?: "No label found"}"
-                            )
-                        } else {
-                            Log.d("Snapshot", "No objects detected in the image")
+
+                    if (result?.result.isNullOrEmpty() && result?.status != null) {
+                        // Single direct response format - create an ImageAnalyzedResult
+                        val singleResult = ImageAnalyzedResult(
+                            status = result.status ?: "",
+                            description = result.description ?: "",
+                            siteInformation = result.siteInformation
+                        )
+
+                        launch(Dispatchers.Main) {
+                            serverResult = listOf(singleResult)
+                            Log.d("Snapshot", "Site detected: ${singleResult.siteInformation?.siteName ?: "Unknown"}")
+                        }
+                    } else {
+                        // Original format with result array
+                        Log.d("TAG", "Fetched analyzed result! Total objects: ${result?.result?.size ?: 0}")
+                        val objects = result?.result ?: emptyList()
+
+                        launch(Dispatchers.Main) {
+                            serverResult = objects
+                            if (serverResult?.isNotEmpty() == true) {
+                                val firstObject = serverResult?.firstOrNull()
+                                Log.d("Snapshot", "Image analyzed: ${firstObject?.siteInformation?.label ?: "No label found"} - ${firstObject?.siteInformation?.siteName ?: "No site name"}")
+                            } else {
+                                Log.d("Snapshot", "No objects detected in the image")
+                            }
                         }
                     }
                 } else {
-                    Log.e("TAG", "Failed to analyze result!")
+                    Log.e("TAG", "Failed to analyze result! Response code: ${response.code()}")
                 }
             } catch (e: Exception) {
                 Log.e("TAG", "Failed to analyze result! Exception: ${e.message}")
+                e.printStackTrace()
             }
         }
     }
