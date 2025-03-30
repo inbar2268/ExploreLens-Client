@@ -138,8 +138,8 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         for (arDetectedObject in arLabeledAnchors) {
             val anchor = arDetectedObject.anchor
 
-            Log.d(TAG, "Anchor tracking state111: ${anchor.trackingState}")
-            Log.d(TAG, "Label222: ${arDetectedObject.label}")
+            Log.d(TAG, "Anchor tracking state: ${anchor.trackingState}")
+            Log.d(TAG, "Label: ${arDetectedObject.label}")
             if (anchor.trackingState != TrackingState.TRACKING) continue
             labelRenderer.draw(
                 render,
@@ -159,8 +159,8 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 
             Log.i(TAG, " Analyzer got objects: $objects")
             val anchors = objects.mapNotNull { obj ->
-                val atX = obj.center?.x
-                val atY = obj.center?.y
+                val atX = obj.siteInformation?.x
+                val atY = obj.siteInformation?.y
 
                 if(atX == null || atY == null){
                     return@mapNotNull null
@@ -179,13 +179,13 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                     frame
                 ) ?: return@mapNotNull null
 
-                Log.d(TAG, "Anchor created for ${obj.label}")
+                Log.d(TAG, "Anchor created for ${obj.siteInformation?.siteName}")
                 Log.d(
                     TAG,
                     "Anchor Pose: x=${anchor.pose.tx()}, y=${anchor.pose.ty()}, z=${anchor.pose.tz()}"
                 )
+                ARLabeledAnchor(anchor, obj.siteInformation!!.siteName)
 
-                ARLabeledAnchor(anchor, obj.label)
             }
             arLabeledAnchors.addAll(anchors)
             view.post {
@@ -208,9 +208,17 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         labelY: Float,
         frame: Frame
     ): Anchor? {
-        // Same initial steps as before for coordinate conversion
-        convertFloats[0] = labelX
-        convertFloats[1] = labelY
+        // Convert normalized coordinates (0.5, 0.5) to image pixel coordinates
+        val imageWidth = frame.camera.imageIntrinsics.imageDimensions[0].toFloat()
+        val imageHeight = frame.camera.imageIntrinsics.imageDimensions[1].toFloat()
+
+        // If server is sending normalized coordinates (0-1), convert to pixels
+        val pixelX = if (labelX <= 1.0f) labelX * imageWidth else labelX
+        val pixelY = if (labelY <= 1.0f) labelY * imageHeight else labelY
+
+        // Now convert to view coordinates
+        convertFloats[0] = pixelX
+        convertFloats[1] = pixelY
         frame.transformCoordinates2d(
             Coordinates2d.IMAGE_PIXELS,
             convertFloats,
@@ -218,41 +226,97 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
             convertFloatsOut
         )
 
-        // Hit test
+        // Hit test at the converted view coordinates
         val hits = frame.hitTest(convertFloatsOut[0], convertFloatsOut[1])
         val hitResult = hits.firstOrNull() ?: return null
 
-        // Get the hit pose
+        // Get the hit pose and distance
         val hitPose = hitResult.hitPose
-
-        // Create ray direction from snapshot
-        val viewWidth = frame.camera.imageIntrinsics.imageDimensions[0].toFloat()
-        val viewHeight = frame.camera.imageIntrinsics.imageDimensions[1].toFloat()
-        val normalizedX = (labelX / viewWidth) * 2 - 1
-        val normalizedY = -((labelY / viewHeight) * 2 - 1)
-
-        // Create direction vector
-        val rayDirection = floatArrayOf(normalizedX, normalizedY, -1.0f, 0.0f)
-        val snapshotRayDirection = snapshotPose.transformPoint(rayDirection)
-
-        // Get distance
         val hitDistance = hitResult.distance
 
-        // Calculate world position from snapshot
+        // Use the hit pose directly but with a Y-adjustment
         val worldPosition = floatArrayOf(
-            snapshotPose.tx() + snapshotRayDirection[0] * hitDistance,
-            // Explicitly lower the Y position to address the "too high" issue
-            (snapshotPose.ty() + snapshotRayDirection[1] * hitDistance) - 0.2f, // Subtract 20cm
-            snapshotPose.tz() + snapshotRayDirection[2] * hitDistance
+            hitPose.tx(),
+            hitPose.ty() - 0.2f, // Lower by 20cm to fix the "too high" issue
+            hitPose.tz()
         )
 
-        // Create the anchor at the adjusted position
+        // Create the anchor with the adjusted position
         val anchorPose = Pose.makeTranslation(worldPosition[0], worldPosition[1], worldPosition[2])
+
+        Log.d(TAG, "Created anchor at x=${anchorPose.tx()}, y=${anchorPose.ty()}, z=${anchorPose.tz()} from normalized (${labelX}, ${labelY})")
 
         return session.createAnchor(anchorPose)
     }
 
     private fun placeLabelRelativeToSnapshot(
+        session: Session,
+        snapshotPose: Pose,
+        labelX: Float,  // This is in normalized coordinates (0.0 to 1.0)
+        labelY: Float,  // This is in normalized coordinates (0.0 to 1.0)
+        frame: Frame
+    ): Anchor? {
+        // Log input coordinates
+        Log.d(TAG, "Input normalized coordinates: x=$labelX, y=$labelY")
+
+        // 1. Convert normalized coordinates (0.0 to 1.0) to image pixel coordinates
+        val imageWidth = frame.camera.imageIntrinsics.imageDimensions[0].toFloat()
+        val imageHeight = frame.camera.imageIntrinsics.imageDimensions[1].toFloat()
+
+        val pixelX = labelX * imageWidth  // Convert normalized x to pixel x
+        val pixelY = labelY * imageHeight  // Convert normalized y to pixel y
+
+        // 2. Convert image coordinates (pixelX, pixelY) to view coordinates
+        convertFloats[0] = pixelX
+        convertFloats[1] = pixelY
+        frame.transformCoordinates2d(
+            Coordinates2d.IMAGE_PIXELS,
+            convertFloats,
+            Coordinates2d.VIEW,
+            convertFloatsOut
+        )
+
+        // 3. Perform a hit test at the converted view coordinates
+        val hits = frame.hitTest(convertFloatsOut[0], convertFloatsOut[1])
+        val hitResult = hits.firstOrNull()
+        if (hitResult == null) {
+            Log.e(TAG, "No hit test results found")
+            return null
+        }
+
+        // 4. Get the hit pose and distance
+        val hitPose = hitResult.hitPose
+        val hitDistance = hitResult.distance
+        Log.d(TAG, "Hit pose: tx=${hitPose.tx()}, ty=${hitPose.ty()}, tz=${hitPose.tz()}, distance=$hitDistance")
+
+        // 5. Calculate a ray from the current camera through the touch point
+        val viewWidth = frame.camera.imageIntrinsics.imageDimensions[0].toFloat()
+        val viewHeight = frame.camera.imageIntrinsics.imageDimensions[1].toFloat()
+
+        val normalizedX = (pixelX / viewWidth) * 2 - 1  // Convert to normalized device coordinates
+        val normalizedY = -((pixelY / viewHeight) * 2 - 1) // Flip Y axis
+
+        // 6. Create the same ray direction but from the snapshot camera's perspective
+        val rayDirection = floatArrayOf(normalizedX, normalizedY, -1.0f, 0.0f)
+
+        // 7. Transform this direction from snapshot camera space to world space
+        val snapshotRayWorldDirection = snapshotPose.transformPoint(rayDirection)
+
+        // 8. Apply the hit distance to the ray from the snapshot camera's position
+        val worldPosition = floatArrayOf(
+            snapshotPose.tx() + snapshotRayWorldDirection[0] * hitDistance * 0.95f, // Apply correction
+            snapshotPose.ty() + snapshotRayWorldDirection[1] * hitDistance * 0.95f,
+            snapshotPose.tz() + snapshotRayWorldDirection[2] * hitDistance * 0.95f
+        )
+
+        // 9. Create an anchor at this computed world position
+        val anchorPose = Pose.makeTranslation(worldPosition[0], worldPosition[1], worldPosition[2])
+        Log.d(TAG, "Final anchor pose: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}")
+
+        return session.createAnchor(anchorPose)
+    }
+
+    private fun placeLabelRelativeToSnapshot1(
         session: Session,
         snapshotPose: Pose,
         labelX: Float,
@@ -364,52 +428,67 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     } catch (e: Throwable) {
         throw e
     }
-
     fun getAnalyzedResult(path: String) {
-        Log.e(
-            "IM HERE",
-            "HERE"
-        )
+        Log.e("IM HERE", "HERE")
         launch(Dispatchers.IO) {
             try {
                 val file = File(path)
-                Log.e(
-                    "TAG",
-                    "Fetched analyzed result! Total objects: ${file.path ?: 0}"
-                )
+                Log.d("TAG", "Fetching analyzed result for image: ${file.path}")
+
                 val requestBody = file.asRequestBody("application/octet-stream".toMediaType())
-                val multipartBody =
-                    MultipartBody.Part.createFormData("image", file.name, requestBody)
-                val request =
-                    AnalyzedResultsClient.analyzedResultApiClient.getAnalyzedResult(multipartBody)
+                val multipartBody = MultipartBody.Part.createFormData("image", file.name, requestBody)
+                val request = AnalyzedResultsClient.analyzedResultApiClient.getAnalyzedResult(multipartBody)
                 val response = request.execute()
+
+                Log.d("TAG", "Response: ${response}")
 
                 if (response.isSuccessful) {
                     val result: allImageAnalyzedResults? = response.body()
-                    Log.e(
-                        "TAG",
-                        "Fetched analyzed result! Total objects: ${result?.result?.size ?: 0}"
-                    )
-                    val objects = result?.result ?: emptyList()
-                    launch(Dispatchers.Main) {
-                        serverResult = objects
-                        if (serverResult?.isNotEmpty() == true) {
-                            Log.d(
-                                "Snapshot",
-                                "Image analyzed: ${serverResult?.firstOrNull()?.label ?: "No label found"}"
-                            )
-                        } else {
-                            Log.d("Snapshot", "No objects detected in the image")
+
+                    if (result?.result.isNullOrEmpty() && result?.status != null) {
+                        // Single direct response format - create an ImageAnalyzedResult
+                        val singleResult = ImageAnalyzedResult(
+                            status = result.status ?: "",
+                            description = result.description ?: "",
+                            siteInformation = result.siteInformation
+                        )
+
+                        launch(Dispatchers.Main) {
+                            // Check if the status is "failure" and show snackbar without processing anchors
+                            if (singleResult.status == "failure" && singleResult.description == "No famous site detected and no relevant objects found.") {
+                                showSnackbar("No objects detected in the image")
+                                return@launch // Early return to stop further processing
+                            }
+
+                            serverResult = listOf(singleResult)
+                            Log.d("Snapshot", "Site detected: ${singleResult.siteInformation?.siteName ?: "Unknown"}")
+                        }
+                    } else {
+                        // Original format with result array
+                        Log.d("TAG", "Fetched analyzed result! Total objects: ${result?.result?.size ?: 0}")
+                        val objects = result?.result ?: emptyList()
+
+                        launch(Dispatchers.Main) {
+                            serverResult = objects
+                            if (serverResult?.isNotEmpty() == true) {
+                                val firstObject = serverResult?.firstOrNull()
+                                Log.d("Snapshot", "Image analyzed: ${firstObject?.siteInformation?.siteName ?: "No label found"} - ${firstObject?.siteInformation?.siteName ?: "No site name"}")
+                            } else {
+                                Log.d("Snapshot", "No objects detected in the image")
+                                showSnackbar("No objects detected in the image")
+                            }
                         }
                     }
                 } else {
-                    Log.e("TAG", "Failed to analyze result!")
+                    Log.e("TAG", "Failed to analyze result! Response code: ${response.code()}")
                 }
             } catch (e: Exception) {
                 Log.e("TAG", "Failed to analyze result! Exception: ${e.message}")
+                e.printStackTrace()
             }
         }
     }
+
 
 
     private val convertFloats = FloatArray(4)
