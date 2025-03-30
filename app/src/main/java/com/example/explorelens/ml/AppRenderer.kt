@@ -89,61 +89,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 
     var objectResults: List<DetectedObjectResult>? = null
 
-    override fun onDrawFrame(render: SampleRender) {
-        val session = activity.arCoreSessionHelper.sessionCache ?: return
-        session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.textureId))
-        displayRotationHelper.updateSessionIfNeeded(session)
-
-        val frame = try {
-            session.update()
-        } catch (e: CameraNotAvailableException) {
-            Log.e(TAG, "Camera not available during onDrawFrame", e)
-            showSnackbar("Camera not available. Try restarting the app.")
-            return
-        }
-
-        backgroundRenderer.updateDisplayGeometry(frame)
-        backgroundRenderer.drawBackground(render)
-
-        val camera = frame.camera
-        camera.getViewMatrix(viewMatrix, 0)
-        camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
-        Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
-
-        if (camera.trackingState != TrackingState.TRACKING) {
-            Log.w(TAG, "Camera is not tracking.")
-            return
-        }
-
-        frame.acquirePointCloud().use { pointCloud ->
-            pointCloudRender.drawPointCloud(render, pointCloud, viewProjectionMatrix)
-        }
-
-        if (scanButtonWasPressed) {
-            scanButtonWasPressed = false
-            lastSnapshotData = takeSnapshot(frame, session)
-            launch(Dispatchers.IO) {
-                val mockResults = listOf(
-                    DetectedObjectResult(
-                        confidence = 0.98f,
-                        label = "Eiffel Tower",
-                        centerCoordinate = Pair(300, 700)  // Mock coordinates
-                    ),
-                    DetectedObjectResult(
-                        confidence = 0.87f,
-                        label = "London eye",
-                        centerCoordinate = Pair(200, 500)  // Mock coordinates
-                    )
-                )
-                objectResults = mockResults
-            }
-        }
-
-        processObjectResults(frame, session)
-        drawAnchors(render, frame)
-    }
-
-
     private fun drawAnchors(render: SampleRender, frame: Frame){
 
         for (arDetectedObject in arLabeledAnchors) {
@@ -335,28 +280,24 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 
     private fun hideSnackbar() = activity.view.snackbarHelper.hide(activity)
 
+    private var pendingTouchX: Float? = null
+    private var pendingTouchY: Float? = null
+
     fun handleTouch(x: Float, y: Float) {
-        val session = activity.arCoreSessionHelper.sessionCache ?: return
-        val frame = session.update()
-
-        val hitResults = frame.hitTest(x, y)  // Perform a hit test
-        for (hit in hitResults) {
-            val hitPose = hit.hitPose
-            val clickedAnchor = arLabeledAnchors.find { anchor ->
-                val distance = distanceBetween(anchor.anchor.pose, hitPose)
-                distance < 0.1f // Threshold distance (adjust as needed)
-            }
-
-            if (clickedAnchor != null) {
-                openDetailActivity(clickedAnchor.label)
-                return
-            }
-        }
+        // Just store the coordinates for later processing
+        Log.d(TAG, "Touch received at x=$x, y=$y")
+        pendingTouchX = x
+        pendingTouchY = y
     }
+
+
     private fun openDetailActivity(label: String) {
-        val intent = Intent(activity, DetailActivity::class.java)
-        intent.putExtra("LABEL_KEY", label)
-        activity.startActivity(intent)
+        activity.runOnUiThread {
+            Log.d(TAG, "Opening DetailActivity with label: $label")
+            val intent = Intent(activity, DetailActivity::class.java)
+            intent.putExtra("LABEL_KEY", label)
+            activity.startActivity(intent)
+        }
     }
     private fun distanceBetween(pose1: Pose, pose2: Pose): Float {
         val dx = pose1.tx() - pose2.tx()
@@ -364,7 +305,121 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         val dz = pose1.tz() - pose2.tz()
         return sqrt(dx * dx + dy * dy + dz * dz)
     }
+    override fun onDrawFrame(render: SampleRender) {
+        val session = activity.arCoreSessionHelper.sessionCache ?: return
+        session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.textureId))
+        displayRotationHelper.updateSessionIfNeeded(session)
 
+        val frame = try {
+            session.update()
+        } catch (e: CameraNotAvailableException) {
+            Log.e(TAG, "Camera not available during onDrawFrame", e)
+            showSnackbar("Camera not available. Try restarting the app.")
+            return
+        }
+
+        backgroundRenderer.updateDisplayGeometry(frame)
+        backgroundRenderer.drawBackground(render)
+
+        val camera = frame.camera
+        camera.getViewMatrix(viewMatrix, 0)
+        camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
+        Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+
+        if (camera.trackingState != TrackingState.TRACKING) {
+            Log.w(TAG, "Camera is not tracking.")
+            return
+        }
+
+        frame.acquirePointCloud().use { pointCloud ->
+            pointCloudRender.drawPointCloud(render, pointCloud, viewProjectionMatrix)
+        }
+
+        // Process any pending touch events
+        pendingTouchX?.let { x ->
+            pendingTouchY?.let { y ->
+                processTouchInGLThread(x, y, frame, session)
+                // Clear the pending touch
+                pendingTouchX = null
+                pendingTouchY = null
+            }
+        }
+
+        if (scanButtonWasPressed) {
+            scanButtonWasPressed = false
+            lastSnapshotData = takeSnapshot(frame, session)
+            launch(Dispatchers.IO) {
+                val mockResults = listOf(
+                    DetectedObjectResult(
+                        confidence = 0.98f,
+                        label = "Eiffel Tower",
+                        centerCoordinate = Pair(300, 700)  // Mock coordinates
+                    ),
+                    DetectedObjectResult(
+                        confidence = 0.87f,
+                        label = "London eye",
+                        centerCoordinate = Pair(200, 500)  // Mock coordinates
+                    )
+                )
+                objectResults = mockResults
+            }
+        }
+
+        processObjectResults(frame, session)
+        drawAnchors(render, frame)
+    }
+
+    private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Session) {
+        val camera = frame.camera
+
+        if (camera.trackingState != TrackingState.TRACKING) {
+            Log.w(TAG, "Camera is not tracking.")
+            return
+        }
+
+        try {
+            // Perform hit test
+            val hitResults = frame.hitTest(x, y)
+
+            Log.d(TAG, "Hit test performed, found ${hitResults.size} results")
+
+            for (hit in hitResults) {
+                val hitPose = hit.hitPose
+                Log.d(TAG, "Hit pose: x=${hitPose.tx()}, y=${hitPose.ty()}, z=${hitPose.tz()}")
+
+                // Log all anchors for debugging
+                arLabeledAnchors.forEachIndexed { index, anchor ->
+                    Log.d(TAG, "Anchor $index: label=${anchor.label}, pose: x=${anchor.anchor.pose.tx()}, y=${anchor.anchor.pose.ty()}, z=${anchor.anchor.pose.tz()}")
+                    val distance = distanceBetween(anchor.anchor.pose, hitPose)
+                    Log.d(TAG, "Distance to anchor $index: $distance")
+                }
+
+                // Check if the hit is close to any of our anchors
+                val clickedAnchor = arLabeledAnchors.find { anchor ->
+                    val distance = distanceBetween(anchor.anchor.pose, hitPose)
+                    Log.d(TAG, "Distance to ${anchor.label}: $distance")
+                    distance < 0.2f  // You might need to adjust this threshold
+                }
+
+                if (clickedAnchor != null) {
+                    Log.d(TAG, "Clicked on anchor: ${clickedAnchor.label}")
+                    activity.runOnUiThread {
+                        // Navigate to detail activity on the UI thread
+                        openDetailActivity(clickedAnchor.label)
+                    }
+                    return
+                }
+            }
+
+            if (hitResults.isEmpty()) {
+                Log.d(TAG, "No hit results found")
+            } else {
+                Log.d(TAG, "Hit results found but no anchors were close enough")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error processing touch", e)
+        }
+    }
 
 
 }

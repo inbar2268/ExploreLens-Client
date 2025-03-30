@@ -1,6 +1,7 @@
 package com.example.explorelens
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.explorelens.ml.R
@@ -12,8 +13,9 @@ class DetailActivity : AppCompatActivity() {
         setContentView(R.layout.activity_detail)
 
         // Set label to TextView
-        val label = intent.getStringExtra("AR_LABEL") ?: "Unknown"
-        val textView = findViewById<TextView>(R.id.labelTextView)
-        textView.text = label
+        val label = intent.getStringExtra("LABEL_KEY") ?: "Unknown"
+        Log.d("DetailActivity", "Received label: $label")
+        val labelTextView = findViewById<TextView>(R.id.labelTextView)
+        labelTextView.text = label
     }
 }
