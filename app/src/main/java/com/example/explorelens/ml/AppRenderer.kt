@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import com.example.explorelens.networking.AnalyzedResultApi
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import java.io.File
 import java.lang.Thread.sleep
@@ -162,7 +163,7 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                 val atX = obj.siteInformation?.x
                 val atY = obj.siteInformation?.y
 
-                if(atX == null || atY == null){
+                if (atX == null || atY == null) {
                     return@mapNotNull null
                 }
 
@@ -201,6 +202,7 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
             }
         }
     }
+
     private fun placeLabelRelativeToSnapshotWithYCorrection(
         session: Session,
         snapshotPose: Pose,
@@ -244,7 +246,10 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         // Create the anchor with the adjusted position
         val anchorPose = Pose.makeTranslation(worldPosition[0], worldPosition[1], worldPosition[2])
 
-        Log.d(TAG, "Created anchor at x=${anchorPose.tx()}, y=${anchorPose.ty()}, z=${anchorPose.tz()} from normalized (${labelX}, ${labelY})")
+        Log.d(
+            TAG,
+            "Created anchor at x=${anchorPose.tx()}, y=${anchorPose.ty()}, z=${anchorPose.tz()} from normalized (${labelX}, ${labelY})"
+        )
 
         return session.createAnchor(anchorPose)
     }
@@ -287,7 +292,10 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         // 4. Get the hit pose and distance
         val hitPose = hitResult.hitPose
         val hitDistance = hitResult.distance
-        Log.d(TAG, "Hit pose: tx=${hitPose.tx()}, ty=${hitPose.ty()}, tz=${hitPose.tz()}, distance=$hitDistance")
+        Log.d(
+            TAG,
+            "Hit pose: tx=${hitPose.tx()}, ty=${hitPose.ty()}, tz=${hitPose.tz()}, distance=$hitDistance"
+        )
 
         // 5. Calculate a ray from the current camera through the touch point
         val viewWidth = frame.camera.imageIntrinsics.imageDimensions[0].toFloat()
@@ -311,7 +319,10 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 
         // 9. Create an anchor at this computed world position
         val anchorPose = Pose.makeTranslation(worldPosition[0], worldPosition[1], worldPosition[2])
-        Log.d(TAG, "Final anchor pose: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}")
+        Log.d(
+            TAG,
+            "Final anchor pose: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}"
+        )
 
         return session.createAnchor(anchorPose)
     }
@@ -350,7 +361,10 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         // 4. Get hit pose and distance
         val hitPose = hitResult.hitPose
         val hitDistance = hitResult.distance
-        Log.d(TAG, "Hit pose: tx=${hitPose.tx()}, ty=${hitPose.ty()}, tz=${hitPose.tz()}, distance=$hitDistance")
+        Log.d(
+            TAG,
+            "Hit pose: tx=${hitPose.tx()}, ty=${hitPose.ty()}, tz=${hitPose.tz()}, distance=$hitDistance"
+        )
 
         // 5. Calculate a ray from the current camera through the touch point
         val viewWidth = frame.camera.imageIntrinsics.imageDimensions[0].toFloat()
@@ -375,7 +389,10 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 
         // 9. Create an anchor at this computed position
         val anchorPose = Pose.makeTranslation(worldPosition[0], worldPosition[1], worldPosition[2])
-        Log.d(TAG, "Final anchor: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}")
+        Log.d(
+            TAG,
+            "Final anchor: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}"
+        )
 
         return session.createAnchor(anchorPose)
     }
@@ -428,68 +445,87 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     } catch (e: Throwable) {
         throw e
     }
+
     fun getAnalyzedResult(path: String) {
-        Log.e("IM HERE", "HERE")
+        Log.d("AnalyzeImage", "Starting image analysis")
         launch(Dispatchers.IO) {
             try {
                 val file = File(path)
-                Log.d("TAG", "Fetching analyzed result for image: ${file.path}")
+                Log.d("AnalyzeImage", "Analyzing image: ${file.path}")
 
+                // Prepare multipart request with the image file
                 val requestBody = file.asRequestBody("application/octet-stream".toMediaType())
                 val multipartBody = MultipartBody.Part.createFormData("image", file.name, requestBody)
                 val request = AnalyzedResultsClient.analyzedResultApiClient.getAnalyzedResult(multipartBody)
                 val response = request.execute()
 
-                Log.d("TAG", "Response: ${response}")
+                Log.d("AnalyzeImage", "Server response: ${response}")
 
-                if (response.isSuccessful) {
-                    val result: allImageAnalyzedResults? = response.body()
+                // Switch to Main thread for UI updates
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        val result: allImageAnalyzedResults? = response.body()
 
-                    if (result?.result.isNullOrEmpty() && result?.status != null) {
-                        // Single direct response format - create an ImageAnalyzedResult
-                        val singleResult = ImageAnalyzedResult(
-                            status = result.status ?: "",
-                            description = result.description ?: "",
-                            siteInformation = result.siteInformation
-                        )
+                        // Check for null response body
+                        if (result == null) {
+                            Log.e("AnalyzeImage", "Received empty response from server")
+                            showSnackbar("Server error: No data received")
+                            return@withContext
+                        }
 
-                        launch(Dispatchers.Main) {
-                            // Check if the status is "failure" and show snackbar without processing anchors
-                            if (singleResult.status == "failure" && singleResult.description == "No famous site detected and no relevant objects found.") {
-                                showSnackbar("No objects detected in the image")
-                                return@launch // Early return to stop further processing
-                            }
+                        // Check if this is a direct response (without results array)
+                        if (result.result.isNullOrEmpty() && result.status != null) {
+                            // Create a single result object from the direct response
+                            val singleResult = ImageAnalyzedResult(
+                                status = result.status ?: "",
+                                description = result.description ?: "",
+                                siteInformation = result.siteInformation
+                            )
 
                             serverResult = listOf(singleResult)
-                            Log.d("Snapshot", "Site detected: ${singleResult.siteInformation?.siteName ?: "Unknown"}")
-                        }
-                    } else {
-                        // Original format with result array
-                        Log.d("TAG", "Fetched analyzed result! Total objects: ${result?.result?.size ?: 0}")
-                        val objects = result?.result ?: emptyList()
 
-                        launch(Dispatchers.Main) {
-                            serverResult = objects
-                            if (serverResult?.isNotEmpty() == true) {
-                                val firstObject = serverResult?.firstOrNull()
-                                Log.d("Snapshot", "Image analyzed: ${firstObject?.siteInformation?.siteName ?: "No label found"} - ${firstObject?.siteInformation?.siteName ?: "No site name"}")
-                            } else {
-                                Log.d("Snapshot", "No objects detected in the image")
+                            // Handle failure status
+                            if (singleResult.status == "failure") {
+                                Log.d("AnalyzeImage", "No objects detected: ${singleResult.description}")
                                 showSnackbar("No objects detected in the image")
+                            } else {
+                                Log.d("AnalyzeImage", "Site detected: ${singleResult.siteInformation?.siteName ?: "Unknown"}")
                             }
                         }
+                        // Handle normal results array
+                        else if (!result.result.isNullOrEmpty()) {
+                            Log.d("AnalyzeImage", "Found ${result.result.size} objects in the image")
+                            serverResult = result.result
+
+                            val firstObject = serverResult?.firstOrNull()
+                            if (firstObject != null) {
+                                Log.d("AnalyzeImage", "Image analyzed: ${firstObject.siteInformation?.siteName ?: "No label found"}")
+                            }
+                        }
+                        // Handle case with no results at all
+                        else {
+                            Log.d("AnalyzeImage", "No objects detected in the image")
+                            showSnackbar("No objects detected in the image")
+                            serverResult = emptyList()
+                        }
+                    } else {
+                        // Handle unsuccessful HTTP response
+                        Log.e("AnalyzeImage", "Analysis failed! Response code: ${response.code()}")
+                        showSnackbar("Server error: ${response.code()}")
                     }
-                } else {
-                    Log.e("TAG", "Failed to analyze result! Response code: ${response.code()}")
                 }
             } catch (e: Exception) {
-                Log.e("TAG", "Failed to analyze result! Exception: ${e.message}")
+                // Handle exceptions during the request
+                Log.e("AnalyzeImage", "Analysis failed! Exception: ${e.message}")
                 e.printStackTrace()
+
+                // Switch to Main thread to show error message
+                withContext(Dispatchers.Main) {
+                    showSnackbar("Error analyzing the image")
+                }
             }
         }
     }
-
-
 
     private val convertFloats = FloatArray(4)
     private val convertFloatsOut = FloatArray(4)
