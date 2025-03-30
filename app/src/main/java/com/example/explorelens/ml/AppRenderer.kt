@@ -111,24 +111,27 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
         Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
 
+        if (scanButtonWasPressed) {
+            if (camera.trackingState != TrackingState.TRACKING) {
+                view.post {
+                    view.setScanningActive(false)
+                    showSnackbar("Please wait for AR to initialize. Move your device around to scan the environment.")
+                }
+            } else {
+                lastSnapshotData = takeSnapshot(frame, session)
+            }
+            scanButtonWasPressed = false
+        }
         if (camera.trackingState != TrackingState.TRACKING) {
             Log.w(TAG, "Camera is not tracking.")
             return
         }
-
         frame.acquirePointCloud().use { pointCloud ->
             pointCloudRender.drawPointCloud(render, pointCloud, viewProjectionMatrix)
         }
-
-        if (scanButtonWasPressed) {
-            scanButtonWasPressed = false
-            lastSnapshotData = takeSnapshot(frame, session)
-        }
-
         processObjectResults(frame, session)
         drawAnchors(render, frame)
     }
-
 
     private fun drawAnchors(render: SampleRender, frame: Frame) {
 
