@@ -66,6 +66,13 @@ dependencies {
     // ARCore
     implementation 'com.google.ar:core:1.24.0'
 
+    //retrofit
+    implementation 'com.squareup.retrofit2:retrofit:2.11.0'
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+
+
     // Obj - a simple Wavefront OBJ file loader
     // https://github.com/javagl/Obj
     implementation 'de.javagl:obj:0.2.1'
