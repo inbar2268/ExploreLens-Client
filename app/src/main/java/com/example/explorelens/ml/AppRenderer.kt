@@ -130,22 +130,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         if (scanButtonWasPressed) {
             scanButtonWasPressed = false
             lastSnapshotData = takeSnapshot(frame, session)
-            launch(Dispatchers.IO) {
-                val mockResults = listOf(
-                    DetectedObjectResult(
-                        confidence = 0.98f,
-                        label = "Eiffel Tower",
-                        centerCoordinate = Pair(300, 700)  // Mock coordinates
-                    ),
-                    DetectedObjectResult(
-                        confidence = 0.87f,
-                        label = "London eye",
-                        centerCoordinate = Pair(200, 500)  // Mock coordinates
-                    )
-                )
-                sleep(2000)
-                objectResults = mockResults
-            }
         }
 
         processObjectResults(frame, session)
@@ -172,14 +156,19 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     }
 
     private fun processObjectResults(frame: Frame, session: Session) {
-        val objects = objectResults
+        val objects = serverResult
         if (objects != null) {
-            objectResults = null
+            serverResult = null
             val snapshotData = lastSnapshotData
 
             Log.i(TAG, "$currentAnalyzer got objects: $objects")
             val anchors = objects.mapNotNull { obj ->
-                val (atX, atY) = obj.centerCoordinate
+                val atX = obj.center?.x
+                val atY = obj.center?.y
+
+                if(atX == null || atY == null){
+                    return@mapNotNull null
+                }
 
                 if (snapshotData == null) {
                     Log.e(TAG, "No snapshot data available for anchor creation")
@@ -189,8 +178,8 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                 val anchor = placeLabelRelativeToSnapshotWithYCorrection(
                     session,
                     snapshotData.cameraPose,
-                    atX.toFloat(),
-                    atY.toFloat(),
+                    atX,
+                    atY,
                     frame
                 ) ?: return@mapNotNull null
 
