@@ -160,7 +160,7 @@ class LabelRender {
     val containerMesh = Mesh(render, Mesh.PrimitiveMode.TRIANGLE_STRIP, null, arrayOf(VertexBuffer(render, 2, meshBuffer)))
 
     // Set the shader color to semi-transparent black (for the container)
-    containerShader.setVec4("fragColor", floatArrayOf(0f, 0f, 0f, 1.0f)) // RGBA for semi-transparent black
+    containerShader.setVec4("fragColor", floatArrayOf(1.0f, 1.0f, 1.0f, 0.8f)) // RGBA for semi-transparent black
 
     // Set the view projection matrix
     containerShader.setMat4("u_ViewProjection", viewProjectionMatrix)

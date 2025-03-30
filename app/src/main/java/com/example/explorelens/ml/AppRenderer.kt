@@ -98,16 +98,11 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
             Log.d(TAG, "Label222: ${arDetectedObject.label}")
             if (anchor.trackingState != TrackingState.TRACKING) continue
 
-            val containerWidth = 249.0f
-            val containerHeight = 80.0f
+            val containerWidth = 0.5f
+            val containerHeight = 0.15f
             val containerPose = anchor.pose
 
-            labelRenderer.drawContainerSimple(
-                render,
-                viewProjectionMatrix,
-                containerWidth,
-                containerHeight
-            )
+            Log.d(TAG, "Drawing container for ${arDetectedObject.label} at pose: x=${containerPose.tx()}, y=${containerPose.ty()}, z=${containerPose.tz()}")
 
             labelRenderer.drawContainer(
                 render,
@@ -115,6 +110,14 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                 containerPose,
                 containerWidth,
                 containerHeight
+            )
+            val textPose = Pose(
+                floatArrayOf(
+                    containerPose.tx(),
+                    containerPose.ty(),
+                    containerPose.tz() - 0.01f  // Slightly in front
+                ),
+                containerPose.rotationQuaternion
             )
             labelRenderer.draw(
                 render,
