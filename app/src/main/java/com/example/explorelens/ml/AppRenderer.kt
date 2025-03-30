@@ -151,7 +151,7 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     }
 
 
-    private fun drawAnchors(render: SampleRender, frame: Frame){
+    private fun drawAnchors(render: SampleRender, frame: Frame) {
 
         for (arDetectedObject in arLabeledAnchors) {
             val anchor = arDetectedObject.anchor
@@ -194,7 +194,10 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                 ) ?: return@mapNotNull null
 
                 Log.d(TAG, "Anchor created for ${obj.label}")
-                Log.d(TAG, "Anchor Pose: x=${anchor.pose.tx()}, y=${anchor.pose.ty()}, z=${anchor.pose.tz()}")
+                Log.d(
+                    TAG,
+                    "Anchor Pose: x=${anchor.pose.tx()}, y=${anchor.pose.ty()}, z=${anchor.pose.tz()}"
+                )
 
                 ARLabeledAnchor(anchor, obj.label)
             }
@@ -203,13 +206,19 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                 view.setScanningActive(false)
                 when {
                     objects.isEmpty() && currentAnalyzer == mlKitAnalyzer && !mlKitAnalyzer.hasCustomModel() ->
-                        showSnackbar("Default ML Kit classification model returned no results. " +
-                                "For better classification performance, see the README to configure a custom model.")
+                        showSnackbar(
+                            "Default ML Kit classification model returned no results. " +
+                                    "For better classification performance, see the README to configure a custom model."
+                        )
+
                     objects.isEmpty() ->
                         showSnackbar("Classification model returned no results.")
+
                     anchors.size != objects.size ->
-                        showSnackbar("Objects were classified, but could not be attached to an anchor. " +
-                                "Try moving your device around to obtain a better understanding of the environment.")
+                        showSnackbar(
+                            "Objects were classified, but could not be attached to an anchor. " +
+                                    "Try moving your device around to obtain a better understanding of the environment."
+                        )
                 }
             }
         }
@@ -233,7 +242,7 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                 val rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
 
                 val file = rotatedImage.toFile(context, "snapshot")
-                path=file.absolutePath
+                path = file.absolutePath
 
             }
         } catch (e: NotYetAvailableException) {
@@ -265,20 +274,21 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         throw e
     }
 
-    fun getAnalyzedResult(path:String) {
+    fun getAnalyzedResult(path: String) {
         Log.e(
             "IM HERE",
             "HERE"
         )
         launch(Dispatchers.IO) {
             try {
-       val file = File(path)
+                val file = File(path)
                 Log.e(
                     "TAG",
                     "Fetched analyzed result! Total objects: ${file.path ?: 0}"
                 )
                 val requestBody = file.asRequestBody("application/octet-stream".toMediaType())
-                val multipartBody = MultipartBody.Part.createFormData("image", file.name, requestBody)
+                val multipartBody =
+                    MultipartBody.Part.createFormData("image", file.name, requestBody)
                 val request =
                     AnalyzedResultsClient.analyzedResultApiClient.getAnalyzedResult(multipartBody)
                 val response = request.execute()
@@ -310,7 +320,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         }
     }
 
-}
 
     private val convertFloats = FloatArray(4)
     private val convertFloatsOut = FloatArray(4)
@@ -336,29 +345,36 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         )
 
         // Log transformed coordinates
-        Log.d(TAG, "Transformed view coordinates: x=${convertFloatsOut[0]}, y=${convertFloatsOut[1]}")
+        Log.d(
+            "TAG",
+            "Transformed view coordinates: x=${convertFloatsOut[0]}, y=${convertFloatsOut[1]}"
+        )
 
         // Log snapshot pose details
-        Log.d(TAG, "Snapshot Pose: " +
-                "tx=${snapshotPose.tx()}, " +
-                "ty=${snapshotPose.ty()}, " +
-                "tz=${snapshotPose.tz()}")
+        Log.d(
+            "TAG", "Snapshot Pose: " +
+                    "tx=${snapshotPose.tx()}, " +
+                    "ty=${snapshotPose.ty()}, " +
+                    "tz=${snapshotPose.tz()}"
+        )
 
         // Perform hit test
         val hits = frame.hitTest(convertFloatsOut[0], convertFloatsOut[1])
         val hitResult = hits.firstOrNull()
 
         if (hitResult == null) {
-            Log.e(TAG, "No hit test results found")
+            Log.e("TAG", "No hit test results found")
             return null
         }
 
         // Log hit pose details
         val hitPose = hitResult.hitPose
-        Log.d(TAG, "Hit Pose: " +
-                "tx=${hitPose.tx()}, " +
-                "ty=${hitPose.ty()}, " +
-                "tz=${hitPose.tz()}")
+        Log.d(
+            "TAG", "Hit Pose: " +
+                    "tx=${hitPose.tx()}, " +
+                    "ty=${hitPose.ty()}, " +
+                    "tz=${hitPose.tz()}"
+        )
 
         // Create anchor at hit pose
         return session.createAnchor(hitPose)
