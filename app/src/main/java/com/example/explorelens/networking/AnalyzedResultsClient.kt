@@ -4,7 +4,7 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-val BASE_URL = "http://192.168.1.141:3000"
+val BASE_URL = "http://192.168.68.132:3000"
 
 object AnalyzedResultsClient {
     private val okHttpClient: OkHttpClient by lazy {

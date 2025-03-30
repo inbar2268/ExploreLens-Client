@@ -14,9 +14,6 @@ import com.google.ar.core.TrackingState
 import com.example.explorelens.common.helpers.DisplayRotationHelper
 import com.example.explorelens.common.samplerender.SampleRender
 import com.example.explorelens.common.samplerender.arcore.BackgroundRenderer
-import com.example.explorelens.ml.classification.DetectedObjectResult
-import com.example.explorelens.ml.classification.MLKitObjectDetector
-import com.example.explorelens.ml.classification.ObjectDetector
 import com.example.explorelens.ml.classification.utils.ImageUtils
 import com.example.explorelens.ml.render.LabelRender
 import com.example.explorelens.ml.render.PointCloudRender
@@ -62,8 +59,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
 
 
     private var lastSnapshotData: Snapshot? = null
-    val mlKitAnalyzer = MLKitObjectDetector(activity)
-    var currentAnalyzer: ObjectDetector = mlKitAnalyzer
     val arLabeledAnchors = Collections.synchronizedList(mutableListOf<ARLabeledAnchor>())
 
     override fun onResume(owner: LifecycleOwner) {
@@ -94,8 +89,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     override fun onSurfaceChanged(render: SampleRender?, width: Int, height: Int) {
         displayRotationHelper.onSurfaceChanged(width, height)
     }
-
-    var objectResults: List<DetectedObjectResult>? = null
 
     override fun onDrawFrame(render: SampleRender) {
         val session = activity.arCoreSessionHelper.sessionCache ?: return
@@ -161,7 +154,7 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
             serverResult = null
             val snapshotData = lastSnapshotData
 
-            Log.i(TAG, "$currentAnalyzer got objects: $objects")
+            Log.i(TAG, " Analyzer got objects: $objects")
             val anchors = objects.mapNotNull { obj ->
                 val atX = obj.center?.x
                 val atY = obj.center?.y
@@ -195,14 +188,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
             view.post {
                 view.setScanningActive(false)
                 when {
-                    objects.isEmpty() && currentAnalyzer == mlKitAnalyzer && !mlKitAnalyzer.hasCustomModel() ->
-                        showSnackbar(
-                            "Default ML Kit classification model returned no results. " +
-                                    "For better classification performance, see the README to configure a custom model."
-                        )
-
-                    objects.isEmpty() ->
-                        showSnackbar("Classification model returned no results.")
 
                     anchors.size != objects.size ->
                         showSnackbar(
