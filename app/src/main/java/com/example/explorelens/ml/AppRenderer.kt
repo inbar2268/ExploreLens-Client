@@ -39,6 +39,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import java.io.File
 import java.lang.Thread.sleep
 import java.util.Collections
+import kotlin.math.sqrt
 
 class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, SampleRender.Renderer,
     CoroutineScope by MainScope() {
@@ -142,6 +143,7 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                         centerCoordinate = Pair(200, 500)  // Mock coordinates
                     )
                 )
+                sleep(2000)
                 objectResults = mockResults
             }
         }
@@ -178,14 +180,13 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
             Log.i(TAG, "$currentAnalyzer got objects: $objects")
             val anchors = objects.mapNotNull { obj ->
                 val (atX, atY) = obj.centerCoordinate
-                val snapshotData = lastSnapshotData
 
                 if (snapshotData == null) {
                     Log.e(TAG, "No snapshot data available for anchor creation")
                     return@mapNotNull null
                 }
 
-                val anchor = createAnchorAtPoseXY(
+                val anchor = placeLabelRelativeToSnapshotWithYCorrection(
                     session,
                     snapshotData.cameraPose,
                     atX.toFloat(),
@@ -223,7 +224,120 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
             }
         }
     }
+    private fun placeLabelRelativeToSnapshotWithYCorrection(
+        session: Session,
+        snapshotPose: Pose,
+        labelX: Float,
+        labelY: Float,
+        frame: Frame
+    ): Anchor? {
+        // Same initial steps as before for coordinate conversion
+        convertFloats[0] = labelX
+        convertFloats[1] = labelY
+        frame.transformCoordinates2d(
+            Coordinates2d.IMAGE_PIXELS,
+            convertFloats,
+            Coordinates2d.VIEW,
+            convertFloatsOut
+        )
 
+        // Hit test
+        val hits = frame.hitTest(convertFloatsOut[0], convertFloatsOut[1])
+        val hitResult = hits.firstOrNull() ?: return null
+
+        // Get the hit pose
+        val hitPose = hitResult.hitPose
+
+        // Create ray direction from snapshot
+        val viewWidth = frame.camera.imageIntrinsics.imageDimensions[0].toFloat()
+        val viewHeight = frame.camera.imageIntrinsics.imageDimensions[1].toFloat()
+        val normalizedX = (labelX / viewWidth) * 2 - 1
+        val normalizedY = -((labelY / viewHeight) * 2 - 1)
+
+        // Create direction vector
+        val rayDirection = floatArrayOf(normalizedX, normalizedY, -1.0f, 0.0f)
+        val snapshotRayDirection = snapshotPose.transformPoint(rayDirection)
+
+        // Get distance
+        val hitDistance = hitResult.distance
+
+        // Calculate world position from snapshot
+        val worldPosition = floatArrayOf(
+            snapshotPose.tx() + snapshotRayDirection[0] * hitDistance,
+            // Explicitly lower the Y position to address the "too high" issue
+            (snapshotPose.ty() + snapshotRayDirection[1] * hitDistance) - 0.2f, // Subtract 20cm
+            snapshotPose.tz() + snapshotRayDirection[2] * hitDistance
+        )
+
+        // Create the anchor at the adjusted position
+        val anchorPose = Pose.makeTranslation(worldPosition[0], worldPosition[1], worldPosition[2])
+
+        return session.createAnchor(anchorPose)
+    }
+
+    private fun placeLabelRelativeToSnapshot(
+        session: Session,
+        snapshotPose: Pose,
+        labelX: Float,
+        labelY: Float,
+        frame: Frame
+    ): Anchor? {
+        // Log input coordinates
+        Log.d(TAG, "Input image coordinates: x=$labelX, y=$labelY")
+
+        // 1. Convert image coordinates to view coordinates
+        convertFloats[0] = labelX
+        convertFloats[1] = labelY
+        frame.transformCoordinates2d(
+            Coordinates2d.IMAGE_PIXELS,
+            convertFloats,
+            Coordinates2d.VIEW,
+            convertFloatsOut
+        )
+
+        // 2. Get current camera pose for reference
+        val currentCameraPose = frame.camera.pose
+
+        // 3. Perform hit test using current camera
+        val hits = frame.hitTest(convertFloatsOut[0], convertFloatsOut[1])
+        val hitResult = hits.firstOrNull()
+        if (hitResult == null) {
+            Log.e(TAG, "No hit test results found")
+            return null
+        }
+
+        // 4. Get hit pose and distance
+        val hitPose = hitResult.hitPose
+        val hitDistance = hitResult.distance
+        Log.d(TAG, "Hit pose: tx=${hitPose.tx()}, ty=${hitPose.ty()}, tz=${hitPose.tz()}, distance=$hitDistance")
+
+        // 5. Calculate a ray from the current camera through the touch point
+        val viewWidth = frame.camera.imageIntrinsics.imageDimensions[0].toFloat()
+        val viewHeight = frame.camera.imageIntrinsics.imageDimensions[1].toFloat()
+        val normalizedX = (labelX / viewWidth) * 2 - 1
+        val normalizedY = -((labelY / viewHeight) * 2 - 1) // Flip Y axis
+
+        // 6. Create the same ray direction but from the snapshot camera's perspective
+        // This is key - we're using the same viewport coordinates but from the snapshot pose
+        val rayDirection = floatArrayOf(normalizedX, normalizedY, -1.0f, 0.0f)
+
+        // 7. Transform this direction from snapshot camera space to world space
+        val snapshotRayWorldDirection = snapshotPose.transformPoint(rayDirection)
+
+        // 8. Use the hit distance from the current camera's hit test
+        // but apply it to the ray from the snapshot camera's position
+        val worldPosition = floatArrayOf(
+            snapshotPose.tx() + snapshotRayWorldDirection[0] * hitDistance * 0.95f, // Apply a small correction factor
+            snapshotPose.ty() + snapshotRayWorldDirection[1] * hitDistance * 0.95f, // to address the "too high" issue
+            snapshotPose.tz() + snapshotRayWorldDirection[2] * hitDistance * 0.95f
+        )
+
+        // 9. Create an anchor at this computed position
+        val anchorPose = Pose.makeTranslation(worldPosition[0], worldPosition[1], worldPosition[2])
+        Log.d(TAG, "Final anchor: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}")
+
+        return session.createAnchor(anchorPose)
+    }
 
     private fun takeSnapshot(frame: Frame, session: Session): Snapshot {
         val camera = frame.camera
