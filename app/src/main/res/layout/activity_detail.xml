@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="#F5F5F5"> <!-- Light gray background for the whole layout -->
 
+    <!-- Title TextView (Label) -->
     <TextView
         android:id="@+id/labelTextView"
         android:layout_width="match_parent"
@@ -14,22 +15,33 @@
         android:gravity="center"
         android:textSize="24sp"
         android:textStyle="bold"
-        tools:text="Label Here" />
+        android:textColor="#333333" /> <!-- Dark text color -->
 
+    <!-- Description Label -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp"
+        android:layout_marginBottom="8dp"
         android:text="Description"
         android:textSize="18sp"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:textColor="#555555" /> <!-- Medium dark color for labels -->
 
+    <!-- Container for the Description TextView -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@drawable/rounded_background">
+
+    <!-- Description TextView -->
     <TextView
         android:id="@+id/descriptionTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="16sp"
-        tools:text="Site description will appear here..." />
-
-
+        android:textColor="#444444" />
 </LinearLayout>
+
+    </LinearLayout>
