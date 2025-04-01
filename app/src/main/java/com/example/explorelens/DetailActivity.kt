@@ -15,6 +15,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
 import com.example.explorelens.ml.R
+import java.util.concurrent.TimeUnit
 
 
 class DetailActivity : AppCompatActivity() {
@@ -41,6 +42,9 @@ class DetailActivity : AppCompatActivity() {
 
         // Create OkHttpClient with interceptor for headers
         val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .addHeader("Accept", "application/json")
