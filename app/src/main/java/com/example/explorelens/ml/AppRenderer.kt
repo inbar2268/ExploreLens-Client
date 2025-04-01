@@ -415,11 +415,11 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         } catch (e: NotYetAvailableException) {
             Log.e("takeSnapshot", "No image available yet")
         }
-//        path?.let {
-//            Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
-//            getAnalyzedResult(it)
-//        }
-        val mockResults = listOf(
+        path?.let {
+            Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
+            getAnalyzedResult(it)
+        }
+ /*       val mockResults = listOf(
             ImageAnalyzedResult(
                 status = "success",
                 description = "Famous site detected from cropped object.",
@@ -441,6 +441,7 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                 )
             )
         )
+        */
 
         val snapshot = Snapshot(
             timestamp = frame.timestamp,
@@ -450,8 +451,8 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         )
 
         launch(Dispatchers.Main) {
-            sleep(2000)
-            serverResult = mockResults
+            //sleep(2000)
+            //serverResult = mockResults
             view.setScanningActive(false)
         }
 
