@@ -1,7 +1,11 @@
 package com.example.explorelens
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.view.View
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -18,9 +22,13 @@ import com.example.explorelens.ml.R
 import java.util.concurrent.TimeUnit
 
 
+
 class DetailActivity : AppCompatActivity() {
     private lateinit var labelTextView: TextView
     private lateinit var descriptionTextView: TextView
+    private lateinit var loadingIndicator: ProgressBar
+// Add this in onCreate
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
@@ -33,7 +41,20 @@ class DetailActivity : AppCompatActivity() {
         Log.d("DetailActivity", "Received label: $label")
 
         labelTextView.text = label
+        loadingIndicator = findViewById(R.id.loadingIndicator)
+        loadingIndicator.visibility = View.VISIBLE
         fetchSiteDetails(label)
+
+    }
+    private fun loadData() {
+        Handler(Looper.getMainLooper()).postDelayed({
+            // Once data is loaded, update UI and hide loading indicator
+            labelTextView.text = "Your Title"
+            descriptionTextView.text = "Your description content here"
+
+            // Hide loading indicator
+            loadingIndicator.visibility = View.GONE
+        }, 1500) // Simulating a 1.5 second load time
     }
     private fun fetchSiteDetails(label: String) {
         // Create Retrofit instance with a base URL
@@ -70,6 +91,7 @@ class DetailActivity : AppCompatActivity() {
         call.enqueue(object : Callback<String> {
             override fun onResponse(call: Call<String>, response: Response<String>) {
                 if (response.isSuccessful) {
+                    loadingIndicator.visibility = View.GONE
                     val responseBody = response.body()
                     if (responseBody != null) {
                         // Update UI with the string response
@@ -85,6 +107,7 @@ class DetailActivity : AppCompatActivity() {
             }
 
             override fun onFailure(call: Call<String>, t: Throwable) {
+                loadingIndicator.visibility = View.GONE
                 Log.e("DetailActivity", "Network error: ${t.message}", t)
                 showError("Network error: ${t.message}")
             }

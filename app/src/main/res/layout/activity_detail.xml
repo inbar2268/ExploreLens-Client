@@ -4,7 +4,15 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="#F5F5F5"> <!-- Light gray background for the whole layout -->
+    android:background="#F5F5F5">
+
+    <!-- Loading Indicator (ProgressBar) -->
+    <ProgressBar
+        android:id="@+id/loadingIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
 
     <!-- Title TextView (Label) -->
     <TextView
@@ -15,7 +23,7 @@
         android:gravity="center"
         android:textSize="24sp"
         android:textStyle="bold"
-        android:textColor="#333333" /> <!-- Dark text color -->
+        android:textColor="#333333" />
 
     <!-- Description Label -->
     <TextView
@@ -25,23 +33,30 @@
         android:text="Description"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:textColor="#555555" /> <!-- Medium dark color for labels -->
+        android:textColor="#555555" />
 
     <!-- Container for the Description TextView -->
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="@drawable/rounded_background">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
-    <!-- Description TextView -->
-    <TextView
-        android:id="@+id/descriptionTextView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textColor="#444444" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@drawable/rounded_background">
+
+            <!-- Description TextView -->
+            <TextView
+                android:id="@+id/descriptionTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="#444444" />
+        </LinearLayout>
+    </ScrollView>
+
 </LinearLayout>
-
-    </LinearLayout>
