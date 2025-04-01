@@ -3,3 +3,5 @@
 *.tflite
 
 src/main/res/raw/credentials.json
+
+
