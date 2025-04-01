@@ -39,6 +39,8 @@ import java.io.File
 import java.lang.Thread.sleep
 import java.util.Collections
 import kotlin.math.sqrt
+import com.example.explorelens.networking.AnalyzedResultsClient
+
 
 class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, SampleRender.Renderer,
     CoroutineScope by MainScope() {
