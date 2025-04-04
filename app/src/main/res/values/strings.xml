@@ -15,9 +15,10 @@
 -->
 
 <resources>
-  <string name="app_name">ARCore MLKit</string>
-  <string name="scan_busy">Scanning…</string>
-  <string name="scan_available">Scan</string>
-  <string name="clear">Clear</string>
-  <string name="use_cloud_ml">Use Cloud ML</string>
+    <string name="app_name">ARCore MLKit</string>
+    <string name="scan_busy">Scanning…</string>
+    <string name="scan_available">Scan</string>
+    <string name="clear">Clear</string>
+    <string name="use_cloud_ml">Use Cloud ML</string>
+    <string name="title_activity_detail">DetailActivity</string>
 </resources>

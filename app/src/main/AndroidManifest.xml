@@ -12,7 +12,12 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Design.Light.NoActionBar">
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+      <activity
+          android:name="com.example.explorelens.DetailActivity"
+          android:exported="false"
+          android:label="@string/title_activity_detail"
+          android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
         <activity
             android:name="com.example.explorelens.ml.MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
@@ -28,5 +33,11 @@
             android:name="com.google.ar.core"
             android:value="required" />
     </application>
+
+    <uses-feature android:name="android.hardware.camera" />
+    <uses-feature android:name="android.hardware.camera.ar" />
+    <uses-feature
+        android:name="android.hardware.camera.flash"
+        android:required="false" />
 
 </manifest>

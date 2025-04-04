@@ -1,11 +1,13 @@
 package com.example.explorelens.ml
 
+import android.content.Intent
 import android.content.Context
 import android.graphics.Bitmap
 import android.opengl.Matrix
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.example.explorelens.DetailActivity
 import com.example.explorelens.Extensions.convertYuv
 import com.example.explorelens.Extensions.toFile
 import com.example.explorelens.Model.Snapshot
@@ -32,6 +34,7 @@ import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import com.example.explorelens.networking.AnalyzedResultApi
+import com.example.explorelens.networking.AnalyzedResultsClient
 import com.example.explorelens.networking.SiteInformation
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -133,6 +136,14 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         frame.acquirePointCloud().use { pointCloud ->
             pointCloudRender.drawPointCloud(render, pointCloud, viewProjectionMatrix)
         }
+        pendingTouchX?.let { x ->
+            pendingTouchY?.let { y ->
+                processTouchInGLThread(x, y, frame, session)
+                // Clear the pending touch
+                pendingTouchX = null
+                pendingTouchY = null
+            }
+        }
         processObjectResults(frame, session)
         drawAnchors(render, frame)
     }
@@ -166,7 +177,7 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
                 val atX = obj.siteInformation?.x
                 val atY = obj.siteInformation?.y
 
-                if (atX == null || atY == null) {
+                if(atX == null || atY == null){
                     return@mapNotNull null
                 }
 
@@ -422,7 +433,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         return session.createAnchor(anchorPose)
     }
 
-
     private fun takeSnapshot(frame: Frame, session: Session): Snapshot {
         val camera = frame.camera
         val viewMatrix = FloatArray(16)
@@ -496,7 +506,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
     } catch (e: Throwable) {
         throw e
     }
-
     fun getAnalyzedResult(path: String) {
         Log.d("AnalyzeImage", "Starting image analysis")
         launch(Dispatchers.IO) {
@@ -578,10 +587,90 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         }
     }
 
+
     private fun showSnackbar(message: String): Unit =
         activity.view.snackbarHelper.showError(activity, message)
 
     private fun hideSnackbar() = activity.view.snackbarHelper.hide(activity)
+
+    private var pendingTouchX: Float? = null
+    private var pendingTouchY: Float? = null
+
+    fun handleTouch(x: Float, y: Float) {
+        // Just store the coordinates for later processing
+        Log.d(TAG, "Touch received at x=$x, y=$y")
+        pendingTouchX = x
+        pendingTouchY = y
+    }
+
+
+    private fun openDetailActivity(label: String) {
+        activity.runOnUiThread {
+            Log.d(TAG, "Opening DetailActivity with label: $label")
+            val intent = Intent(activity, DetailActivity::class.java)
+            intent.putExtra("LABEL_KEY", label)
+            activity.startActivity(intent)
+        }
+    }
+    private fun distanceBetween(pose1: Pose, pose2: Pose): Float {
+        val dx = pose1.tx() - pose2.tx()
+        val dy = pose1.ty() - pose2.ty()
+        val dz = pose1.tz() - pose2.tz()
+        return sqrt(dx * dx + dy * dy + dz * dz)
+    }
+
+    private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Session) {
+        val camera = frame.camera
+
+        if (camera.trackingState != TrackingState.TRACKING) {
+            Log.w(TAG, "Camera is not tracking.")
+            return
+        }
+
+        try {
+            // Perform hit test
+            val hitResults = frame.hitTest(x, y)
+
+            Log.d(TAG, "Hit test performed, found ${hitResults.size} results")
+
+            for (hit in hitResults) {
+                val hitPose = hit.hitPose
+                Log.d(TAG, "Hit pose: x=${hitPose.tx()}, y=${hitPose.ty()}, z=${hitPose.tz()}")
+
+                // Log all anchors for debugging
+                arLabeledAnchors.forEachIndexed { index, anchor ->
+                    Log.d(TAG, "Anchor $index: label=${anchor.label}, pose: x=${anchor.anchor.pose.tx()}, y=${anchor.anchor.pose.ty()}, z=${anchor.anchor.pose.tz()}")
+                    val distance = distanceBetween(anchor.anchor.pose, hitPose)
+                    Log.d(TAG, "Distance to anchor $index: $distance")
+                }
+
+                // Check if the hit is close to any of our anchors
+                val clickedAnchor = arLabeledAnchors.find { anchor ->
+                    val distance = distanceBetween(anchor.anchor.pose, hitPose)
+                    Log.d(TAG, "Distance to ${anchor.label}: $distance")
+                    distance < 0.2f  // You might need to adjust this threshold
+                }
+
+                if (clickedAnchor != null) {
+                    Log.d(TAG, "Clicked on anchor: ${clickedAnchor.label}")
+                    activity.runOnUiThread {
+                        // Navigate to detail activity on the UI thread
+                        openDetailActivity(clickedAnchor.label)
+                    }
+                    return
+                }
+            }
+
+            if (hitResults.isEmpty()) {
+                Log.d(TAG, "No hit results found")
+            } else {
+                Log.d(TAG, "Hit results found but no anchors were close enough")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error processing touch", e)
+        }
+    }
+
 
 }
 

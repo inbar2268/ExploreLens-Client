@@ -18,7 +18,7 @@
         android:layout_height="80dp"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="40dp"
-        android:background="@drawable/camera_button_background"
+        android:background="@drawable/camera_icon"
         android:elevation="4dp" />
 
 
