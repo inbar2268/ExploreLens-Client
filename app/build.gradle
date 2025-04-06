@@ -3,6 +3,14 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+import java.util.Properties
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.newDataInputStream())
+}
+
 android {
 
     buildFeatures {
@@ -13,12 +21,61 @@ android {
 
     namespace "com.example.explorelens.ml"
 
+
+
     defaultConfig {
-        applicationId "com.example.explorelens"
+        applicationId "com.example.explorelens.ml"
         minSdkVersion 24
         targetSdkVersion 35
         versionCode 1
         versionName "1.0"
+
+        buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty('BASE_URL', 'http://localhost:3000')}\"")
+        //buildConfigField("String", "BASE_URL", "\"${local.properties['BASE_URL'] ?: '127.0.0.1'}\"")
+        buildConfigField("Boolean", "USE_MOCK_DATA", "${project.properties["USE_MOCK_DATA"] ?: "false"}")
+
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            // Create a task to generate the network security config
+            def generateNetworkSecurityConfig = task("generate${variant.name.capitalize()}NetworkSecurityConfig") {
+                doLast {
+                    def templateFile = file("${projectDir}/src/main/res/xml/network_security_config.xml")
+                    def outputFile = file("${projectDir}/build/generated/res/xml/${variant.name}/network_security_config.xml")
+
+                    outputFile.parentFile.mkdirs()
+
+                    // Use BASE_URL from local.properties
+                    def localProps = new Properties()
+                    def localPropsFile = rootProject.file("local.properties")
+                    if (localPropsFile.exists()) {
+                        localProps.load(new FileInputStream(localPropsFile))
+                    }
+                    def baseUrl = localProps['BASE_URL'] ?: 'http://localhost:3000'
+
+                    def templateContent = templateFile.text
+                    def outputContent = templateContent.replace('$BASE_URL', baseUrl)
+
+                    outputFile.text = outputContent
+                }
+            }
+
+            // Hook into the build process
+            variant.preBuildProvider.get().dependsOn(generateNetworkSecurityConfig)
+
+            // Register the generated resource directory
+            variant.registerGeneratedResFolders(
+                    files("${projectDir}/build/generated/res/xml/${variant.name}").builtBy(generateNetworkSecurityConfig)
+            )
+        }
+    }
+
+
+    buildFeatures {
+        viewBinding true
+        buildConfig true
+        compose true
     }
 
     buildTypes {
@@ -73,6 +130,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.11.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
     implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.9.2'
 
 
     // Obj - a simple Wavefront OBJ file loader
@@ -84,6 +142,7 @@ dependencies {
     implementation 'androidx.compose.material3:material3-android:1.3.1'
     implementation 'androidx.compose.runtime:runtime-android:1.7.8'
     implementation 'androidx.compose.foundation:foundation-android:1.7.8'
+
 }
 configurations.all {
     resolutionStrategy {

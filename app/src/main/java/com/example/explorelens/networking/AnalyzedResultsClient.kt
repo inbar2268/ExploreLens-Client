@@ -1,14 +1,20 @@
 package com.example.explorelens.networking
 
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import com.example.explorelens.ml.BuildConfig
 
-val BASE_URL = "http://10.100.102.69:3000"
+val BASE_URL = BuildConfig.BASE_URL
 
 object AnalyzedResultsClient {
     private val okHttpClient: OkHttpClient by lazy {
+        val loggingInterceptor = HttpLoggingInterceptor()
+        loggingInterceptor.level = HttpLoggingInterceptor.Level.BODY // Log body content
+
         OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor) // Add the logging interceptor
             .addInterceptor(AnalyzedResultInterceptor())
             .build()
     }
@@ -21,9 +27,11 @@ object AnalyzedResultsClient {
             .build()
         retrofitClient.create(AnalyzedResultApi::class.java)
     }
+
     val siteDetailsApiClient: SiteDetailsApi by lazy {
         createRetrofitClient().create(SiteDetailsApi::class.java)
     }
+
     private fun createRetrofitClient(): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
@@ -31,5 +39,4 @@ object AnalyzedResultsClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
-
 }
