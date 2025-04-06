@@ -1,10 +1,10 @@
-package com.example.explorelens.networking
+package com.example.explorelens.data.network
 
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import com.example.explorelens.ml.BuildConfig
+import com.example.explorelens.BuildConfig
 
 val BASE_URL = BuildConfig.BASE_URL
 
@@ -16,6 +16,9 @@ object AnalyzedResultsClient {
         OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor) // Add the logging interceptor
             .addInterceptor(AnalyzedResultInterceptor())
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS) // Set connection timeout
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS) // Set read timeout
+            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS) // Set write timeout
             .build()
     }
 

@@ -1,4 +1,4 @@
-package com.example.explorelens.ml.render
+package com.example.explorelens.ar.render
 
 import com.google.ar.core.Pose
 import com.example.explorelens.common.samplerender.Mesh
@@ -9,7 +9,6 @@ import android.graphics.Color
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import android.graphics.Paint
-import android.graphics.RectF
 import android.graphics.Typeface
 import android.util.Log
 

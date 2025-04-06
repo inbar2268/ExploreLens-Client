@@ -1,27 +1,25 @@
-package com.example.explorelens.ml
+package com.example.explorelens.ar
 
 import android.content.Intent
-import android.content.Context
-import android.graphics.Bitmap
-import com.example.explorelens.ml.BuildConfig
 import android.opengl.Matrix
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.example.explorelens.ArActivity
 import com.example.explorelens.DetailActivity
-import com.example.explorelens.Extensions.convertYuv
-import com.example.explorelens.Extensions.toFile
-import com.example.explorelens.Model.Snapshot
+import com.example.explorelens.extensions.convertYuv
+import com.example.explorelens.extensions.toFile
+import com.example.explorelens.model.Snapshot
 import com.google.ar.core.Frame
 import com.google.ar.core.TrackingState
 import com.example.explorelens.common.helpers.DisplayRotationHelper
 import com.example.explorelens.common.samplerender.SampleRender
 import com.example.explorelens.common.samplerender.arcore.BackgroundRenderer
-import com.example.explorelens.ml.classification.utils.ImageUtils
-import com.example.explorelens.ml.render.LabelRender
-import com.example.explorelens.ml.render.PointCloudRender
-import com.example.explorelens.networking.allImageAnalyzedResults
-import com.example.explorelens.networking.ImageAnalyzedResult
+import com.example.explorelens.ar.classification.utils.ImageUtils
+import com.example.explorelens.ar.render.LabelRender
+import com.example.explorelens.ar.render.PointCloudRender
+import com.example.explorelens.data.network.allImageAnalyzedResults
+import com.example.explorelens.data.network.ImageAnalyzedResult
 import com.google.ar.core.Anchor
 import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Pose
@@ -34,23 +32,23 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import com.example.explorelens.networking.AnalyzedResultApi
-import com.example.explorelens.networking.AnalyzedResultsClient
-import com.example.explorelens.networking.SiteInformation
+import com.example.explorelens.data.network.AnalyzedResultsClient
+import com.example.explorelens.data.network.SiteInformation
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import java.io.File
 import java.lang.Thread.sleep
 import java.util.Collections
 import kotlin.math.sqrt
+import com.example.explorelens.BuildConfig
 
-class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, SampleRender.Renderer,
+class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRender.Renderer,
     CoroutineScope by MainScope() {
     companion object {
         val TAG = "HelloArRenderer"
     }
 
-    lateinit var view: MainActivityView
+    lateinit var view: ArActivityView
     val displayRotationHelper = DisplayRotationHelper(activity)
     lateinit var backgroundRenderer: BackgroundRenderer
     val pointCloudRender = PointCloudRender()
@@ -77,7 +75,7 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         displayRotationHelper.onPause()
     }
 
-    fun bindView(view: MainActivityView) {
+    fun bindView(view: ArActivityView) {
         this.view = view
         view.snapshotButton.setOnClickListener {
             scanButtonWasPressed = true

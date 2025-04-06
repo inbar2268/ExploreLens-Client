@@ -1,23 +1,19 @@
 
-package com.example.explorelens.ml
+package com.example.explorelens.ar
 import android.opengl.GLSurfaceView
-import android.util.Log
 import android.view.View
 import androidx.appcompat.widget.AppCompatButton
-import androidx.appcompat.widget.AppCompatImageButton
-import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.example.explorelens.ArActivity
 import com.example.explorelens.common.helpers.SnackbarHelper
 import com.example.explorelens.common.samplerender.SampleRender
-import android.view.ScaleGestureDetector
-import android.view.MotionEvent
-import com.example.explorelens.ml.AppRenderer.Companion.TAG
+import com.example.explorelens.R
 
 /**
  * Wraps [R.layout.activity_main] and controls lifecycle operations for [GLSurfaceView].
  */
-class MainActivityView(val activity: MainActivity, renderer: AppRenderer) : DefaultLifecycleObserver {
+class ArActivityView(val activity: ArActivity, renderer: AppRenderer) : DefaultLifecycleObserver {
   val root = View.inflate(activity, R.layout.activity_main, null)
   val surfaceView = root.findViewById<GLSurfaceView>(R.id.surfaceview).apply {
     SampleRender(this, renderer, activity.assets)

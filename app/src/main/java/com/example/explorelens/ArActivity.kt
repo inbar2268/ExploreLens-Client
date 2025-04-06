@@ -1,4 +1,4 @@
-package com.example.explorelens.ml
+package com.example.explorelens
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -13,21 +13,17 @@ import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException
 import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
-import android.hardware.camera2.CameraManager
-import android.content.Context
-import android.hardware.camera2.CameraAccessException
 import android.view.MotionEvent
-import com.google.ar.core.Camera
-import com.google.ar.core.TrackingState
-import kotlin.math.max
-import kotlin.math.min
+import com.example.explorelens.ar.ARCoreSessionLifecycleHelper
+import com.example.explorelens.ar.AppRenderer
+import com.example.explorelens.ar.ArActivityView
 
-class MainActivity : AppCompatActivity() {
+class ArActivity : AppCompatActivity() {
   val TAG = "MainActivity"
   lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
 
   lateinit var renderer: AppRenderer
-  lateinit var view: MainActivityView
+  lateinit var view: ArActivityView
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -76,7 +72,7 @@ class MainActivity : AppCompatActivity() {
     lifecycle.addObserver(renderer)
 
     // Set up AR UI
-    view = MainActivityView(this, renderer)
+    view = ArActivityView(this, renderer)
     setContentView(view.root)
     renderer.bindView(view)
     lifecycle.addObserver(view)

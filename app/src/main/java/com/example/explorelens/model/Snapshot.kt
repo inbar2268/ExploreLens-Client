@@ -1,6 +1,5 @@
-package com.example.explorelens.Model
+package com.example.explorelens.model
 
-import android.graphics.Bitmap
 import com.google.ar.core.Pose
 
 class Snapshot (

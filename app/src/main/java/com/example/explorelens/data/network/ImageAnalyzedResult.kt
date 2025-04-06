@@ -1,4 +1,4 @@
-package com.example.explorelens.networking
+package com.example.explorelens.data.network
 
 import com.google.gson.annotations.SerializedName
 
