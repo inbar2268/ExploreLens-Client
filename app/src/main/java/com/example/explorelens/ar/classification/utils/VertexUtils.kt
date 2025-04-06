@@ -1,5 +1,5 @@
 
-package com.example.explorelens.ml.classification.utils
+package com.example.explorelens.ar.classification.utils
 
 import com.google.cloud.vision.v1.NormalizedVertex
 

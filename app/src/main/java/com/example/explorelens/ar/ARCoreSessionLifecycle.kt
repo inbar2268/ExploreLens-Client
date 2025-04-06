@@ -1,5 +1,5 @@
 
-package com.example.explorelens.ml
+package com.example.explorelens.ar
 
 import android.app.Activity
 import android.widget.Toast

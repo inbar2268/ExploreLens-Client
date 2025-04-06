@@ -1,4 +1,4 @@
-package com.example.explorelens.ml.render
+package com.example.explorelens.ar.render
 
 import android.graphics.Bitmap
 import android.graphics.Canvas

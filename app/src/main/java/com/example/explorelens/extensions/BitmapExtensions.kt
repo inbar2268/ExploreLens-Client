@@ -1,14 +1,9 @@
-package com.example.explorelens.Extensions
-import android.graphics.YuvImage
-import android.graphics.Rect
-import java.io.ByteArrayOutputStream
+package com.example.explorelens.extensions
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.media.Image
 import android.util.Log
 import com.example.android.camera.utils.YuvToRgbConverter
-import com.google.ar.core.ImageFormat
 import java.io.File
 import java.io.FileOutputStream
 

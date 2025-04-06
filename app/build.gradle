@@ -19,12 +19,12 @@ android {
     compileSdkVersion 35
     buildToolsVersion "30.0.3"
 
-    namespace "com.example.explorelens.ml"
+    namespace "com.example.explorelens"
 
 
 
     defaultConfig {
-        applicationId "com.example.explorelens.ml"
+        applicationId "com.example.explorelens"
         minSdkVersion 24
         targetSdkVersion 35
         versionCode 1

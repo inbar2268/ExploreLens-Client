@@ -8,8 +8,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.explorelens.ml.R
-import com.example.explorelens.networking.AnalyzedResultsClient
+import com.example.explorelens.data.network.AnalyzedResultsClient
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response

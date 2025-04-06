@@ -1,4 +1,4 @@
-package com.example.explorelens.networking
+package com.example.explorelens.data.network
 
 import retrofit2.Call
 import retrofit2.http.GET

@@ -1,5 +1,5 @@
 
-package com.example.explorelens.ml.render
+package com.example.explorelens.ar.render
 
 import com.google.ar.core.PointCloud
 import com.example.explorelens.common.samplerender.Mesh

@@ -1,6 +1,5 @@
-package com.example.explorelens.networking
+package com.example.explorelens.data.network
 
-import com.example.explorelens.networking.allImageAnalyzedResults
 import okhttp3.MultipartBody
 import retrofit2.http.POST
 import retrofit2.Call

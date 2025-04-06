@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.explorelens.ml">
+    package="com.example.explorelens">
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.ar" />
@@ -19,7 +19,7 @@
           android:label="@string/title_activity_detail"
           android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
         <activity
-            android:name="com.example.explorelens.ml.MainActivity"
+            android:name="com.example.explorelens.ArActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="true"
             android:screenOrientation="fullSensor">

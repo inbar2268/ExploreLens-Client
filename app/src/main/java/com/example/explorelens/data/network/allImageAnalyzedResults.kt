@@ -1,7 +1,4 @@
-package com.example.explorelens.networking
-
-import com.example.explorelens.networking.ImageAnalyzedResult
-import com.google.gson.annotations.SerializedName
+package com.example.explorelens.data.network
 
 data class allImageAnalyzedResults(
     val result: List<ImageAnalyzedResult>? = null,
