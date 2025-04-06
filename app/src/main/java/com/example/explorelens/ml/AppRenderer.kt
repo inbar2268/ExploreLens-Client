@@ -3,6 +3,7 @@ package com.example.explorelens.ml
 import android.content.Intent
 import android.content.Context
 import android.graphics.Bitmap
+import com.example.explorelens.ml.BuildConfig
 import android.opengl.Matrix
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -456,32 +457,47 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
         } catch (e: NotYetAvailableException) {
             Log.e("takeSnapshot", "No image available yet")
         }
-        path?.let {
-            Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
-            getAnalyzedResult(it)
+
+        if(BuildConfig.USE_MOCK_DATA){
+            path?.let {
+                Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
+            }
+            val mockResults = listOf(
+            ImageAnalyzedResult(
+                status = "success",
+                description = "Famous site detected from cropped object.",
+                siteInformation = SiteInformation(
+                    label = "Building",
+                    x = 0.4430117717f,
+                    y = 0.419694645f,
+                    siteName = "Independence Hall In Shalom Tower"
+                )
+            ),
+            ImageAnalyzedResult(
+                status = "assume",
+                description = "Famous site detected in full image.",
+                siteInformation = SiteInformation(
+                    label = "full-image",
+                    x = 0.5f,
+                    y = 0.5f,
+                    siteName = "Holocaust Monument Rabin Square"
+                )
+            )
+        )
+            launch(Dispatchers.Main) {
+                sleep(2000)
+                serverResult = mockResults
+                view.setScanningActive(false)
+            }
+        } else{
+            path?.let {
+                Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
+                getAnalyzedResult(it)
+            }
+            launch(Dispatchers.Main) {
+                view.setScanningActive(false)
+            }
         }
-//        val mockResults = listOf(
-//            ImageAnalyzedResult(
-//                status = "success",
-//                description = "Famous site detected from cropped object.",
-//                siteInformation = SiteInformation(
-//                    label = "Building",
-//                    x = 0.4430117717f,
-//                    y = 0.419694645f,
-//                    siteName = "Independence Hall In Shalom Tower"
-//                )
-//            ),
-//            ImageAnalyzedResult(
-//                status = "assume",
-//                description = "Famous site detected in full image.",
-//                siteInformation = SiteInformation(
-//                    label = "full-image",
-//                    x = 0.5f,
-//                    y = 0.5f,
-//                    siteName = "Holocaust Monument Rabin Square"
-//                )
-//            )
-//        )
 
         val snapshot = Snapshot(
             timestamp = frame.timestamp,
@@ -489,13 +505,6 @@ class AppRenderer(val activity: MainActivity) : DefaultLifecycleObserver, Sample
             viewMatrix = viewMatrix,
             projectionMatrix = projectionMatrix
         )
-
-        launch(Dispatchers.Main) {
-//            sleep(2000)
-//            serverResult = mockResults
-            view.setScanningActive(false)
-        }
-
         return snapshot
     }
 

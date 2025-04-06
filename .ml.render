@@ -1,0 +1,11 @@
+  backup-branch[m
+  feat/add-anchors-to-detected-objects[m
+  feat/anchor-placement-camera-pose[m
+  feat/connect-server-to-anchor-placment[m
+  feat/get-result_from-server[m
+  feat/handle-api-response[m
+  feat/mockup-data[m
+  feat/remove-default-object-detector[m
+* [32mfix/place-label-relative-to-snapshot[m
+  main[m
+  server-connection[m
