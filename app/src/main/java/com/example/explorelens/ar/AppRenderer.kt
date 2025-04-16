@@ -198,14 +198,24 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
                     TAG,
                     "Anchor Pose: x=${anchor.pose.tx()}, y=${anchor.pose.ty()}, z=${anchor.pose.tz()}"
                 )
-                ARLabeledAnchor(anchor, obj.siteInformation!!.siteName)
 
+                // Create a combined label with site name and description
+                // Format: "SiteName||Description"
+                val siteName = obj.siteInformation!!.siteName
+                val description = obj.description ?: ""
+                val labelText = "$siteName||$description"
+
+                Log.d(TAG, "Creating label with text: $labelText")
+
+                ARLabeledAnchor(anchor, labelText)
             }
+
             arLabeledAnchors.addAll(anchors)
             view.post {
                 view.setScanningActive(false)
                 when {
-
+                    anchors.isEmpty() ->
+                        showSnackbar("No objects were detected. Try scanning again.")
                     anchors.size != objects.size ->
                         showSnackbar(
                             "Objects were classified, but could not be attached to an anchor. " +
@@ -659,10 +669,13 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
                 }
 
                 if (clickedAnchor != null) {
-                    Log.d(TAG, "Clicked on anchor: ${clickedAnchor.label}")
+                    // Extract only the site name part (before the || separator)
+                    val siteName = clickedAnchor.label.split("||")[0]
+                    Log.d(TAG, "Clicked on anchor: $siteName")
+
                     activity.runOnUiThread {
-                        // Navigate to detail activity on the UI thread
-                        openDetailActivity(clickedAnchor.label)
+                        // Navigate to detail activity with just the site name
+                        openDetailActivity(siteName)
                     }
                     return
                 }
@@ -677,8 +690,6 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             Log.e(TAG, "Error processing touch", e)
         }
     }
-
-
 }
 
 data class ARLabeledAnchor(val anchor: Anchor, val label: String)

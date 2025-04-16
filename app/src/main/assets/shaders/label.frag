@@ -9,9 +9,10 @@ uniform vec4 fragColor;  // Color for the fragment (for background or effects)
 layout(location = 0) out vec4 o_FragColor;  // Output color of the fragment
 
 void main(void) {
-    // Sample the texture using the texture coordinates
-    vec4 texColor = texture(uTexture, vec2(vTexPos.x, 1.0 - vTexPos.y));  // Flip the Y-axis to match OpenGL conventions
+    // Sample the texture using the texture coordinates (flipping Y-axis)
+    vec4 texColor = texture(uTexture, vec2(vTexPos.x, 1.0 - vTexPos.y));
 
-    // Set the final output color, combining the texture color with the fragColor
-    o_FragColor = texColor * fragColor;  // Apply color to texture (blend or effect)
+    // Output the texture color multiplied by the fragment color
+    // This preserves the alpha channel from both the texture and the fragColor
+    o_FragColor = texColor * fragColor;
 }
