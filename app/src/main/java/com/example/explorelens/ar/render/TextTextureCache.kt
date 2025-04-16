@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.opengl.GLES30
 import android.util.Log
@@ -60,21 +61,39 @@ class TextTextureCache {
     return texture
   }
 
-  // Simple paint for label text (bright red to be visible)
-  val textPaint = Paint().apply {
-    textSize = 42f // Larger text size for visibility
-    color = Color.RED // Bright red for visibility
+  // Clean, elegant text for the label
+  val labelPaint = Paint().apply {
+    textSize = 40f
+    color = Color.BLACK
     style = Paint.Style.FILL
     isAntiAlias = true
     textAlign = Paint.Align.CENTER
-    typeface = Typeface.DEFAULT_BOLD
+    typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
   }
 
-  // Black outline for text readability
-  val strokePaint = Paint(textPaint).apply {
+  // Smaller text for the description
+  val descPaint = Paint().apply {
+    textSize = 30f
     color = Color.BLACK
+    style = Paint.Style.FILL
+    isAntiAlias = true
+    textAlign = Paint.Align.CENTER
+    typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+  }
+
+  // Background container paint
+  val bgPaint = Paint().apply {
+    color = Color.argb(220, 255, 255, 255) // Semi-transparent white
+    style = Paint.Style.FILL
+    isAntiAlias = true
+  }
+
+  // Light gray outline for the container
+  val outlinePaint = Paint().apply {
+    color = Color.argb(255, 200, 200, 200) // Light gray
     style = Paint.Style.STROKE
-    strokeWidth = 4f // Thicker stroke for better visibility
+    strokeWidth = 3f
+    isAntiAlias = true
   }
 
   private fun generateBitmapFromString(string: String): Bitmap {
@@ -85,32 +104,35 @@ class TextTextureCache {
     val label = parts[0].trim()
     val description = if (parts.size > 1) parts[1].trim() else ""
 
-    val w = 512 // Wider
-    val h = 256
+    val w = 512 // Width
+    val h = 256 // Height
 
     val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
 
-    // Fill with semi-transparent black for the container background
-    bitmap.eraseColor(Color.argb(180, 0, 0, 0))
+    // Start with transparent background
+    bitmap.eraseColor(Color.TRANSPARENT)
 
     val canvas = Canvas(bitmap)
 
-    // Draw label text with outline
-    canvas.drawText(label, w / 2f, h / 3f, strokePaint)
-    canvas.drawText(label, w / 2f, h / 3f, textPaint)
+    // Define the container rectangle with padding
+    val padding = 20f
+    val containerRect = RectF(
+      padding,
+      padding,
+      w - padding,
+      h - padding
+    )
 
-    // Draw description if it exists (with smaller font)
+    // Draw rounded rectangle for the container
+    val cornerRadius = 30f // Large corner radius for modern look
+    canvas.drawRoundRect(containerRect, cornerRadius, cornerRadius, bgPaint)
+    canvas.drawRoundRect(containerRect, cornerRadius, cornerRadius, outlinePaint)
+
+    // Draw label with elegant font
+    canvas.drawText(label, w / 2f, h * 0.38f, labelPaint)
+
+    // Draw description if it exists
     if (description.isNotEmpty()) {
-      val descPaint = Paint(textPaint).apply {
-        textSize = 32f
-        color = Color.WHITE
-        typeface = Typeface.DEFAULT
-      }
-
-      val descStrokePaint = Paint(strokePaint).apply {
-        textSize = 32f
-      }
-
       // Truncate text if needed
       val maxWidth = w * 0.85f
       val truncatedDesc = if (descPaint.measureText(description) > maxWidth) {
@@ -123,11 +145,9 @@ class TextTextureCache {
         description
       }
 
-      canvas.drawText(truncatedDesc, w / 2f, h * 2/3f, descStrokePaint)
-      canvas.drawText(truncatedDesc, w / 2f, h * 2/3f, descPaint)
+      canvas.drawText(truncatedDesc, w / 2f, h * 0.65f, descPaint)
     }
 
-    // Log bitmap dimensions for debugging
     Log.d(TAG, "Created bitmap: ${bitmap.width}x${bitmap.height}, config: ${bitmap.config}")
 
     return bitmap

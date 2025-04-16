@@ -9,6 +9,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.explorelens.data.network.AnalyzedResultsClient
+import com.example.explorelens.R
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response

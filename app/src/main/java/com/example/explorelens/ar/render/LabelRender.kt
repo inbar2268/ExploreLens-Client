@@ -14,20 +14,20 @@ class LabelRender {
     private const val TAG = "LabelRender"
     val COORDS_BUFFER_SIZE = 2 * 4 * 4
 
-    // Create a larger quad for better visibility
+    // Adjusted aspect ratio for better looking card
     val NDC_QUAD_COORDS_BUFFER =
       ByteBuffer.allocateDirect(COORDS_BUFFER_SIZE).order(
         ByteOrder.nativeOrder()
       ).asFloatBuffer().apply {
         put(
           floatArrayOf(
-            -1.5f, -0.75f, // Bottom left - changed aspect ratio
-            1.5f, -0.75f,  // Bottom right
-            -1.5f, 0.75f,  // Top left
-            1.5f, 0.75f,   // Top right
+            -1.8f, -0.9f, // Bottom left - wider aspect ratio
+            1.8f, -0.9f,  // Bottom right
+            -1.8f, 0.9f,  // Top left
+            1.8f, 0.9f,   // Top right
           )
         )
-        position(0) // Important! Reset position after putting data
+        position(0)
       }
 
     val SQUARE_TEX_COORDS_BUFFER =
@@ -42,7 +42,7 @@ class LabelRender {
             1f, 1f,
           )
         )
-        position(0) // Important! Reset position after putting data
+        position(0)
       }
   }
 
@@ -52,7 +52,7 @@ class LabelRender {
   lateinit var shader: Shader
 
   fun onSurfaceCreated(render: SampleRender) {
-    // Create shader with simpler configuration
+    // Create shader with proper blending for transparency
     shader = Shader.createFromAssets(render, "shaders/label.vert", "shaders/label.frag", null)
       .setBlend(
         Shader.BlendFactor.SRC_ALPHA,
@@ -61,7 +61,7 @@ class LabelRender {
       .setDepthTest(false)
       .setDepthWrite(false)
 
-    // Default white color for the texture (will be multiplied with the texture color)
+    // Default pure white color for the texture (1.0 alpha for full opacity)
     shader.setVec4("fragColor", floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f))
 
     // Create mesh from vertex buffers
@@ -84,8 +84,9 @@ class LabelRender {
     Log.d(TAG, "Drawing label: $label")
 
     // Set the label origin from the pose
+    // Adjust Y position slightly upward for better positioning
     labelOrigin[0] = pose.tx()
-    labelOrigin[1] = pose.ty()
+    labelOrigin[1] = pose.ty() + 0.1f  // Offset upward slightly
     labelOrigin[2] = pose.tz()
 
     // Set the shader uniforms
