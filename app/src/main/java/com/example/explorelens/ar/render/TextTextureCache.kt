@@ -13,6 +13,7 @@ import com.example.explorelens.common.samplerender.GLError
 import com.example.explorelens.common.samplerender.SampleRender
 import com.example.explorelens.common.samplerender.Texture
 import java.nio.ByteBuffer
+
 /**
  * Generates and caches GL textures for label names.
  */
@@ -63,7 +64,7 @@ class TextTextureCache {
 
   // Clean, elegant text for the label
   val labelPaint = Paint().apply {
-    textSize = 40f
+    textSize = 36f // REDUCED text size for better fit
     color = Color.BLACK
     style = Paint.Style.FILL
     isAntiAlias = true
@@ -73,7 +74,7 @@ class TextTextureCache {
 
   // Smaller text for the description
   val descPaint = Paint().apply {
-    textSize = 30f
+    textSize = 26f // REDUCED text size for description
     color = Color.BLACK
     style = Paint.Style.FILL
     isAntiAlias = true
@@ -104,8 +105,9 @@ class TextTextureCache {
     val label = parts[0].trim()
     val description = if (parts.size > 1) parts[1].trim() else ""
 
-    val w = 512 // Width
-    val h = 256 // Height
+    // Make bitmap dimensions larger to accommodate longer description line
+    val w = 850 // Width increased
+    val h = 420 // Increased height for better text positioning
 
     val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
 
@@ -114,8 +116,15 @@ class TextTextureCache {
 
     val canvas = Canvas(bitmap)
 
-    // Define the container rectangle with padding
-    val padding = 20f
+    // Calculate text bounds to ensure proper positioning
+    val labelBounds = Rect()
+    labelPaint.getTextBounds(label, 0, label.length, labelBounds)
+
+    // Calculate vertical offsets based on text height to prevent cutoff
+    val titleOffset = labelBounds.height() * 1.5f
+
+    // Define the container rectangle with padding - make it larger
+    val padding = 50f
     val containerRect = RectF(
       padding,
       padding,
@@ -128,33 +137,95 @@ class TextTextureCache {
     canvas.drawRoundRect(containerRect, cornerRadius, cornerRadius, bgPaint)
     canvas.drawRoundRect(containerRect, cornerRadius, cornerRadius, outlinePaint)
 
-    // Calculate text height to avoid cutoff
-    val labelBounds = Rect()
-    labelPaint.getTextBounds(label, 0, label.length, labelBounds)
+    // Center the label vertically and horizontally
+    // Position text based on its measured height to avoid cutoff
+    val labelY = h * 0.38f + titleOffset/2
+    canvas.drawText(label, w / 2f, labelY, labelPaint)
 
-    // Give more vertical padding for the title to avoid cutoff
-    // Draw label with elegant font - moved down to avoid top cutoff
-    canvas.drawText(label, w / 2f, h * 0.42f, labelPaint)
-
-    // Draw description if it exists
+    // Draw description if it exists - position it properly below the title
     if (description.isNotEmpty()) {
-      // Truncate text if needed
-      val maxWidth = w * 0.85f
-      val truncatedDesc = if (descPaint.measureText(description) > maxWidth) {
-        var shortened = description
-        while (shortened.isNotEmpty() && descPaint.measureText(shortened + "...") > maxWidth) {
-          shortened = shortened.substring(0, shortened.length - 1)
-        }
-        shortened + "..."
-      } else {
-        description
-      }
+      // Get first line by looking for period, exclamation, question mark, or newline
+      val firstLine = extractFirstLine(description)
 
-      canvas.drawText(truncatedDesc, w / 2f, h * 0.68f, descPaint)
+      // Get the available width for the description (container width minus padding)
+      val availableWidth = w - (2 * padding + 20f)  // Extra 20px margin on sides
+
+      // Format the text to fit within the available width
+      val formattedText = formatTextToFit(firstLine, descPaint, availableWidth)
+
+      // Position description below the title with proper spacing
+      val descBounds = Rect()
+      descPaint.getTextBounds(formattedText, 0, formattedText.length, descBounds)
+      val descY = labelY + labelBounds.height() + descBounds.height() + 20f
+
+      // Draw each line of the formatted text
+      formattedText.split("\n").forEachIndexed { index, line ->
+        val lineY = descY + (index * descPaint.textSize * 1.2f)
+        canvas.drawText(line, w / 2f, lineY, descPaint)
+      }
     }
 
     Log.d(TAG, "Created bitmap: ${bitmap.width}x${bitmap.height}, config: ${bitmap.config}")
 
     return bitmap
+  }
+
+  // Extract the first sentence or line of text
+  private fun extractFirstLine(text: String): String {
+    // Try to get the first sentence
+    val sentenceEnd = text.indexOfAny(charArrayOf('.', '!', '?', '\n'), 0)
+    return if (sentenceEnd >= 0) {
+      // Include the punctuation mark
+      text.substring(0, sentenceEnd + 1)
+    } else {
+      // If no sentence-ending punctuation found, use the whole text
+      text
+    }
+  }
+
+  // Format text to fit within available width, with proper line breaks
+  private fun formatTextToFit(text: String, paint: Paint, maxWidth: Float): String {
+    // If text already fits, return it as is
+    if (paint.measureText(text) <= maxWidth) {
+      return text
+    }
+
+    // If text is too long, break it into multiple lines
+    val words = text.split(" ")
+    val lines = mutableListOf<String>()
+    var currentLine = ""
+
+    for (word in words) {
+      val testLine = if (currentLine.isEmpty()) word else "$currentLine $word"
+
+      if (paint.measureText(testLine) <= maxWidth) {
+        currentLine = testLine
+      } else {
+        // Current line is full, start a new line
+        if (currentLine.isNotEmpty()) {
+          lines.add(currentLine)
+        }
+        currentLine = word
+      }
+    }
+
+    // Add the last line if it's not empty
+    if (currentLine.isNotEmpty()) {
+      lines.add(currentLine)
+    }
+
+    // Limit to 2 lines maximum to fit in the container
+    if (lines.size > 3) {
+      val lastLine = lines[1]
+      // Add ellipsis if we're truncating
+      lines[1] = if (lastLine.length > 3) {
+        lastLine.substring(0, lastLine.length - 3) + "..."
+      } else {
+        lastLine + "..."
+      }
+      return lines.take(3).joinToString("\n")
+    }
+
+    return lines.joinToString("\n")
   }
 }

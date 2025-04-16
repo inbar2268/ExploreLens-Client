@@ -14,17 +14,17 @@ class LabelRender {
     private const val TAG = "LabelRender"
     val COORDS_BUFFER_SIZE = 2 * 4 * 4
 
-    // Adjusted aspect ratio for better looking card
+    // Adjusted quad coordinates to match the aspect ratio of our texture (600x360)
     val NDC_QUAD_COORDS_BUFFER =
       ByteBuffer.allocateDirect(COORDS_BUFFER_SIZE).order(
         ByteOrder.nativeOrder()
       ).asFloatBuffer().apply {
         put(
           floatArrayOf(
-            -1.8f, -0.9f, // Bottom left - wider aspect ratio
-            1.8f, -0.9f,  // Bottom right
-            -1.8f, 0.9f,  // Top left
-            1.8f, 0.9f,   // Top right
+            -2.0f, -1.2f, // Bottom left - adjusted for 700x420 aspect ratio
+            2.0f, -1.2f,  // Bottom right
+            -2.0f, 1.2f,  // Top left
+            2.0f, 1.2f,   // Top right
           )
         )
         position(0)
