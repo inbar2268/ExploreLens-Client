@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.opengl.GLES30
@@ -12,7 +13,6 @@ import com.example.explorelens.common.samplerender.GLError
 import com.example.explorelens.common.samplerender.SampleRender
 import com.example.explorelens.common.samplerender.Texture
 import java.nio.ByteBuffer
-
 /**
  * Generates and caches GL textures for label names.
  */
@@ -128,8 +128,13 @@ class TextTextureCache {
     canvas.drawRoundRect(containerRect, cornerRadius, cornerRadius, bgPaint)
     canvas.drawRoundRect(containerRect, cornerRadius, cornerRadius, outlinePaint)
 
-    // Draw label with elegant font
-    canvas.drawText(label, w / 2f, h * 0.38f, labelPaint)
+    // Calculate text height to avoid cutoff
+    val labelBounds = Rect()
+    labelPaint.getTextBounds(label, 0, label.length, labelBounds)
+
+    // Give more vertical padding for the title to avoid cutoff
+    // Draw label with elegant font - moved down to avoid top cutoff
+    canvas.drawText(label, w / 2f, h * 0.42f, labelPaint)
 
     // Draw description if it exists
     if (description.isNotEmpty()) {
@@ -145,7 +150,7 @@ class TextTextureCache {
         description
       }
 
-      canvas.drawText(truncatedDesc, w / 2f, h * 0.65f, descPaint)
+      canvas.drawText(truncatedDesc, w / 2f, h * 0.68f, descPaint)
     }
 
     Log.d(TAG, "Created bitmap: ${bitmap.width}x${bitmap.height}, config: ${bitmap.config}")

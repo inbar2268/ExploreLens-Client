@@ -33,6 +33,9 @@ android {
         buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty('BASE_URL', 'http://localhost:3000')}\"")
         //buildConfigField("String", "BASE_URL", "\"${local.properties['BASE_URL'] ?: '127.0.0.1'}\"")
         buildConfigField("Boolean", "USE_MOCK_DATA", "${project.properties["USE_MOCK_DATA"] ?: "false"}")
+        Properties properties = new Properties()
+        properties.load(project.rootProject.file('local.properties').newDataInputStream())
+        buildConfigField "String", "BASE_URL", "\"${properties.getProperty('BASE_URL')}\""
 
     }
 

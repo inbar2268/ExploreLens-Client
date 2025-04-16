@@ -1,4 +1,3 @@
-// Update DetailActivity.kt
 package com.example.explorelens
 
 import android.os.Bundle
@@ -9,7 +8,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.explorelens.data.network.AnalyzedResultsClient
-import com.example.explorelens.R
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -33,10 +31,19 @@ class DetailActivity : AppCompatActivity() {
         Log.d("DetailActivity", "Received label: $label")
 
         labelTextView.text = label
-        loadingIndicator.visibility = View.VISIBLE
 
-        // Fetch site details
-        fetchSiteDetails(label)
+        // Check if we already have the description from AR
+        val passedDescription = intent.getStringExtra("DESCRIPTION_KEY")
+        if (passedDescription != null && passedDescription.isNotEmpty()) {
+            // Use the passed description directly
+            Log.d("DetailActivity", "Using passed description")
+            loadingIndicator.visibility = View.GONE
+            descriptionTextView.text = passedDescription
+        } else {
+            // Need to fetch the description
+            loadingIndicator.visibility = View.VISIBLE
+            fetchSiteDetails(label)
+        }
     }
 
     private fun fetchSiteDetails(label: String) {
@@ -68,6 +75,7 @@ class DetailActivity : AppCompatActivity() {
             override fun onFailure(call: Call<String>, t: Throwable) {
                 loadingIndicator.visibility = View.GONE
                 Log.e("DetailActivity", "Network error: ${t.message}", t)
+
                 showError("Network error: ${t.message}")
             }
         })

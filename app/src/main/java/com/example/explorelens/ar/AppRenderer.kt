@@ -1,6 +1,9 @@
 package com.example.explorelens.ar
 
 import android.content.Intent
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import android.opengl.Matrix
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -171,43 +174,19 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             serverResult = null
             val snapshotData = lastSnapshotData
 
-            Log.i(TAG, " Analyzer got objects: $objects")
+            Log.i(TAG, "Analyzer got objects: $objects")
+
+            if (snapshotData == null) {
+                Log.e(TAG, "No snapshot data available for anchor creation")
+                view.post {
+                    view.setScanningActive(false)
+                    showSnackbar("Unable to place AR labels. Please try again.")
+                }
+                return
+            }
+
             val anchors = objects.mapNotNull { obj ->
-                val atX = obj.siteInformation?.x
-                val atY = obj.siteInformation?.y
-
-                if(atX == null || atY == null){
-                    return@mapNotNull null
-                }
-
-                if (snapshotData == null) {
-                    Log.e(TAG, "No snapshot data available for anchor creation")
-                    return@mapNotNull null
-                }
-
-                val anchor = placeLabelAccurateWithSnapshot(
-                    session,
-                    snapshotData.cameraPose,
-                    atX,
-                    atY,
-                    frame
-                ) ?: return@mapNotNull null
-
-                Log.d(TAG, "Anchor created for ${obj.siteInformation?.siteName}")
-                Log.d(
-                    TAG,
-                    "Anchor Pose: x=${anchor.pose.tx()}, y=${anchor.pose.ty()}, z=${anchor.pose.tz()}"
-                )
-
-                // Create a combined label with site name and description
-                // Format: "SiteName||Description"
-                val siteName = obj.siteInformation!!.siteName
-                val description = obj.description ?: ""
-                val labelText = "$siteName||$description"
-
-                Log.d(TAG, "Creating label with text: $labelText")
-
-                ARLabeledAnchor(anchor, labelText)
+                fetchAndCreateAnchor(session, snapshotData, obj, frame)
             }
 
             arLabeledAnchors.addAll(anchors)
@@ -215,17 +194,18 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
                 view.setScanningActive(false)
                 when {
                     anchors.isEmpty() ->
-                        showSnackbar("No objects were detected. Try scanning again.")
+                        showSnackbar("No landmarks detected. Try scanning again.")
                     anchors.size != objects.size ->
                         showSnackbar(
-                            "Objects were classified, but could not be attached to an anchor. " +
-                                    "Try moving your device around to obtain a better understanding of the environment."
+                            "Some landmarks could not be anchored in space. " +
+                                    "Try moving your device around to scan the environment better."
                         )
+                    else ->
+                        showSnackbar("Tap on a label to see more details")
                 }
             }
         }
     }
-
     private fun placeLabelAccurateWithSnapshot(
         session: Session,
         snapshotPose: Pose,
@@ -652,29 +632,19 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
 
             for (hit in hitResults) {
                 val hitPose = hit.hitPose
-                Log.d(TAG, "Hit pose: x=${hitPose.tx()}, y=${hitPose.ty()}, z=${hitPose.tz()}")
-
-                // Log all anchors for debugging
-                arLabeledAnchors.forEachIndexed { index, anchor ->
-                    Log.d(TAG, "Anchor $index: label=${anchor.label}, pose: x=${anchor.anchor.pose.tx()}, y=${anchor.anchor.pose.ty()}, z=${anchor.anchor.pose.tz()}")
-                    val distance = distanceBetween(anchor.anchor.pose, hitPose)
-                    Log.d(TAG, "Distance to anchor $index: $distance")
-                }
 
                 // Check if the hit is close to any of our anchors
                 val clickedAnchor = arLabeledAnchors.find { anchor ->
                     val distance = distanceBetween(anchor.anchor.pose, hitPose)
-                    Log.d(TAG, "Distance to ${anchor.label}: $distance")
-                    distance < 0.2f  // You might need to adjust this threshold
+                    distance < 0.4f  // Slightly larger threshold for easier tapping
                 }
 
                 if (clickedAnchor != null) {
-                    // Extract only the site name part (before the || separator)
-                    val siteName = clickedAnchor.label.split("||")[0]
+                    // Use the siteName directly if available, otherwise extract from the label
+                    val siteName = clickedAnchor.siteName ?: clickedAnchor.label.split("||")[0]
                     Log.d(TAG, "Clicked on anchor: $siteName")
-
                     activity.runOnUiThread {
-                        // Navigate to detail activity with just the site name
+                        // Navigate to detail activity with the site name
                         openDetailActivity(siteName)
                     }
                     return
@@ -690,7 +660,107 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             Log.e(TAG, "Error processing touch", e)
         }
     }
+    private fun fetchAndCreateAnchor(
+        session: Session,
+        snapshotData: Snapshot,
+        obj: ImageAnalyzedResult,
+        frame: Frame
+    ): ARLabeledAnchor? {
+        val atX = obj.siteInformation?.x
+        val atY = obj.siteInformation?.y
+        val siteName = obj.siteInformation?.siteName
+
+        if (atX == null || atY == null || siteName == null) {
+            Log.e(TAG, "Missing location data or site name")
+            return null
+        }
+
+        // Create anchor first so we can proceed with AR display
+        val anchor = placeLabelAccurateWithSnapshot(
+            session,
+            snapshotData.cameraPose,
+            atX,
+            atY,
+            frame
+        ) ?: return null
+
+        Log.d(TAG, "Anchor created for $siteName")
+
+        // Initially create with just the site name
+        val arLabeledAnchor = ARLabeledAnchor(anchor, "$siteName||Loading...", siteName)
+
+        // Fetch description separately from the API (without blocking)
+        val siteNameForRequest = siteName.replace(" ", "")
+        Log.d(TAG, "Fetching site details for: $siteNameForRequest")
+
+        AnalyzedResultsClient.siteDetailsApiClient.getSiteDetails(siteNameForRequest)
+            .enqueue(object : Callback<String> {
+                override fun onResponse(call: Call<String>, response: Response<String>) {
+                    if (response.isSuccessful) {
+                        val description = response.body() ?: ""
+
+                        // Get first sentence or first line for preview
+                        val previewText = extractPreviewText(description)
+
+                        // Update the label text with fetched description
+                        val newLabelText = "$siteName||$previewText"
+                        Log.d(TAG, "Updated label with description: $newLabelText")
+
+                        // Update the anchor label
+                        synchronized(arLabeledAnchors) {
+                            val index = arLabeledAnchors.indexOf(arLabeledAnchor)
+                            if (index != -1) {
+                                // Create a new anchor with updated label text but same anchor and siteName
+                                val updatedAnchor = ARLabeledAnchor(
+                                    arLabeledAnchor.anchor,
+                                    newLabelText,
+                                    arLabeledAnchor.siteName,
+                                    description // Store full description for DetailActivity
+                                )
+                                arLabeledAnchors[index] = updatedAnchor
+                            }
+                        }
+                    } else {
+                        Log.e(TAG, "Failed to fetch site details: ${response.code()}")
+                    }
+                }
+
+                override fun onFailure(call: Call<String>, t: Throwable) {
+                    Log.e(TAG, "Network error fetching site details: ${t.message}")
+                }
+            })
+
+        return arLabeledAnchor
+    }
+
+    // Helper function to extract a single line or sentence for preview
+    private fun extractPreviewText(description: String): String {
+        // First try to get the first sentence
+        val firstSentence = description.split(Regex("[.!?]"), 2)
+            .firstOrNull()?.trim()
+            ?.plus(".") ?: ""
+
+        // If the sentence is too long, truncate by words
+        if (firstSentence.length > 80) {
+            val words = firstSentence.split(" ")
+            var preview = ""
+            for (word in words) {
+                if ((preview + word).length <= 77) {
+                    preview += "$word "
+                } else {
+                    return preview.trim() + "..."
+                }
+            }
+            return preview.trim()
+        }
+
+        return firstSentence
+    }
 }
 
-data class ARLabeledAnchor(val anchor: Anchor, val label: String)
-
+data class ARLabeledAnchor(
+    val anchor: Anchor,
+    val label: String,
+    val siteName: String? = null, // Site name for DetailActivity
+    val fullDescription: String? = null // Full description for DetailActivity
+)
