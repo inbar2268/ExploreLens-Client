@@ -31,6 +31,8 @@
         </item>
         <!-- Customize your theme here. -->
     </style>
-
-    <style name="Theme.Design.Light.NoActionBar" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Design.Light.NoActionBar" parent="android:Theme.Material.Light.NoActionBar" >
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="fontFamily">sans-serif</item>
+    </style>
 </resources>

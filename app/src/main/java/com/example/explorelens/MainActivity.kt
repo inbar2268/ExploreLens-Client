@@ -35,6 +35,7 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
         arguments: Bundle?
     ) {
         val fragmentsWithoutBottomNav = listOf(
+
             R.id.loginFragment,
             R.id.registerFragment,
             R.id.forgotPasswordFragment

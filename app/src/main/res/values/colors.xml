@@ -21,6 +21,14 @@
   <color name="purple_700">#FF3700B3</color>
   <color name="teal_200">#FF03DAC5</color>
   <color name="teal_700">#FF018786</color>
+  <color name="primary">#2196F3</color>
+  <color name="primary_dark">#1976D2</color>
+  <color name="accent">#03A9F4</color>
   <color name="black">#FF000000</color>
   <color name="white">#FFFFFFFF</color>
+  <color name="gray">#757575</color>
+  <color name="light_gray">#E0E0E0</color>
+  <color name="bottom_nav_background">#005861</color>
+  <color name="bottom_nav_selected">#FFFFFF</color>
+  <color name="bottom_nav_unselected">#CAE9DF</color>
 </resources>

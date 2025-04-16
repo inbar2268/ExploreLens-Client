@@ -1,0 +1,18 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navigation_history"
+        android:icon="@drawable/ic_history"
+        android:title="History" />
+    <item
+        android:id="@+id/navigation_camera"
+        android:icon="@drawable/ic_camera"
+        android:title="Camera" />
+    <item
+        android:id="@+id/navigation_map"
+        android:icon="@drawable/ic_map"
+        android:title="Map" />
+    <item
+        android:id="@+id/navigation_profile"
+        android:icon="@drawable/ic_profile"
+        android:title="Profile" />
+</menu>
