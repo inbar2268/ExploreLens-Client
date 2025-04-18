@@ -1,24 +1,73 @@
 package com.example.explorelens.ui.auth
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.R
 import com.example.explorelens.databinding.FragmentRegisterBinding
+import com.example.explorelens.data.network.auth.GoogleSignInHelper
+import com.google.android.gms.auth.api.signin.GoogleSignIn
 
 class RegisterFragment : Fragment() {
 
     private var _binding: FragmentRegisterBinding? = null
     private val binding get() = _binding!!
     private var isPasswordVisible = false
+    private lateinit var googleSignInHelper: GoogleSignInHelper
+    private val TAG = "RegisterFragment"
+
+    private val googleSignInLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            googleSignInHelper.handleSignInResult(task) { account ->
+                val idToken = account.idToken
+                if (idToken != null) {
+                    Toast.makeText(
+                        context,
+                        "Google Sign-In successful, connecting to server...",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    googleSignInHelper.sendCredentialsToServer(idToken) { success, authResponse ->
+                        if (success && authResponse != null) {
+                            Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+                            findNavController().navigate(R.id.action_registerFragment_to_arActivity)
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Server authentication failed",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                } else {
+                    Log.e(TAG, "ID token is null")
+                    Toast.makeText(
+                        context,
+                        "Google authentication failed: No credentials",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        } else {
+            Log.w(TAG, "Google sign in failed or canceled, code: ${result.resultCode}")
+            Toast.makeText(context, "Google Sign-In canceled", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -32,15 +81,20 @@ class RegisterFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Initialize Google Sign-In Helper
+        googleSignInHelper = GoogleSignInHelper(this)
+        googleSignInHelper.configureGoogleSignIn()
+
         binding.btnBack.setOnClickListener {
             findNavController().navigateUp()
         }
+
         binding.btnRegister.setOnClickListener {
             attemptRegistration()
         }
 
         binding.btnGoogleRegister.setOnClickListener {
-            Toast.makeText(context, "Google Sign-Up clicked", Toast.LENGTH_SHORT).show()
+            signUpWithGoogle()
         }
 
         binding.tvSignIn.setOnClickListener {
@@ -58,6 +112,11 @@ class RegisterFragment : Fragment() {
             }
             override fun afterTextChanged(s: Editable?) {}
         })
+    }
+
+    private fun signUpWithGoogle() {
+        val signInIntent = googleSignInHelper.getSignInIntent()
+        googleSignInLauncher.launch(signInIntent)
     }
 
     private fun togglePasswordVisibility() {

@@ -31,11 +31,12 @@ android {
         versionName "1.0"
 
         buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty('BASE_URL', 'http://localhost:3000')}\"")
-        //buildConfigField("String", "BASE_URL", "\"${local.properties['BASE_URL'] ?: '127.0.0.1'}\"")
+        buildConfigField("String", "WEB_CLIENT_ID", "\"${localProperties.getProperty('WEB_CLIENT_ID', 'NONE')}\"")
         buildConfigField("Boolean", "USE_MOCK_DATA", "${project.properties["USE_MOCK_DATA"] ?: "false"}")
         Properties properties = new Properties()
         properties.load(project.rootProject.file('local.properties').newDataInputStream())
         buildConfigField "String", "BASE_URL", "\"${properties.getProperty('BASE_URL')}\""
+        buildConfigField "String", "WEB_CLIENT_ID", "\"${properties.getProperty('WEB_CLIENT_ID')}\""
 
     }
 
@@ -155,6 +156,8 @@ dependencies {
     implementation 'androidx.navigation:navigation-fragment-ktx:2.8.9'
     implementation 'androidx.navigation:navigation-ui-ktx:2.5.1'
 
+    //google-sign in
+    implementation 'com.google.android.gms:play-services-auth:20.5.0'
 }
 configurations.all {
     resolutionStrategy {
