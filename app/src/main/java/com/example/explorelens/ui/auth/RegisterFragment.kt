@@ -5,14 +5,18 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.R
+import com.example.explorelens.data.repository.AuthRepository
 import com.example.explorelens.databinding.FragmentRegisterBinding
+import kotlinx.coroutines.launch
 
 class RegisterFragment : Fragment() {
 
@@ -20,12 +24,15 @@ class RegisterFragment : Fragment() {
     private val binding get() = _binding!!
     private var isPasswordVisible = false
 
+    private lateinit var authRepository: AuthRepository
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentRegisterBinding.inflate(inflater, container, false)
+        authRepository = AuthRepository.getInstance(requireContext())
         return binding.root
     }
 
@@ -58,6 +65,13 @@ class RegisterFragment : Fragment() {
             }
             override fun afterTextChanged(s: Editable?) {}
         })
+
+        lifecycleScope.launch {
+            if (authRepository.isLoggedIn()) {
+                findNavController().navigate(R.id.action_registerFragment_to_arActivity)
+                Toast.makeText(context, "Already logged in", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun togglePasswordVisibility() {
@@ -108,8 +122,27 @@ class RegisterFragment : Fragment() {
         }
 
         if (isValid) {
-            Toast.makeText(context, "Registration successful", Toast.LENGTH_SHORT).show()
-            findNavController().navigate(R.id.action_registerFragment_to_loginFragment)
+            binding.progressBar.visibility = View.VISIBLE
+            binding.btnRegister.isEnabled = false
+
+            authRepository.register(
+                username = name,
+                email = email,
+                password = password,
+                onSuccess = { response ->
+                    binding.progressBar.visibility = View.GONE
+                    binding.btnRegister.isEnabled = true
+
+                    Toast.makeText(context, "Registration successful", Toast.LENGTH_SHORT).show()
+                    findNavController().navigate(R.id.action_registerFragment_to_arActivity)
+                },
+                onError = { errorMessage ->
+                    Log.e("REGISTER", "Registration failed: $errorMessage")
+                    binding.progressBar.visibility = View.GONE
+                    binding.btnRegister.isEnabled = true
+                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                }
+            )
         }
     }
 

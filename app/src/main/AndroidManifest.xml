@@ -39,6 +39,9 @@
             android:name="com.google.ar.core"
             android:value="required" />
         <meta-data
+            android:name="credentialManager"
+            android:value="true" />
+        <meta-data
             android:name="preloaded_fonts"
             android:resource="@array/preloaded_fonts" />
     </application>

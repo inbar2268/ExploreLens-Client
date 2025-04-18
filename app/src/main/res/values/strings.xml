@@ -44,4 +44,5 @@
     <string name="use_cloud_ml">Use Cloud ML</string>
     <string name="title_activity_detail">DetailActivity</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="google_web_client_id">104765132347-414c89ik9nmsf6g2vf60lmfn3tkp5q2v.apps.googleusercontent.com</string>
 </resources>
