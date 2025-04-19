@@ -16,9 +16,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.R
+import com.example.explorelens.data.model.RegisterRequest
 import com.example.explorelens.databinding.FragmentRegisterBinding
 import com.example.explorelens.data.network.auth.GoogleSignInHelper
+import com.example.explorelens.data.repository.AuthRepository
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class RegisterFragment : Fragment() {
 
@@ -26,6 +31,7 @@ class RegisterFragment : Fragment() {
     private val binding get() = _binding!!
     private var isPasswordVisible = false
     private lateinit var googleSignInHelper: GoogleSignInHelper
+    private lateinit var authRepository: AuthRepository
     private val TAG = "RegisterFragment"
 
     private val googleSignInLauncher = registerForActivityResult(
@@ -72,7 +78,7 @@ class RegisterFragment : Fragment() {
         } else {
             Log.w(TAG, "Google sign in failed or canceled, code: ${result.resultCode}")
             Toast.makeText(context, "Google Sign-In canceled", Toast.LENGTH_SHORT).show()
-        }
+            binding.progressBar.visibility = View.GONE        }
     }
 
     override fun onCreateView(
@@ -81,6 +87,7 @@ class RegisterFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentRegisterBinding.inflate(inflater, container, false)
+        authRepository = AuthRepository(requireContext())
         return binding.root
     }
 
@@ -177,8 +184,19 @@ class RegisterFragment : Fragment() {
         }
 
         if (isValid) {
-            Toast.makeText(context, "Registration successful", Toast.LENGTH_SHORT).show()
-            findNavController().navigate(R.id.action_registerFragment_to_loginFragment)
+            CoroutineScope(Dispatchers.Main).launch {
+                val result = authRepository.registerUser(name, email, password)
+                if (result.isSuccess) {
+                    Toast.makeText(context, "Registration successful", Toast.LENGTH_SHORT).show()
+                    findNavController().navigate(R.id.action_registerFragment_to_profileFragment)
+                } else {
+                    Toast.makeText(
+                        context,
+                        "Registration failed: ${result.exceptionOrNull()?.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
         }
     }
 

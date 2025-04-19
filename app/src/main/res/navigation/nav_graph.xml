@@ -66,5 +66,7 @@
         android:name="com.example.explorelens.ArActivity"
         android:label="AR"
         tools:layout="@layout/activity_main" />
-
+    <action
+        android:id="@+id/action_arActivity_to_profileFragment"
+        app:destination="@+id/profileFragment" />
 </navigation>

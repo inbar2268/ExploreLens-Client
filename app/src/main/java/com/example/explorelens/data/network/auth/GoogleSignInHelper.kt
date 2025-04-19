@@ -79,7 +79,7 @@ class GoogleSignInHelper(private val fragment: Fragment) {
                         val authResponse = response.body()
                         if (authResponse != null) {
                             // Save tokens to encrypted shared preferences
-                            tokenManager.saveAuthTokens(authResponse)
+                            tokenManager.saveAuthTokensLogin(authResponse)
 
                             // Call completion handler with success
                             onComplete(true, authResponse)

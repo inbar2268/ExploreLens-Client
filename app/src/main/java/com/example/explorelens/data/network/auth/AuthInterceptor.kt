@@ -75,7 +75,7 @@ class AuthInterceptor(private val context: Context) : Interceptor {
 
             if (response.isSuccessful && response.body() != null) {
                 val tokenResponse = response.body()!!
-                tokenManager.saveAuthTokens(tokenResponse)
+                tokenManager.saveAuthTokensLogin(tokenResponse)
                 tokenResponse.accessToken
             } else {
                 Log.e(TAG, "Token refresh failed: ${response.code()} ${response.message()}")

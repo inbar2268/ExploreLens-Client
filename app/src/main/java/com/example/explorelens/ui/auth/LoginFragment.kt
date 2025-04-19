@@ -13,12 +13,19 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.R
+import com.example.explorelens.data.model.RegisterRequest
 import com.example.explorelens.databinding.FragmentLoginBinding
 import com.example.explorelens.data.network.auth.GoogleSignInHelper
 import com.example.explorelens.data.network.auth.GoogleSignInHelper.Companion.isUserAuthenticatedWithGoogle
+import com.example.explorelens.data.repository.AuthRepository
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class LoginFragment : Fragment() {
 
@@ -26,6 +33,7 @@ class LoginFragment : Fragment() {
     private val binding get() = _binding!!
     private var isPasswordVisible = false
     private lateinit var googleSignInHelper: GoogleSignInHelper
+    private lateinit var authRepository: AuthRepository
     private val TAG = "LoginFragment"
 
     private val googleSignInLauncher = registerForActivityResult(
@@ -72,6 +80,7 @@ class LoginFragment : Fragment() {
         } else {
             Log.w(TAG, "Google sign in failed or canceled, code: ${result.resultCode}")
             Toast.makeText(context, "Google Sign-In canceled", Toast.LENGTH_SHORT).show()
+            binding.progressBar.visibility = View.GONE
         }
     }
 
@@ -81,16 +90,19 @@ class LoginFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentLoginBinding.inflate(inflater, container, false)
+        authRepository = AuthRepository(requireContext())
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val authRepository = AuthRepository(requireContext())
+
         googleSignInHelper = GoogleSignInHelper(this)
         googleSignInHelper.configureGoogleSignIn()
 
-        if (isUserAuthenticatedWithGoogle(requireContext())) {
+        if (isUserAuthenticatedWithGoogle(requireContext()) || authRepository.isLoggedIn()) {
             Toast.makeText(context, "Welcome back!", Toast.LENGTH_SHORT).show()
             findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
             return
@@ -155,21 +167,36 @@ class LoginFragment : Fragment() {
 
         if (email.isEmpty()) {
             binding.etEmail.error = "Email is required"
+            return
         }
 
         if (password.isEmpty()) {
             binding.etPassword.error = "Password is required"
             binding.ivPasswordToggle.visibility = View.INVISIBLE
+            return
         } else {
             binding.ivPasswordToggle.visibility = View.VISIBLE
         }
 
-        if (email.isNotEmpty() && password.isNotEmpty()) {
-            // Simulate successful login
-            Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
-            findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
+        binding.progressBar.visibility = View.VISIBLE
+        binding.btnLogin.isEnabled = false
+        binding.btnGoogleLogin.isEnabled = false
+
+        CoroutineScope(Dispatchers.Main).launch {
+            val result = authRepository.loginUser(email, password)
+            if (result.isSuccess) {
+                Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+                findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
+            } else {
+                Toast.makeText(context, "Login failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+            }
+
+            binding.progressBar.visibility = View.GONE
+            binding.btnLogin.isEnabled = true
+            binding.btnGoogleLogin.isEnabled = true
         }
     }
+
 
     override fun onDestroyView() {
         super.onDestroyView()

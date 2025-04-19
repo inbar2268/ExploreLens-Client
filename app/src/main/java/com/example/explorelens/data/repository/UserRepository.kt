@@ -64,9 +64,7 @@ class UserRepository(context: Context) {
         return userDao.observeUserById(userId)
     }
 
-    // Clear user data
     suspend fun clearUserData() {
         userDao.deleteUser()
-        tokenManager.clearTokens()
     }
 }
