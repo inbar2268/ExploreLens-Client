@@ -36,16 +36,17 @@ class LoginFragment : Fragment() {
             googleSignInHelper.handleSignInResult(task) { account ->
                 val idToken = account.idToken
                 if (idToken != null) {
-                    Toast.makeText(
-                        context,
-                        "Google Sign-In successful, connecting to server...",
-                        Toast.LENGTH_SHORT
-                    ).show()
 
                     googleSignInHelper.sendCredentialsToServer(idToken) { success, authResponse ->
+                        // Hide loading indicator
+                        binding.progressBar.visibility = View.GONE
+                        binding.btnLogin.isEnabled = true
+                        binding.btnGoogleLogin.isEnabled = true
+
                         if (success && authResponse != null) {
                             Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
-                            findNavController().navigate(R.id.action_loginFragment_to_arActivity)
+                            // Only navigate AFTER server confirms authentication
+                            findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
                         } else {
                             Toast.makeText(
                                 context,
@@ -55,6 +56,11 @@ class LoginFragment : Fragment() {
                         }
                     }
                 } else {
+                    // Hide loading indicator also on failure
+                    binding.progressBar.visibility = View.GONE
+                    binding.btnLogin.isEnabled = true
+                    binding.btnGoogleLogin.isEnabled = true
+
                     Log.e(TAG, "ID token is null")
                     Toast.makeText(
                         context,
@@ -86,7 +92,7 @@ class LoginFragment : Fragment() {
 
         if (isUserAuthenticatedWithGoogle(requireContext())) {
             Toast.makeText(context, "Welcome back!", Toast.LENGTH_SHORT).show()
-            findNavController().navigate(R.id.action_loginFragment_to_arActivity)
+            findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
             return
         }
 
@@ -120,6 +126,10 @@ class LoginFragment : Fragment() {
     }
 
     private fun signInWithGoogle() {
+        binding.progressBar.visibility = View.VISIBLE
+        binding.btnLogin.isEnabled = false
+        binding.btnGoogleLogin.isEnabled = false
+
         val signInIntent = googleSignInHelper.getSignInIntent()
         googleSignInLauncher.launch(signInIntent)
     }
@@ -157,7 +167,7 @@ class LoginFragment : Fragment() {
         if (email.isNotEmpty() && password.isNotEmpty()) {
             // Simulate successful login
             Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
-            findNavController().navigate(R.id.action_loginFragment_to_arActivity)
+            findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
         }
     }
 

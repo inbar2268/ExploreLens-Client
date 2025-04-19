@@ -36,16 +36,17 @@ class RegisterFragment : Fragment() {
             googleSignInHelper.handleSignInResult(task) { account ->
                 val idToken = account.idToken
                 if (idToken != null) {
-                    Toast.makeText(
-                        context,
-                        "Google Sign-In successful, connecting to server...",
-                        Toast.LENGTH_SHORT
-                    ).show()
 
                     googleSignInHelper.sendCredentialsToServer(idToken) { success, authResponse ->
+                        // Hide loading indicator
+                        binding.progressBar.visibility = View.GONE
+                        binding.btnRegister.isEnabled = true
+                        binding.btnGoogleRegister.isEnabled = true
+
                         if (success && authResponse != null) {
                             Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
-                            findNavController().navigate(R.id.action_registerFragment_to_arActivity)
+                            // Only navigate AFTER server confirms authentication
+                            findNavController().navigate(R.id.action_registerFragment_to_profileFragment)
                         } else {
                             Toast.makeText(
                                 context,
@@ -55,6 +56,11 @@ class RegisterFragment : Fragment() {
                         }
                     }
                 } else {
+                    // Hide loading indicator also on failure
+                    binding.progressBar.visibility = View.GONE
+                    binding.btnRegister.isEnabled = true
+                    binding.btnGoogleRegister.isEnabled = true
+
                     Log.e(TAG, "ID token is null")
                     Toast.makeText(
                         context,
@@ -115,6 +121,10 @@ class RegisterFragment : Fragment() {
     }
 
     private fun signUpWithGoogle() {
+        binding.progressBar.visibility = View.VISIBLE
+        binding.btnRegister.isEnabled = false
+        binding.btnGoogleRegister.isEnabled = false
+
         val signInIntent = googleSignInHelper.getSignInIntent()
         googleSignInLauncher.launch(signInIntent)
     }

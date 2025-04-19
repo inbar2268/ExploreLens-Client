@@ -4,9 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
 import com.example.explorelens.BuildConfig
-import com.example.explorelens.R
 import com.example.explorelens.data.model.*
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
@@ -20,21 +18,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.Response
 
-
 class GoogleSignInHelper(private val fragment: Fragment) {
     private val TAG = "GoogleSignInHelper"
     private lateinit var googleSignInClient: GoogleSignInClient
-    private val AuthApi: AuthApi = AuthClient.authApi
+    private val authApi: AuthApi = AuthClient.authApi
+    private val tokenManager: AuthTokenManager by lazy {
+        AuthTokenManager.getInstance(fragment.requireContext())
+    }
 
     val WEB_CLIENT_ID = BuildConfig.WEB_CLIENT_ID
 
     // Initialize Google Sign-In client
     fun configureGoogleSignIn() {
         // Configure sign-in to request the user's ID, email address, and basic profile
-        // Most importantly, request an ID token - this is what we'll send to our server
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
-            .requestIdToken(WEB_CLIENT_ID) // Replace with your actual web client ID
+            .requestIdToken(WEB_CLIENT_ID)
             .build()
 
         // Build a GoogleSignInClient with the options specified by gso
@@ -49,9 +48,6 @@ class GoogleSignInHelper(private val fragment: Fragment) {
         try {
             // Get Google Sign-In account
             val account = completedTask.getResult(ApiException::class.java)
-
-            // Log successful sign-in
-            Log.d(TAG, "Google Sign-In successful: ${account.displayName}, ${account.email}")
 
             // Call the success listener with the account
             onSuccessListener(account)
@@ -69,9 +65,6 @@ class GoogleSignInHelper(private val fragment: Fragment) {
 
     // Send Google credentials to your server
     fun sendCredentialsToServer(idToken: String, onComplete: (Boolean, LoginResponse?) -> Unit) {
-        // Show loading message
-        Toast.makeText(fragment.context, "Authenticating with server...", Toast.LENGTH_SHORT).show()
-
         // Create request body with the Google ID token
         val googleAuthRequest = GoogleSignInRequest(idToken)
 
@@ -79,14 +72,14 @@ class GoogleSignInHelper(private val fragment: Fragment) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 // Send the token to your server
-                val response: Response<LoginResponse> = AuthApi.googleSignIn(googleAuthRequest)
+                val response: Response<LoginResponse> = authApi.googleSignIn(googleAuthRequest)
 
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
                         val authResponse = response.body()
                         if (authResponse != null) {
-                            // Save tokens to shared preferences
-                            saveAuthTokens(authResponse)
+                            // Save tokens to encrypted shared preferences
+                            tokenManager.saveAuthTokens(authResponse)
 
                             // Call completion handler with success
                             onComplete(true, authResponse)
@@ -120,31 +113,11 @@ class GoogleSignInHelper(private val fragment: Fragment) {
         }
     }
 
-    // Save authentication tokens to SharedPreferences
-    private fun saveAuthTokens(authResponse: LoginResponse) {
-        val sharedPref = fragment.requireActivity().getSharedPreferences(
-            "auth_prefs",
-            Context.MODE_PRIVATE
-        )
-
-        with(sharedPref.edit()) {
-            putString("access_token", authResponse.accessToken)
-            putString("refresh_token", authResponse.refreshToken)
-            putString("user_id", authResponse._id)
-            putLong("token_timestamp", System.currentTimeMillis())
-            apply()
-        }
-    }
-
     companion object {
         fun isUserAuthenticatedWithGoogle(context: Context): Boolean {
             val account = GoogleSignIn.getLastSignedInAccount(context)
-            val sharedPref = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-
-            val accessToken = sharedPref.getString("access_token", null)
-            val userId = sharedPref.getString("user_id", null)
-
-            return account != null && accessToken != null && userId != null
+            val tokenManager = AuthTokenManager.getInstance(context)
+            return account != null && tokenManager.isLoggedIn()
         }
     }
 }
