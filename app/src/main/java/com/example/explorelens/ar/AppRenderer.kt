@@ -2,6 +2,8 @@ package com.example.explorelens.ar
 
 import android.content.Intent
 import android.opengl.Matrix
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -41,6 +43,9 @@ import java.lang.Thread.sleep
 import java.util.Collections
 import kotlin.math.sqrt
 import com.example.explorelens.BuildConfig
+import com.example.explorelens.Model
+import com.example.explorelens.model.ARLabeledAnchor
+
 
 class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRender.Renderer,
     CoroutineScope by MainScope() {
@@ -62,13 +67,17 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
     var scanButtonWasPressed = false
 
     private var lastSnapshotData: Snapshot? = null
-    val arLabeledAnchors = Collections.synchronizedList(mutableListOf<ARLabeledAnchor>())
-
+    var arLabeledAnchors = Collections.synchronizedList(mutableListOf<ARLabeledAnchor>())
+    private var hasLoadedAnchors = false
     private val convertFloats = FloatArray(4)
     private val convertFloatsOut = FloatArray(4)
 
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
+        Handler(Looper.getMainLooper()).postDelayed({
+
+        }, 1000)
+        Log.e(TAG, "anchors amount: ${arLabeledAnchors.size}")
     }
 
     override fun onPause(owner: LifecycleOwner) {
@@ -82,6 +91,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             view.setScanningActive(true)
             hideSnackbar()
         }
+
     }
 
     override fun onSurfaceCreated(render: SampleRender) {
@@ -100,7 +110,6 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         val session = activity.arCoreSessionHelper.sessionCache ?: return
         session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.textureId))
         displayRotationHelper.updateSessionIfNeeded(session)
-
         val frame = try {
             session.update()
         } catch (e: CameraNotAvailableException) {
@@ -125,6 +134,10 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
                 }
             } else {
                 lastSnapshotData = takeSnapshot(frame, session)
+                if (!hasLoadedAnchors) {
+                    getAllAnchors()
+                    hasLoadedAnchors = true
+                }
             }
             scanButtonWasPressed = false
         }
@@ -148,8 +161,12 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
     }
 
     private fun drawAnchors(render: SampleRender, frame: Frame) {
+        val anchorsToRender = ArrayList<ARLabeledAnchor>()
+        synchronized(arLabeledAnchors) {
+            anchorsToRender.addAll(arLabeledAnchors)
+        }
 
-        for (arDetectedObject in arLabeledAnchors) {
+        for (arDetectedObject in anchorsToRender) {
             val anchor = arDetectedObject.anchor
 
             Log.d(TAG, "Anchor tracking state: ${anchor.trackingState}")
@@ -176,7 +193,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
                 val atX = obj.siteInformation?.x
                 val atY = obj.siteInformation?.y
 
-                if(atX == null || atY == null){
+                if (atX == null || atY == null) {
                     return@mapNotNull null
                 }
 
@@ -201,7 +218,8 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
                 ARLabeledAnchor(anchor, obj.siteInformation!!.siteName)
 
             }
-            arLabeledAnchors.addAll(anchors)
+            addAnchorToDatabase(anchors)
+
             view.post {
                 view.setScanningActive(false)
                 when {
@@ -225,7 +243,10 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
     ): Anchor? {
         // Log input coordinates
         Log.d(TAG, "Input coordinates (normalized): x=$labelX, y=$labelY")
-        Log.d(TAG, "Snapshot pose: tx=${snapshotPose.tx()}, ty=${snapshotPose.ty()}, tz=${snapshotPose.tz()}")
+        Log.d(
+            TAG,
+            "Snapshot pose: tx=${snapshotPose.tx()}, ty=${snapshotPose.ty()}, tz=${snapshotPose.tz()}"
+        )
 
         // 1. Calculate the direction vector in camera space
         // Convert normalized coordinates (0-1) to view space (-1 to 1)
@@ -297,7 +318,10 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             worldPosition[2]
         )
 
-        Log.d(TAG, "Created anchor at: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}")
+        Log.d(
+            TAG,
+            "Created anchor at: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}"
+        )
 
         return session.createAnchor(anchorPose)
     }
@@ -311,7 +335,10 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
     ): Anchor? {
         // Log input coordinates
         Log.d(TAG, "Input coordinates (normalized): x=$labelX, y=$labelY")
-        Log.d(TAG, "Snapshot pose: tx=${snapshotPose.tx()}, ty=${snapshotPose.ty()}, tz=${snapshotPose.tz()}")
+        Log.d(
+            TAG,
+            "Snapshot pose: tx=${snapshotPose.tx()}, ty=${snapshotPose.ty()}, tz=${snapshotPose.tz()}"
+        )
 
         // 1. Calculate the direction vector in camera space
         // Convert normalized coordinates (0-1) to view space (-1 to 1)
@@ -368,7 +395,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         // 5. Calculate final world position
         val worldPosition = floatArrayOf(
             snapshotPose.tx() + normalizedDirection[0] * distance,
-            snapshotPose.ty() + normalizedDirection[1] * distance , // Lower by 20cm
+            snapshotPose.ty() + normalizedDirection[1] * distance, // Lower by 20cm
             snapshotPose.tz() + normalizedDirection[2] * distance
         )
 
@@ -379,7 +406,10 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             worldPosition[2]
         )
 
-        Log.d(TAG, "Created anchor at: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}")
+        Log.d(
+            TAG,
+            "Created anchor at: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}"
+        )
 
         return session.createAnchor(anchorPose)
     }
@@ -427,7 +457,10 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         // Create the anchor with the adjusted position
         val anchorPose = Pose.makeTranslation(worldPosition[0], worldPosition[1], worldPosition[2])
 
-        Log.d(TAG, "Created anchor at x=${anchorPose.tx()}, y=${anchorPose.ty()}, z=${anchorPose.tz()} from normalized (${labelX}, ${labelY})")
+        Log.d(
+            TAG,
+            "Created anchor at x=${anchorPose.tx()}, y=${anchorPose.ty()}, z=${anchorPose.tz()} from normalized (${labelX}, ${labelY})"
+        )
 
         return session.createAnchor(anchorPose)
     }
@@ -456,38 +489,38 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             Log.e("takeSnapshot", "No image available yet")
         }
 
-        if(BuildConfig.USE_MOCK_DATA){
+        if (BuildConfig.USE_MOCK_DATA) {
             path?.let {
                 Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
             }
             val mockResults = listOf(
-            ImageAnalyzedResult(
-                status = "success",
-                description = "Famous site detected from cropped object.",
-                siteInformation = SiteInformation(
-                    label = "Building",
-                    x = 0.4430117717f,
-                    y = 0.419694645f,
-                    siteName = "Independence Hall In Shalom Tower"
-                )
-            ),
-            ImageAnalyzedResult(
-                status = "assume",
-                description = "Famous site detected in full image.",
-                siteInformation = SiteInformation(
-                    label = "full-image",
-                    x = 0.5f,
-                    y = 0.5f,
-                    siteName = "Holocaust Monument Rabin Square"
+                ImageAnalyzedResult(
+                    status = "success",
+                    description = "Famous site detected from cropped object.",
+                    siteInformation = SiteInformation(
+                        label = "Building",
+                        x = 0.4430117717f,
+                        y = 0.419694645f,
+                        siteName = "Independence Hall In Shalom Tower"
+                    )
+                ),
+                ImageAnalyzedResult(
+                    status = "assume",
+                    description = "Famous site detected in full image.",
+                    siteInformation = SiteInformation(
+                        label = "full-image",
+                        x = 0.5f,
+                        y = 0.5f,
+                        siteName = "Holocaust Monument Rabin Square"
+                    )
                 )
             )
-        )
             launch(Dispatchers.Main) {
                 sleep(2000)
                 serverResult = mockResults
                 view.setScanningActive(false)
             }
-        } else{
+        } else {
             path?.let {
                 Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
                 getAnalyzedResult(it)
@@ -513,6 +546,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
     } catch (e: Throwable) {
         throw e
     }
+
     fun getAnalyzedResult(path: String) {
         Log.d("AnalyzeImage", "Starting image analysis")
         launch(Dispatchers.IO) {
@@ -522,8 +556,10 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
 
                 // Prepare multipart request with the image file
                 val requestBody = file.asRequestBody("application/octet-stream".toMediaType())
-                val multipartBody = MultipartBody.Part.createFormData("image", file.name, requestBody)
-                val request = AnalyzedResultsClient.analyzedResultApiClient.getAnalyzedResult(multipartBody)
+                val multipartBody =
+                    MultipartBody.Part.createFormData("image", file.name, requestBody)
+                val request =
+                    AnalyzedResultsClient.analyzedResultApiClient.getAnalyzedResult(multipartBody)
                 val response = request.execute()
 
                 Log.d("AnalyzeImage", "Server response: ${response}")
@@ -553,20 +589,32 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
 
                             // Handle failure status
                             if (singleResult.status == "failure") {
-                                Log.d("AnalyzeImage", "No objects detected: ${singleResult.description}")
+                                Log.d(
+                                    "AnalyzeImage",
+                                    "No objects detected: ${singleResult.description}"
+                                )
                                 showSnackbar("No objects detected in the image")
                             } else {
-                                Log.d("AnalyzeImage", "Site detected: ${singleResult.siteInformation?.siteName ?: "Unknown"}")
+                                Log.d(
+                                    "AnalyzeImage",
+                                    "Site detected: ${singleResult.siteInformation?.siteName ?: "Unknown"}"
+                                )
                             }
                         }
                         // Handle normal results array
                         else if (!result.result.isNullOrEmpty()) {
-                            Log.d("AnalyzeImage", "Found ${result.result.size} objects in the image")
+                            Log.d(
+                                "AnalyzeImage",
+                                "Found ${result.result.size} objects in the image"
+                            )
                             serverResult = result.result
 
                             val firstObject = serverResult?.firstOrNull()
                             if (firstObject != null) {
-                                Log.d("AnalyzeImage", "Image analyzed: ${firstObject.siteInformation?.siteName ?: "No label found"}")
+                                Log.d(
+                                    "AnalyzeImage",
+                                    "Image analyzed: ${firstObject.siteInformation?.siteName ?: "No label found"}"
+                                )
                             }
                         }
                         // Handle case with no results at all
@@ -619,6 +667,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             activity.startActivity(intent)
         }
     }
+
     private fun distanceBetween(pose1: Pose, pose2: Pose): Float {
         val dx = pose1.tx() - pose2.tx()
         val dy = pose1.ty() - pose2.ty()
@@ -640,19 +689,27 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
 
             Log.d(TAG, "Hit test performed, found ${hitResults.size} results")
 
+            val anchorsToCheck = ArrayList<ARLabeledAnchor>()
+            synchronized(arLabeledAnchors) {
+                anchorsToCheck.addAll(arLabeledAnchors)
+            }
+
             for (hit in hitResults) {
                 val hitPose = hit.hitPose
                 Log.d(TAG, "Hit pose: x=${hitPose.tx()}, y=${hitPose.ty()}, z=${hitPose.tz()}")
 
                 // Log all anchors for debugging
-                arLabeledAnchors.forEachIndexed { index, anchor ->
-                    Log.d(TAG, "Anchor $index: label=${anchor.label}, pose: x=${anchor.anchor.pose.tx()}, y=${anchor.anchor.pose.ty()}, z=${anchor.anchor.pose.tz()}")
+                anchorsToCheck.forEachIndexed { index, anchor ->
+                    Log.d(
+                        TAG,
+                        "Anchor $index: label=${anchor.label}, pose: x=${anchor.anchor.pose.tx()}, y=${anchor.anchor.pose.ty()}, z=${anchor.anchor.pose.tz()}"
+                    )
                     val distance = distanceBetween(anchor.anchor.pose, hitPose)
                     Log.d(TAG, "Distance to anchor $index: $distance")
                 }
 
                 // Check if the hit is close to any of our anchors
-                val clickedAnchor = arLabeledAnchors.find { anchor ->
+                val clickedAnchor = anchorsToCheck.find { anchor ->
                     val distance = distanceBetween(anchor.anchor.pose, hitPose)
                     Log.d(TAG, "Distance to ${anchor.label}: $distance")
                     distance < 0.2f  // You might need to adjust this threshold
@@ -678,8 +735,22 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         }
     }
 
+    private fun getAllAnchors() {
+        Model.shared.getAlArLabeledAnchors { fetchedAnchors ->
+            synchronized(arLabeledAnchors) {
+                arLabeledAnchors.clear()
+                arLabeledAnchors.addAll(fetchedAnchors)
+            }
+        }
+    }
+
+
+    private fun addAnchorToDatabase(anchors: List<ARLabeledAnchor>) {
+        Model.shared.addArLabelAnchors(anchors) {
+            getAllAnchors()
+        }
+    }
 
 }
 
-data class ARLabeledAnchor(val anchor: Anchor, val label: String)
 
