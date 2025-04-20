@@ -5,9 +5,11 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import android.opengl.Matrix
+import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.navigation.findNavController
 import com.example.explorelens.ArActivity
 import com.example.explorelens.DetailActivity
 import com.example.explorelens.extensions.convertYuv
@@ -44,6 +46,8 @@ import java.lang.Thread.sleep
 import java.util.Collections
 import kotlin.math.sqrt
 import com.example.explorelens.BuildConfig
+import com.example.explorelens.R
+import com.example.explorelens.ui.site.SiteDetailsFragment
 
 class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRender.Renderer,
     CoroutineScope by MainScope() {
@@ -601,16 +605,19 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
     }
 
 
-    private fun openDetailActivity(label: String, description: String? = null) {
+    private fun openSiteDetailsFragment(label: String, description: String? = null) {
         activity.runOnUiThread {
-            Log.d(TAG, "Opening DetailActivity with label: $label, description available: ${description != null}")
-            val intent = Intent(activity, DetailActivity::class.java)
-            intent.putExtra("LABEL_KEY", label)
-            // If we have a description, pass it to avoid another API call
-            if (description != null) {
-                intent.putExtra("DESCRIPTION_KEY", description)
+            Log.d(TAG, "Opening SiteDetailsFragment with label: $label, description available: ${description != null}")
+
+            // Create bundle with arguments
+            val bundle = Bundle().apply {
+                putString("LABEL_KEY", label)
+                description?.let { putString("DESCRIPTION_KEY", it) }
             }
-            activity.startActivity(intent)
+
+            // Navigate using the Navigation Controller
+            activity.findNavController(R.id.nav_host_fragment)
+                .navigate(R.id.action_arActivity_to_siteDetailsFragment, bundle)
         }
     }
     private fun distanceBetween(pose1: Pose, pose2: Pose): Float {
@@ -845,7 +852,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         // Pass the full description to DetailActivity if available
         activity.runOnUiThread {
             // Make sure to pass the full description, not just the first line
-            openDetailActivity(siteName, clickedAnchor.fullDescription)
+            openSiteDetailsFragment(siteName, clickedAnchor.fullDescription)
         }
     }
 }

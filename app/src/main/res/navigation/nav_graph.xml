@@ -60,6 +60,19 @@
             app:destination="@+id/loginFragment" />
     </fragment>
 
+    <fragment
+        android:id="@+id/siteDetailsFragment"
+        android:name="com.example.explorelens.ui.site.SiteDetailsFragment"
+        android:label="Site Details"
+        tools:layout="@layout/fragment_site_details">
+        <argument
+            android:name="LABEL_KEY"
+            app:argType="string" />
+        <argument
+            android:name="DESCRIPTION_KEY"
+            app:argType="string"
+            app:nullable="true" />
+    </fragment>
 
     <activity
         android:id="@+id/arActivity"
@@ -69,4 +82,7 @@
     <action
         android:id="@+id/action_arActivity_to_profileFragment"
         app:destination="@+id/profileFragment" />
+    <action
+        android:id="@+id/action_arActivity_to_siteDetailsFragment"
+        app:destination="@id/siteDetailsFragment" />
 </navigation>
