@@ -13,19 +13,17 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.R
-import com.example.explorelens.data.model.RegisterRequest
 import com.example.explorelens.databinding.FragmentLoginBinding
 import com.example.explorelens.data.network.auth.GoogleSignInHelper
 import com.example.explorelens.data.network.auth.GoogleSignInHelper.Companion.isUserAuthenticatedWithGoogle
 import com.example.explorelens.data.repository.AuthRepository
+import com.example.explorelens.utils.LoadingManager
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class LoginFragment : Fragment() {
 
@@ -39,48 +37,22 @@ class LoginFragment : Fragment() {
     private val googleSignInLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
+        Log.d(TAG, "Google Sign-In result received. Code: ${result.resultCode}")
         if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            googleSignInHelper.handleSignInResult(task) { account ->
-                val idToken = account.idToken
-                if (idToken != null) {
-
-                    googleSignInHelper.sendCredentialsToServer(idToken) { success, authResponse ->
-                        // Hide loading indicator
-                        binding.progressBar.visibility = View.GONE
-                        binding.btnLogin.isEnabled = true
-                        binding.btnGoogleLogin.isEnabled = true
-
-                        if (success && authResponse != null) {
-                            Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
-                            // Only navigate AFTER server confirms authentication
-                            findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
-                        } else {
-                            Toast.makeText(
-                                context,
-                                "Server authentication failed",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                } else {
-                    // Hide loading indicator also on failure
-                    binding.progressBar.visibility = View.GONE
-                    binding.btnLogin.isEnabled = true
-                    binding.btnGoogleLogin.isEnabled = true
-
-                    Log.e(TAG, "ID token is null")
-                    Toast.makeText(
-                        context,
-                        "Google authentication failed: No credentials",
-                        Toast.LENGTH_SHORT
-                    ).show()
+            Log.d(TAG, "Result OK, handling sign-in result...")
+            googleSignInHelper.processSignInResult(
+                result.data,
+                isRegistration = false,
+                showLoading = { showLoading() },
+                hideLoading = { hideLoading() },
+                onSuccess = {
+                    findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
                 }
-            }
+            )
         } else {
             Log.w(TAG, "Google sign in failed or canceled, code: ${result.resultCode}")
             Toast.makeText(context, "Google Sign-In canceled", Toast.LENGTH_SHORT).show()
-            binding.progressBar.visibility = View.GONE
+            hideLoading()
         }
     }
 
@@ -97,36 +69,33 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val authRepository = AuthRepository(requireContext())
+        setupGoogleSignIn()
+        checkExistingLogin()
+        setupListeners()
+    }
 
-        googleSignInHelper = GoogleSignInHelper(this)
+    private fun setupGoogleSignIn() {
+        googleSignInHelper = GoogleSignInHelper(this, authRepository)
         googleSignInHelper.configureGoogleSignIn()
+    }
 
+    private fun checkExistingLogin() {
         if (isUserAuthenticatedWithGoogle(requireContext()) || authRepository.isLoggedIn()) {
             Toast.makeText(context, "Welcome back!", Toast.LENGTH_SHORT).show()
             findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
-            return
         }
+    }
 
-        binding.btnLogin.setOnClickListener {
-            attemptLogin()
-        }
-
-        binding.btnGoogleLogin.setOnClickListener {
-            signInWithGoogle()
-        }
-
+    private fun setupListeners() {
+        binding.btnLogin.setOnClickListener { attemptLogin() }
+        binding.btnGoogleLogin.setOnClickListener { signInWithGoogle() }
         binding.tvSignUp.setOnClickListener {
             findNavController().navigate(R.id.action_loginFragment_to_registerFragment)
         }
-
         binding.tvForgotPassword.setOnClickListener {
             findNavController().navigate(R.id.action_loginFragment_to_forgotPasswordFragment)
         }
-
-        binding.ivPasswordToggle.setOnClickListener {
-            togglePasswordVisibility()
-        }
+        binding.ivPasswordToggle.setOnClickListener { togglePasswordVisibility() }
 
         binding.etPassword.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -137,13 +106,34 @@ class LoginFragment : Fragment() {
         })
     }
 
-    private fun signInWithGoogle() {
-        binding.progressBar.visibility = View.VISIBLE
-        binding.btnLogin.isEnabled = false
-        binding.btnGoogleLogin.isEnabled = false
+    private fun handleGoogleSignInResult(data: android.content.Intent?) {
+        val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+        googleSignInHelper.handleSignInResult(task) { idToken ->
+            showLoading()
 
-        val signInIntent = googleSignInHelper.getSignInIntent()
-        googleSignInLauncher.launch(signInIntent)
+
+            CoroutineScope(Dispatchers.Main).launch {
+                val result = authRepository.googleSignIn(idToken)
+                hideLoading()
+
+                if (result.isSuccess) {
+                    Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+                    findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
+                } else {
+                    Log.e(TAG, "Google login failed: ${result.exceptionOrNull()?.message}")
+                    Toast.makeText(context, "Google login failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun signInWithGoogle() {
+        googleSignInHelper.performGoogleSignIn(
+            googleSignInLauncher,
+            isRegistration = false,
+            showLoading = { showLoading() },
+            hideLoading = { hideLoading() }
+        )
     }
 
     private fun togglePasswordVisibility() {
@@ -165,41 +155,70 @@ class LoginFragment : Fragment() {
         val email = binding.etEmail.text.toString().trim()
         val password = binding.etPassword.text.toString().trim()
 
+        var isValid = true
+
         if (email.isEmpty()) {
             binding.etEmail.error = "Email is required"
-            return
+            isValid = false
         }
 
         if (password.isEmpty()) {
             binding.etPassword.error = "Password is required"
             binding.ivPasswordToggle.visibility = View.INVISIBLE
-            return
-        } else {
+            isValid = false
+        } else{
             binding.ivPasswordToggle.visibility = View.VISIBLE
+
         }
 
-        binding.progressBar.visibility = View.VISIBLE
-        binding.btnLogin.isEnabled = false
-        binding.btnGoogleLogin.isEnabled = false
+        if(isValid){
+            showLoading()
+            CoroutineScope(Dispatchers.Main).launch {
+                val result = authRepository.loginUser(email, password)
+                hideLoading()
 
-        CoroutineScope(Dispatchers.Main).launch {
-            val result = authRepository.loginUser(email, password)
-            if (result.isSuccess) {
-                Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
-                findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
-            } else {
-                Toast.makeText(context, "Login failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                if (result.isSuccess) {
+                    Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+                    findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
+                } else {
+                    Log.d(TAG, "Login failed: ${result.exceptionOrNull()?.message}")
+                    Toast.makeText(context, "Login failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                }
             }
-
-            binding.progressBar.visibility = View.GONE
-            binding.btnLogin.isEnabled = true
-            binding.btnGoogleLogin.isEnabled = true
+        } else{
+            return
         }
+
     }
 
+    private fun showLoading() {
+        LoadingManager.showLoading(requireActivity())
+        binding.btnLogin.isEnabled = false
+        binding.btnGoogleLogin.isEnabled = false
+    }
+
+    private fun hideLoading() {
+        LoadingManager.hideLoading()
+        binding.btnLogin.isEnabled = true
+        binding.btnGoogleLogin.isEnabled = true
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        LoadingManager.hideLoading()
         _binding = null
+    }
+
+    override fun onResume() {
+        super.onResume()
+        binding.etEmail.text?.clear()
+        binding.etPassword.text?.clear()
+        binding.etEmail.error = null
+        binding.etPassword.error = null
+        binding.ivPasswordToggle.visibility = View.INVISIBLE
+        isPasswordVisible = false
+        binding.etPassword.transformationMethod = PasswordTransformationMethod.getInstance()
+        binding.ivPasswordToggle.setImageResource(android.R.drawable.ic_menu_view)
+        hideLoading()
     }
 }

@@ -1,11 +1,18 @@
 package com.example.explorelens.data.network.auth
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import com.example.explorelens.BuildConfig
-import com.example.explorelens.data.model.*
+import com.example.explorelens.R
+import com.example.explorelens.data.network.auth.AuthTokenManager
+import com.example.explorelens.data.repository.AuthRepository
+import com.example.explorelens.utils.LoadingManager
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -16,15 +23,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import retrofit2.Response
 
-class GoogleSignInHelper(private val fragment: Fragment) {
+class GoogleSignInHelper(private val fragment: Fragment, private val authRepository: AuthRepository) {
     private val TAG = "GoogleSignInHelper"
     private lateinit var googleSignInClient: GoogleSignInClient
-    private val authApi: AuthApi = AuthClient.authApi
-    private val tokenManager: AuthTokenManager by lazy {
-        AuthTokenManager.getInstance(fragment.requireContext())
-    }
 
     val WEB_CLIENT_ID = BuildConfig.WEB_CLIENT_ID
 
@@ -41,19 +43,27 @@ class GoogleSignInHelper(private val fragment: Fragment) {
     }
 
     // Get sign-in intent to launch Google Sign-In flow
-    fun getSignInIntent() = googleSignInClient.signInIntent
+    fun getSignInIntent(): Intent {
+        return googleSignInClient.signInIntent.apply {
+            // Force account picker to appear every time
+            putExtra("com.google.android.gms.auth.ACCOUNT_SELECTION_OPTIONS", true)
+        }
+    }
 
     // Handle Google Sign-In result
-    fun handleSignInResult(completedTask: Task<GoogleSignInAccount>, onSuccessListener: (GoogleSignInAccount) -> Unit) {
+    fun handleSignInResult(
+        completedTask: Task<GoogleSignInAccount>,
+        onSuccessListener: (String) -> Unit
+    ) {
         try {
-            // Get Google Sign-In account
             val account = completedTask.getResult(ApiException::class.java)
-
-            // Call the success listener with the account
-            onSuccessListener(account)
-
+            val idToken = account.idToken
+            if (idToken != null) {
+                onSuccessListener(idToken)
+            } else {
+                Toast.makeText(fragment.context, "Google Sign-In failed: No ID token", Toast.LENGTH_SHORT).show()
+            }
         } catch (e: ApiException) {
-            // Sign in failed
             Log.w(TAG, "Google sign in failed", e)
             Toast.makeText(
                 fragment.context,
@@ -63,51 +73,65 @@ class GoogleSignInHelper(private val fragment: Fragment) {
         }
     }
 
-    // Send Google credentials to your server
-    fun sendCredentialsToServer(idToken: String, onComplete: (Boolean, LoginResponse?) -> Unit) {
-        // Create request body with the Google ID token
-        val googleAuthRequest = GoogleSignInRequest(idToken)
+    fun signOut(onComplete: () -> Unit) {
+        googleSignInClient.signOut().addOnCompleteListener {
+            onComplete()
+        }
+    }
 
-        // Use Coroutines for network call
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                // Send the token to your server
-                val response: Response<LoginResponse> = authApi.googleSignIn(googleAuthRequest)
+    // New unified method for handling the complete sign-in process
+    fun performGoogleSignIn(
+        launcher: ActivityResultLauncher<Intent>,
+        isRegistration: Boolean,
+        showLoading: () -> Unit,
+        hideLoading: () -> Unit
+    ) {
+        showLoading()
 
-                withContext(Dispatchers.Main) {
-                    if (response.isSuccessful) {
-                        val authResponse = response.body()
-                        if (authResponse != null) {
-                            // Save tokens to encrypted shared preferences
-                            tokenManager.saveAuthTokensLogin(authResponse)
+        try {
+            // Sign out first to force account selection
+            signOut {
+                Log.d(TAG, "Signed out before sign-in to force account selection.")
+                val signInIntent = getSignInIntent()
+                hideLoading() // Temporarily hide loading during account selection
+                launcher.launch(signInIntent)
+            }
+        } catch (e: Exception) {
+            hideLoading()
+            Log.e(TAG, "Error launching Google Sign-In: ${e.message}")
+            Toast.makeText(fragment.context, "Failed to start Google Sign-In", Toast.LENGTH_SHORT).show()
+        }
+    }
 
-                            // Call completion handler with success
-                            onComplete(true, authResponse)
-                        } else {
-                            // Empty response body
-                            onComplete(false, null)
-                        }
-                    } else {
-                        // Error response from server
-                        val errorMsg = response.errorBody()?.string() ?: "Authentication failed"
-                        Log.e(TAG, "Server error: $errorMsg")
-                        Toast.makeText(
-                            fragment.context,
-                            "Server authentication failed: $errorMsg",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        onComplete(false, null)
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Log.e(TAG, "Network error", e)
+    // Process the result from Google Sign-In
+    fun processSignInResult(
+        intent: Intent?,
+        isRegistration: Boolean,
+        showLoading: () -> Unit,
+        hideLoading: () -> Unit,
+        onSuccess: () -> Unit
+    ) {
+        val task = GoogleSignIn.getSignedInAccountFromIntent(intent)
+
+        handleSignInResult(task) { idToken ->
+            showLoading()
+
+            CoroutineScope(Dispatchers.Main).launch {
+                val result = authRepository.googleSignIn(idToken)
+                hideLoading()
+
+                if (result.isSuccess) {
+                    val successMessage = if (isRegistration) "Registration successful!" else "Login successful!"
+                    Toast.makeText(fragment.context, successMessage, Toast.LENGTH_SHORT).show()
+                    onSuccess()
+                } else {
+                    val errorPrefix = if (isRegistration) "Google registration" else "Google login"
+                    Log.e(TAG, "$errorPrefix failed: ${result.exceptionOrNull()?.message}")
                     Toast.makeText(
                         fragment.context,
-                        "Network error: ${e.message}",
+                        "$errorPrefix failed: ${result.exceptionOrNull()?.message}",
                         Toast.LENGTH_SHORT
                     ).show()
-                    onComplete(false, null)
                 }
             }
         }
