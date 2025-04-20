@@ -74,6 +74,12 @@
             app:nullable="true" />
     </fragment>
 
+    <fragment
+        android:id="@+id/mapFragment"
+        android:name="com.example.explorelens.ui.map.MapFragment"
+        android:label="Map"
+        tools:layout="@layout/fragment_map" />
+
     <activity
         android:id="@+id/arActivity"
         android:name="com.example.explorelens.ArActivity"
