@@ -213,17 +213,20 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
                 when {
                     anchors.isEmpty() ->
                         showSnackbar("No landmarks detected. Try scanning again.")
+
                     anchors.size != objects.size ->
                         showSnackbar(
                             "Some landmarks could not be anchored in space. " +
                                     "Try moving your device around to scan the environment better."
                         )
+
                     else ->
                         showSnackbar("Tap on a label to see more details")
                 }
             }
         }
     }
+
     private fun placeLabelAccurateWithSnapshot(
         session: Session,
         snapshotPose: Pose,
@@ -651,7 +654,10 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
 
     private fun openDetailActivity(label: String, description: String? = null) {
         activity.runOnUiThread {
-            Log.d(TAG, "Opening DetailActivity with label: $label, description available: ${description != null}")
+            Log.d(
+                TAG,
+                "Opening DetailActivity with label: $label, description available: ${description != null}"
+            )
             val intent = Intent(activity, DetailActivity::class.java)
             intent.putExtra("LABEL_KEY", label)
             // If we have a description, pass it to avoid another API call
@@ -669,7 +675,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         return sqrt(dx * dx + dy * dy + dz * dz)
     }
 
-private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Session) {
+    private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Session) {
         val camera = frame.camera
 
         if (camera.trackingState != TrackingState.TRACKING) {
@@ -722,7 +728,7 @@ private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Se
             synchronized(arLabeledAnchors) {
                 anchorsToCheck.addAll(arLabeledAnchors)
             }
-            
+
             // Examine each anchor to find the closest one to our touch ray
             for (anchor in anchorsToCheck) {
                 val anchorPose = anchor.anchor.pose
@@ -733,7 +739,8 @@ private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Se
                 val toAnchorY = anchorPos[1] - cameraPos[1]
                 val toAnchorZ = anchorPos[2] - cameraPos[2]
 
-                val distanceToAnchor = sqrt(toAnchorX * toAnchorX + toAnchorY * toAnchorY + toAnchorZ * toAnchorZ)
+                val distanceToAnchor =
+                    sqrt(toAnchorX * toAnchorX + toAnchorY * toAnchorY + toAnchorZ * toAnchorZ)
 
                 // Calculate dot product to determine if anchor is in front of camera
                 val dotProduct = toAnchorX * ray[0] + toAnchorY * ray[1] + toAnchorZ * ray[2]
@@ -752,7 +759,7 @@ private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Se
                 val dY = closestPointY - anchorPos[1]
                 val dZ = closestPointZ - anchorPos[2]
                 val perpendicularDistance = sqrt(dX * dX + dY * dY + dZ * dZ)
-                
+
                 val touchThreshold = 0.5f
 
                 if (dotProduct > 0 && perpendicularDistance < touchThreshold) {
@@ -762,8 +769,10 @@ private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Se
                     }
                 }
 
-                Log.d(TAG, "Anchor ${anchor.label}: distance=${distanceToAnchor}, " +
-                        "perpendicular=${perpendicularDistance}, dot=${dotProduct}")
+                Log.d(
+                    TAG, "Anchor ${anchor.label}: distance=${distanceToAnchor}, " +
+                            "perpendicular=${perpendicularDistance}, dot=${dotProduct}"
+                )
             }
 
             // If we found an anchor, handle the click
@@ -777,6 +786,7 @@ private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Se
             Log.e(TAG, "Error processing touch", e)
         }
     }
+
     private fun fetchAndCreateAnchor(
         session: Session,
         snapshotData: Snapshot,
@@ -883,6 +893,7 @@ private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Se
         // Otherwise return the whole description
         return description.trim()
     }
+
     private fun handleAnchorClick(clickedAnchor: ARLabeledAnchor) {
         // Use the siteName directly if available, otherwise extract from the label
         val siteName = clickedAnchor.siteName ?: clickedAnchor.label.split("||")[0]
@@ -894,9 +905,9 @@ private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Se
             openDetailActivity(siteName, clickedAnchor.fullDescription)
         }
     }
-}
-    
-        private fun getAllAnchors() {
+
+
+    private fun getAllAnchors() {
         Model.shared.getAlArLabeledAnchors { fetchedAnchors ->
             synchronized(arLabeledAnchors) {
                 arLabeledAnchors.clear()
@@ -911,5 +922,4 @@ private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Se
             getAllAnchors()
         }
     }
-
-
+}
