@@ -69,16 +69,24 @@
         android:layout_marginTop="16dp">
 
         <!-- Rating Button -->
-        <ImageButton
-            android:id="@+id/ratingButton"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:layout_marginEnd="32dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Rate this site"
-            android:padding="8dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/icon_rating" />
+        <LinearLayout
+            android:id="@+id/ratingContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/rating_button_background"
+            android:paddingVertical="8dp"
+            android:paddingHorizontal="16dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <!-- Replace with our custom rating view -->
+            <com.example.explorelens.ui.site.RatingView
+                android:id="@+id/ratingView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
 
         <!-- Comments Button -->
         <ImageButton
@@ -89,6 +97,7 @@
             android:contentDescription="View comments"
             android:padding="8dp"
             android:scaleType="fitCenter"
+            android:layout_marginLeft="50dp"
             android:src="@drawable/icon_comments" />
     </LinearLayout>
 

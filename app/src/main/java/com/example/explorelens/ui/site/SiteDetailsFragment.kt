@@ -1,5 +1,8 @@
 package com.example.explorelens.ui.site
 
+import android.app.AlertDialog
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -7,30 +10,34 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.RatingBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.R
 import com.example.explorelens.data.network.AnalyzedResultsClient
+import com.example.explorelens.ui.site.RatingView
+import com.example.explorelens.ui.site.CommentsAdapter
+import com.example.explorelens.ui.site.CommentItem
+import com.example.explorelens.ui.site.SiteRating
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import com.example.explorelens.ui.site.CommentsAdapter
-import com.example.explorelens.ui.site.CommentItem
 
 class SiteDetailsFragment : Fragment() {
 
     private lateinit var labelTextView: TextView
     private lateinit var descriptionTextView: TextView
     private lateinit var loadingIndicator: ProgressBar
-    private lateinit var commentsButton: ImageButton
+    private lateinit var commentsButton: View
+    private lateinit var ratingContainer: LinearLayout
+    private lateinit var ratingView: RatingView
+    private var siteRating: SiteRating? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -48,10 +55,16 @@ class SiteDetailsFragment : Fragment() {
         descriptionTextView = view.findViewById(R.id.descriptionTextView)
         loadingIndicator = view.findViewById(R.id.loadingIndicator)
         commentsButton = view.findViewById(R.id.commentsButton)
+        ratingContainer = view.findViewById(R.id.ratingContainer)
+        ratingView = view.findViewById(R.id.ratingView)
 
         // Set up comments button click listener
         commentsButton.setOnClickListener {
             showCommentsDialog()
+        }
+
+        ratingContainer.setOnClickListener {
+            showRatingDialog()
         }
 
         arguments?.let { args ->
@@ -72,6 +85,10 @@ class SiteDetailsFragment : Fragment() {
                 loadingIndicator.visibility = View.VISIBLE
                 fetchSiteDetails(label)
             }
+            // Set initial mock rating
+            // In a real app, you would fetch this from the server
+            siteRating = SiteRating(label, 4.2f, 128)
+            ratingView.setRating(siteRating?.averageRating ?: 0f)
         }
     }
 
@@ -164,6 +181,71 @@ class SiteDetailsFragment : Fragment() {
             }
 
             bottomSheetDialog.show()
+        }
+    }
+    private fun showRatingDialog() {
+        context?.let { ctx ->
+            // Create and show dialog
+            val dialog = AlertDialog.Builder(ctx, R.style.RoundedDialog)
+                .setView(R.layout.dialog_rate_site)
+                .create()
+
+            // Make dialog background transparent to show rounded corners
+            dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+            dialog.show()
+
+            // Get views from dialog
+            val siteName = dialog.findViewById<TextView>(R.id.siteName)
+            val ratingBar = dialog.findViewById<RatingBar>(R.id.ratingBar)
+            val cancelButton = dialog.findViewById<Button>(R.id.cancelButton)
+            val submitButton = dialog.findViewById<Button>(R.id.submitRatingButton)
+
+            // Set site name
+            siteName?.text = labelTextView.text
+
+            // Set up cancel button
+            cancelButton?.setOnClickListener {
+                dialog.dismiss()
+            }
+
+            // Set up submit button
+            submitButton?.setOnClickListener {
+                val rating = ratingBar?.rating ?: 0f
+                if (rating > 0) {
+                    // Here you would normally send this to your backend
+                    // For now, just update the UI and dismiss
+                    updateRatingView(rating)
+                    Toast.makeText(context, "Rating submitted: $rating", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                } else {
+                    Toast.makeText(context, "Please select a rating", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    // Add this method to update the rating display
+    private fun updateRatingView(newRating: Float? = null) {
+        val currentRating = ratingView.getRating()
+        val currentCount = siteRating?.totalRatings ?: 0
+
+        if (newRating != null && currentCount > 0) {
+            // Calculate new average if we have a current rating
+            val totalScore = currentRating * currentCount
+            val newTotalScore = totalScore + newRating
+            val newCount = currentCount + 1
+            val newAverage = newTotalScore / newCount
+
+            // Update our model
+            siteRating = SiteRating(labelTextView.text.toString(), newAverage, newCount)
+
+            // Update the view
+            ratingView.setRating(newAverage)
+        } else if (newRating != null) {
+            // First rating
+            siteRating = SiteRating(labelTextView.text.toString(), newRating, 1)
+            ratingView.setRating(newRating)
         }
     }
 }
