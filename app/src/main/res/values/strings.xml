@@ -37,7 +37,7 @@
     <string name="create_a_new_account">Create a new account</string>
     <string name="reset_password">Reset Password</string>
     <string name="enter_your_email_to_reset_password">Enter your email to reset password</string>
-    <string name="app_name">ARCore MLKit</string>
+    <string name="app_name">ExploreLens</string>
     <string name="scan_busy">Scanning…</string>
     <string name="scan_available">Scan</string>
     <string name="clear">Clear</string>
