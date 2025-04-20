@@ -22,4 +22,16 @@
         android:elevation="4dp" />
 
 
+    <ImageButton
+        android:id="@+id/closeButton"
+        android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="top|start"
+        android:layout_margin="16dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="close"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_close"
+        app:tint="@color/white"/>
+
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

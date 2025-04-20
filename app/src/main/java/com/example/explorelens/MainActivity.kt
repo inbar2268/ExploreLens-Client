@@ -7,6 +7,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import com.example.explorelens.data.network.auth.AuthClient
+import com.example.explorelens.utils.LoadingManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedListener {
@@ -17,6 +19,7 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main2)
+        AuthClient.init(applicationContext)
 
         bottomNavigationView = findViewById(R.id.bottom_navigation)
 
@@ -50,5 +53,10 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
 
     override fun onSupportNavigateUp(): Boolean {
         return navController.navigateUp() || super.onSupportNavigateUp()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        LoadingManager.cleanup()
     }
 }

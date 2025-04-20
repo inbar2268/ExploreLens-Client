@@ -1,6 +1,9 @@
 package com.example.explorelens.ar
 
 import android.content.Intent
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import android.opengl.Matrix
 import android.os.Handler
 import android.os.Looper
@@ -188,52 +191,39 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             serverResult = null
             val snapshotData = lastSnapshotData
 
-            Log.i(TAG, " Analyzer got objects: $objects")
-            val anchors = objects.mapNotNull { obj ->
-                val atX = obj.siteInformation?.x
-                val atY = obj.siteInformation?.y
+            Log.i(TAG, "Analyzer got objects: $objects")
 
-                if (atX == null || atY == null) {
-                    return@mapNotNull null
+            if (snapshotData == null) {
+                Log.e(TAG, "No snapshot data available for anchor creation")
+                view.post {
+                    view.setScanningActive(false)
+                    showSnackbar("Unable to place AR labels. Please try again.")
                 }
-
-                if (snapshotData == null) {
-                    Log.e(TAG, "No snapshot data available for anchor creation")
-                    return@mapNotNull null
-                }
-
-                val anchor = placeLabelAccurateWithSnapshot(
-                    session,
-                    snapshotData.cameraPose,
-                    atX,
-                    atY,
-                    frame
-                ) ?: return@mapNotNull null
-
-                Log.d(TAG, "Anchor created for ${obj.siteInformation?.siteName}")
-                Log.d(
-                    TAG,
-                    "Anchor Pose: x=${anchor.pose.tx()}, y=${anchor.pose.ty()}, z=${anchor.pose.tz()}"
-                )
-                ARLabeledAnchor(anchor, obj.siteInformation!!.siteName)
-
+                return
             }
+
+            val anchors = objects.mapNotNull { obj ->
+                fetchAndCreateAnchor(session, snapshotData, obj, frame)
+            }
+
             addAnchorToDatabase(anchors)
 
             view.post {
                 view.setScanningActive(false)
                 when {
-
+                    anchors.isEmpty() ->
+                        showSnackbar("No landmarks detected. Try scanning again.")
                     anchors.size != objects.size ->
                         showSnackbar(
-                            "Objects were classified, but could not be attached to an anchor. " +
-                                    "Try moving your device around to obtain a better understanding of the environment."
+                            "Some landmarks could not be anchored in space. " +
+                                    "Try moving your device around to scan the environment better."
                         )
+                    else ->
+                        showSnackbar("Tap on a label to see more details")
                 }
             }
         }
     }
-
     private fun placeLabelAccurateWithSnapshot(
         session: Session,
         snapshotPose: Pose,
@@ -659,11 +649,15 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
     }
 
 
-    private fun openDetailActivity(label: String) {
+    private fun openDetailActivity(label: String, description: String? = null) {
         activity.runOnUiThread {
-            Log.d(TAG, "Opening DetailActivity with label: $label")
+            Log.d(TAG, "Opening DetailActivity with label: $label, description available: ${description != null}")
             val intent = Intent(activity, DetailActivity::class.java)
             intent.putExtra("LABEL_KEY", label)
+            // If we have a description, pass it to avoid another API call
+            if (description != null) {
+                intent.putExtra("DESCRIPTION_KEY", description)
+            }
             activity.startActivity(intent)
         }
     }
@@ -675,7 +669,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         return sqrt(dx * dx + dy * dy + dz * dz)
     }
 
-    private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Session) {
+private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Session) {
         val camera = frame.camera
 
         if (camera.trackingState != TrackingState.TRACKING) {
@@ -684,58 +678,225 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         }
 
         try {
-            // Perform hit test
+            // Get camera position and forward direction
+            val cameraPose = camera.pose
+            val cameraPos = cameraPose.translation
+            val forward = cameraPose.zAxis
+
+            // Normalize forward direction (pointing out of the camera)
+            val forwardNorm = floatArrayOf(-forward[0], -forward[1], -forward[2])
+
+            // Find all visible anchors within a generous detection cone
+            var closestAnchor: ARLabeledAnchor? = null
+            var closestDistance = Float.MAX_VALUE
+
+            // Log camera and touch information
+            Log.d(TAG, "Camera position: ${cameraPos.contentToString()}")
+            Log.d(TAG, "Touch coordinates: $x, $y")
+
+            // Create a hit ray from the touch coordinates
             val hitResults = frame.hitTest(x, y)
 
-            Log.d(TAG, "Hit test performed, found ${hitResults.size} results")
+            // Calculate ray direction from touch
+            val ray = if (hitResults.isNotEmpty()) {
+                val hitPos = hitResults.first().hitPose.translation
+                val rayX = hitPos[0] - cameraPos[0]
+                val rayY = hitPos[1] - cameraPos[1]
+                val rayZ = hitPos[2] - cameraPos[2]
+
+                val rayLength = sqrt(rayX * rayX + rayY * rayY + rayZ * rayZ)
+                if (rayLength > 0) {
+                    floatArrayOf(rayX / rayLength, rayY / rayLength, rayZ / rayLength)
+                } else {
+                    forwardNorm
+                }
+            } else {
+                // Fallback to camera forward direction if no hit
+                forwardNorm
+            }
+
+            // Log ray direction
+            Log.d(TAG, "Ray direction: ${ray.contentToString()}")
 
             val anchorsToCheck = ArrayList<ARLabeledAnchor>()
             synchronized(arLabeledAnchors) {
                 anchorsToCheck.addAll(arLabeledAnchors)
             }
+            
+            // Examine each anchor to find the closest one to our touch ray
+            for (anchor in anchorsToCheck) {
+                val anchorPose = anchor.anchor.pose
+                val anchorPos = anchorPose.translation  // FIXED: use anchorPose not anchorPos
 
-            for (hit in hitResults) {
-                val hitPose = hit.hitPose
-                Log.d(TAG, "Hit pose: x=${hitPose.tx()}, y=${hitPose.ty()}, z=${hitPose.tz()}")
+                // Vector from camera to anchor
+                val toAnchorX = anchorPos[0] - cameraPos[0]
+                val toAnchorY = anchorPos[1] - cameraPos[1]
+                val toAnchorZ = anchorPos[2] - cameraPos[2]
 
-                // Log all anchors for debugging
-                anchorsToCheck.forEachIndexed { index, anchor ->
-                    Log.d(
-                        TAG,
-                        "Anchor $index: label=${anchor.label}, pose: x=${anchor.anchor.pose.tx()}, y=${anchor.anchor.pose.ty()}, z=${anchor.anchor.pose.tz()}"
-                    )
-                    val distance = distanceBetween(anchor.anchor.pose, hitPose)
-                    Log.d(TAG, "Distance to anchor $index: $distance")
-                }
+                val distanceToAnchor = sqrt(toAnchorX * toAnchorX + toAnchorY * toAnchorY + toAnchorZ * toAnchorZ)
 
-                // Check if the hit is close to any of our anchors
-                val clickedAnchor = anchorsToCheck.find { anchor ->
-                    val distance = distanceBetween(anchor.anchor.pose, hitPose)
-                    Log.d(TAG, "Distance to ${anchor.label}: $distance")
-                    distance < 0.2f  // You might need to adjust this threshold
-                }
+                // Calculate dot product to determine if anchor is in front of camera
+                val dotProduct = toAnchorX * ray[0] + toAnchorY * ray[1] + toAnchorZ * ray[2]
 
-                if (clickedAnchor != null) {
-                    Log.d(TAG, "Clicked on anchor: ${clickedAnchor.label}")
-                    activity.runOnUiThread {
-                        // Navigate to detail activity on the UI thread
-                        openDetailActivity(clickedAnchor.label)
+                // Distance from ray to anchor (using vector rejection formula)
+                val projection = dotProduct / distanceToAnchor
+                val projectionDistance = distanceToAnchor * projection
+
+                // Calculate the closest point on the ray
+                val closestPointX = cameraPos[0] + ray[0] * projectionDistance
+                val closestPointY = cameraPos[1] + ray[1] * projectionDistance
+                val closestPointZ = cameraPos[2] + ray[2] * projectionDistance
+
+                // Distance from this point to the anchor
+                val dX = closestPointX - anchorPos[0]
+                val dY = closestPointY - anchorPos[1]
+                val dZ = closestPointZ - anchorPos[2]
+                val perpendicularDistance = sqrt(dX * dX + dY * dY + dZ * dZ)
+                
+                val touchThreshold = 0.5f
+
+                if (dotProduct > 0 && perpendicularDistance < touchThreshold) {
+                    if (distanceToAnchor < closestDistance) {
+                        closestAnchor = anchor
+                        closestDistance = distanceToAnchor
                     }
-                    return
                 }
+
+                Log.d(TAG, "Anchor ${anchor.label}: distance=${distanceToAnchor}, " +
+                        "perpendicular=${perpendicularDistance}, dot=${dotProduct}")
             }
 
-            if (hitResults.isEmpty()) {
-                Log.d(TAG, "No hit results found")
+            // If we found an anchor, handle the click
+            if (closestAnchor != null) {
+                Log.d(TAG, "Selected anchor: ${closestAnchor.label} at distance ${closestDistance}")
+                handleAnchorClick(closestAnchor)
             } else {
-                Log.d(TAG, "Hit results found but no anchors were close enough")
+                Log.d(TAG, "No anchor selected")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error processing touch", e)
         }
     }
+    private fun fetchAndCreateAnchor(
+        session: Session,
+        snapshotData: Snapshot,
+        obj: ImageAnalyzedResult,
+        frame: Frame
+    ): ARLabeledAnchor? {
+        val atX = obj.siteInformation?.x
+        val atY = obj.siteInformation?.y
+        val siteName = obj.siteInformation?.siteName
 
-    private fun getAllAnchors() {
+        if (atX == null || atY == null || siteName == null) {
+            Log.e(TAG, "Missing location data or site name")
+            return null
+        }
+        // Create anchor first so we can proceed with AR display
+        val anchor = placeLabelAccurateWithSnapshot(
+            session,
+            snapshotData.cameraPose,
+            atX,
+            atY,
+            frame
+        ) ?: return null
+
+        Log.d(TAG, "Anchor created for $siteName")
+
+        // Initially create with just the site name
+        val arLabeledAnchor = ARLabeledAnchor(anchor, "$siteName||Loading...", siteName)
+
+        // Fetch description separately from the API (without blocking)
+        val siteNameForRequest = siteName.replace(" ", "")
+        Log.d(TAG, "Fetching site details for: $siteNameForRequest")
+
+        AnalyzedResultsClient.siteDetailsApiClient.getSiteDetails(siteNameForRequest)
+            .enqueue(object : Callback<String> {
+                override fun onResponse(call: Call<String>, response: Response<String>) {
+                    if (response.isSuccessful) {
+                        val description = response.body() ?: ""
+
+                        // Get first sentence or first line for preview
+                        val previewText = extractPreviewText(description)
+
+                        // Update the label text with fetched description
+                        val newLabelText = "$siteName||$previewText"
+                        Log.d(TAG, "Updated label with description: $newLabelText")
+
+                        // Update the anchor label
+                        synchronized(arLabeledAnchors) {
+                            val index = arLabeledAnchors.indexOf(arLabeledAnchor)
+                            if (index != -1) {
+                                // Create a new anchor with updated label text
+                                val updatedAnchor = ARLabeledAnchor(
+                                    arLabeledAnchor.anchor,
+                                    newLabelText,
+                                    arLabeledAnchor.siteName
+                                )
+                                // Store full description for DetailActivity
+                                updatedAnchor.fullDescription = description
+                                arLabeledAnchors[index] = updatedAnchor
+                            }
+                        }
+                    } else {
+                        Log.e(TAG, "Failed to fetch site details: ${response.code()}")
+                    }
+                }
+
+                override fun onFailure(call: Call<String>, t: Throwable) {
+                    Log.e(TAG, "Network error fetching site details: ${t.message}")
+                }
+            })
+
+        return arLabeledAnchor
+    }
+
+    // Helper function to extract a single line or sentence for preview
+    private fun extractPreviewText(description: String): String {
+        if (description.isEmpty()) return ""
+        // First try to get the first sentence
+        val firstSentenceEnd = description.indexOfAny(charArrayOf('.', '!', '?'), 0)
+
+        // If we found a sentence ending
+        if (firstSentenceEnd >= 0 && firstSentenceEnd < 200) {
+            // Return the complete sentence including the punctuation
+            return description.substring(0, firstSentenceEnd + 1).trim()
+        }
+
+        // If no sentence end found, look for a line break
+        val firstLineEnd = description.indexOf('\n')
+        if (firstLineEnd >= 0 && firstLineEnd < 200) {
+            return description.substring(0, firstLineEnd).trim()
+        }
+
+        // If the description is very long with no sentence breaks, take up to 200 chars
+        if (description.length > 200) {
+            // Find the last space before 200 characters to avoid cutting words
+            val lastSpace = description.substring(0, 200).lastIndexOf(' ')
+            return if (lastSpace > 0) {
+                description.substring(0, lastSpace).trim() + "..."
+            } else {
+                // If no space found, cut at 200
+                description.substring(0, 200).trim() + "..."
+            }
+        }
+
+        // Otherwise return the whole description
+        return description.trim()
+    }
+    private fun handleAnchorClick(clickedAnchor: ARLabeledAnchor) {
+        // Use the siteName directly if available, otherwise extract from the label
+        val siteName = clickedAnchor.siteName ?: clickedAnchor.label.split("||")[0]
+        Log.d(TAG, "Clicked on anchor: $siteName")
+
+        // Pass the full description to DetailActivity if available
+        activity.runOnUiThread {
+            // Make sure to pass the full description, not just the first line
+            openDetailActivity(siteName, clickedAnchor.fullDescription)
+        }
+    }
+}
+    
+        private fun getAllAnchors() {
         Model.shared.getAlArLabeledAnchors { fetchedAnchors ->
             synchronized(arLabeledAnchors) {
                 arLabeledAnchors.clear()
@@ -750,7 +911,5 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             getAllAnchors()
         }
     }
-
-}
 
 

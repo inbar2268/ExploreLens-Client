@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.ar.core.CameraConfig
 import com.google.ar.core.CameraConfigFilter
 import com.google.ar.core.Config
+import androidx.navigation.fragment.findNavController
 import com.example.explorelens.common.helpers.FullScreenHelper
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.UnavailableApkTooOldException
@@ -14,6 +15,9 @@ import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
 import android.view.MotionEvent
+import android.widget.ImageButton
+import androidx.navigation.findNavController
+import androidx.navigation.fragment.findNavController
 import com.example.explorelens.ar.ARCoreSessionLifecycleHelper
 import com.example.explorelens.ar.AppRenderer
 import com.example.explorelens.ar.ArActivityView
@@ -21,7 +25,6 @@ import com.example.explorelens.ar.ArActivityView
 class ArActivity : AppCompatActivity() {
   val TAG = "MainActivity"
   lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
-
   lateinit var renderer: AppRenderer
   lateinit var view: ArActivityView
 
@@ -77,6 +80,11 @@ class ArActivity : AppCompatActivity() {
     renderer.bindView(view)
     lifecycle.addObserver(view)
 
+    val closeButton = findViewById<ImageButton>(R.id.closeButton)
+    closeButton?.setOnClickListener {
+      findNavController(R.id.nav_host_fragment).navigate(R.id.action_arActivity_to_profileFragment)
+      finish()
+    }
   }
 
   override fun onRequestPermissionsResult(

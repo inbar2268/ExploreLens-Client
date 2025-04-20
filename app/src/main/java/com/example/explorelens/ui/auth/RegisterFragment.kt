@@ -1,24 +1,57 @@
 package com.example.explorelens.ui.auth
 
+import android.app.Activity
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.R
 import com.example.explorelens.databinding.FragmentRegisterBinding
+import com.example.explorelens.data.network.auth.GoogleSignInHelper
+import com.example.explorelens.data.repository.AuthRepository
+import com.example.explorelens.utils.LoadingManager
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class RegisterFragment : Fragment() {
 
     private var _binding: FragmentRegisterBinding? = null
     private val binding get() = _binding!!
     private var isPasswordVisible = false
+    private lateinit var googleSignInHelper: GoogleSignInHelper
+    private lateinit var authRepository: AuthRepository
+    private val TAG = "RegisterFragment"
+
+    private val googleSignInLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            googleSignInHelper.processSignInResult(
+                result.data,
+                isRegistration = true,
+                showLoading = { showLoading() },
+                hideLoading = { hideLoading() },
+                onSuccess = {
+                    findNavController().navigate(R.id.action_registerFragment_to_profileFragment)
+                }
+            )
+        } else {
+            Log.w(TAG, "Google sign in failed or canceled, code: ${result.resultCode}")
+            Toast.makeText(context, "Google Sign-In canceled", Toast.LENGTH_SHORT).show()
+            hideLoading()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -26,30 +59,30 @@ class RegisterFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentRegisterBinding.inflate(inflater, container, false)
+        authRepository = AuthRepository(requireContext())
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.btnBack.setOnClickListener {
-            findNavController().navigateUp()
-        }
-        binding.btnRegister.setOnClickListener {
-            attemptRegistration()
-        }
+        setupGoogleSignIn()
+        setupListeners()
+    }
 
-        binding.btnGoogleRegister.setOnClickListener {
-            Toast.makeText(context, "Google Sign-Up clicked", Toast.LENGTH_SHORT).show()
-        }
+    private fun setupGoogleSignIn() {
+        googleSignInHelper = GoogleSignInHelper(this, authRepository)
+        googleSignInHelper.configureGoogleSignIn()
+    }
 
+    private fun setupListeners() {
+        binding.btnBack.setOnClickListener { findNavController().navigateUp() }
+        binding.btnRegister.setOnClickListener { attemptRegistration() }
+        binding.btnGoogleRegister.setOnClickListener { signUpWithGoogle() }
         binding.tvSignIn.setOnClickListener {
             findNavController().navigate(R.id.action_registerFragment_to_loginFragment)
         }
-
-        binding.ivPasswordToggle.setOnClickListener {
-            togglePasswordVisibility()
-        }
+        binding.ivPasswordToggle.setOnClickListener { togglePasswordVisibility() }
 
         binding.etPassword.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -60,19 +93,50 @@ class RegisterFragment : Fragment() {
         })
     }
 
+    private fun handleGoogleSignInResult(data: android.content.Intent?) {
+        val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+        googleSignInHelper.handleSignInResult(task) { idToken ->
+            // Loading is already shown in signInWithGoogle
+            CoroutineScope(Dispatchers.Main).launch {
+                val result = authRepository.googleSignIn(idToken)
+                hideLoading()
+
+                if (result.isSuccess) {
+                    Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+                    findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
+                } else {
+                    Log.e(TAG, "Google login failed: ${result.exceptionOrNull()?.message}")
+                    Toast.makeText(context, "Google login failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun signUpWithGoogle() {
+        googleSignInHelper.performGoogleSignIn(
+            googleSignInLauncher,
+            isRegistration = true,
+            showLoading = { showLoading() },
+            hideLoading = { hideLoading() }
+        )
+    }
+
     private fun togglePasswordVisibility() {
         isPasswordVisible = !isPasswordVisible
 
-        if (isPasswordVisible) {
-            binding.etPassword.transformationMethod = HideReturnsTransformationMethod.getInstance()
-            binding.ivPasswordToggle.setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
-        } else {
-            binding.etPassword.transformationMethod = PasswordTransformationMethod.getInstance()
-            binding.ivPasswordToggle.setImageResource(android.R.drawable.ic_menu_view)
-        }
+        binding.etPassword.transformationMethod = if (isPasswordVisible)
+            HideReturnsTransformationMethod.getInstance()
+        else
+            PasswordTransformationMethod.getInstance()
 
-        val selection = binding.etPassword.selectionEnd
-        binding.etPassword.setSelection(selection)
+        binding.ivPasswordToggle.setImageResource(
+            if (isPasswordVisible)
+                android.R.drawable.ic_menu_close_clear_cancel
+            else
+                android.R.drawable.ic_menu_view
+        )
+
+        binding.etPassword.setSelection(binding.etPassword.selectionEnd)
     }
 
     private fun attemptRegistration() {
@@ -80,6 +144,29 @@ class RegisterFragment : Fragment() {
         val email = binding.etEmail.text.toString().trim()
         val password = binding.etPassword.text.toString().trim()
 
+        if (!validateInputs(name, email, password)) return
+
+        showLoading()
+
+        CoroutineScope(Dispatchers.Main).launch {
+            val result = authRepository.registerUser(name, email, password)
+            hideLoading()
+
+            if (result.isSuccess) {
+                Toast.makeText(context, "Registration successful", Toast.LENGTH_SHORT).show()
+                findNavController().navigate(R.id.action_registerFragment_to_profileFragment)
+            } else {
+                Log.d(TAG, "Registration failed: ${result.exceptionOrNull()?.message}")
+                Toast.makeText(
+                    context,
+                    "Registration failed: ${result.exceptionOrNull()?.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun validateInputs(name: String, email: String, password: String): Boolean {
         var isValid = true
 
         if (name.isEmpty()) {
@@ -100,21 +187,47 @@ class RegisterFragment : Fragment() {
             binding.ivPasswordToggle.visibility = View.INVISIBLE
             isValid = false
         } else if (password.length < 6) {
-            binding.etPassword.error = "Password must be at least 6 characters"
             binding.ivPasswordToggle.visibility = View.INVISIBLE
+            binding.etPassword.error = "Password must be at least 6 characters"
             isValid = false
-        } else{
+        } else {
             binding.ivPasswordToggle.visibility = View.VISIBLE
         }
 
-        if (isValid) {
-            Toast.makeText(context, "Registration successful", Toast.LENGTH_SHORT).show()
-            findNavController().navigate(R.id.action_registerFragment_to_loginFragment)
-        }
+        return isValid
+    }
+
+    private fun showLoading() {
+        LoadingManager.showLoading(requireActivity())
+        binding.btnRegister.isEnabled = false
+        binding.btnGoogleRegister.isEnabled = false
+    }
+
+    private fun hideLoading() {
+        LoadingManager.hideLoading()
+        binding.btnRegister.isEnabled = true
+        binding.btnGoogleRegister.isEnabled = true
+    }
+
+    override fun onResume() {
+        super.onResume()
+        binding.etName.text?.clear()
+        binding.etEmail.text?.clear()
+        binding.etPassword.text?.clear()
+        binding.etName.error = null
+        binding.etEmail.error = null
+        binding.etPassword.error = null
+        binding.ivPasswordToggle.visibility = View.INVISIBLE
+        isPasswordVisible = false
+        binding.etPassword.transformationMethod = PasswordTransformationMethod.getInstance()
+        binding.ivPasswordToggle.setImageResource(android.R.drawable.ic_menu_view)
+        hideLoading()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        LoadingManager.hideLoading()
         _binding = null
     }
+
 }

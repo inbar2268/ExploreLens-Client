@@ -19,6 +19,9 @@
         <action
             android:id="@+id/action_loginFragment_to_arActivity"
             app:destination="@+id/arActivity" />
+        <action
+            android:id="@+id/action_loginFragment_to_profileFragment"
+            app:destination="@+id/profileFragment" />
     </fragment>
 
     <fragment
@@ -29,6 +32,12 @@
         <action
             android:id="@+id/action_registerFragment_to_loginFragment"
             app:destination="@+id/loginFragment" />
+        <action
+            android:id="@+id/action_registerFragment_to_arActivity"
+            app:destination="@+id/arActivity" />
+        <action
+            android:id="@+id/action_registerFragment_to_profileFragment"
+            app:destination="@+id/profileFragment" />
     </fragment>
 
     <fragment
@@ -41,10 +50,23 @@
             app:destination="@+id/loginFragment" />
     </fragment>
 
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.explorelens.ui.user.ProfileFragment"
+        android:label="Profile"
+        tools:layout="@layout/fragment_profile">
+        <action
+            android:id="@+id/action_profileFragment_to_loginFragment"
+            app:destination="@+id/loginFragment" />
+    </fragment>
+
+
     <activity
         android:id="@+id/arActivity"
         android:name="com.example.explorelens.ArActivity"
         android:label="AR"
         tools:layout="@layout/activity_main" />
-
+    <action
+        android:id="@+id/action_arActivity_to_profileFragment"
+        app:destination="@+id/profileFragment" />
 </navigation>
