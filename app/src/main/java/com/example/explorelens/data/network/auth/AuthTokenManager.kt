@@ -8,7 +8,6 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.example.explorelens.data.model.LoginResponse
-import com.example.explorelens.data.model.RegisterResponse
 import java.io.IOException
 import java.security.GeneralSecurityException
 
@@ -57,7 +56,7 @@ class AuthTokenManager(private val context: Context) {
         }
     }
 
-    fun saveAuthTokensLogin(authResponse: LoginResponse) {
+    fun saveAuthTokens(authResponse: LoginResponse) {
         encryptedSharedPreferences.edit().apply {
             putString(KEY_ACCESS_TOKEN, authResponse.accessToken)
             putString(KEY_REFRESH_TOKEN, authResponse.refreshToken)
@@ -66,16 +65,6 @@ class AuthTokenManager(private val context: Context) {
         }
         Log.d(TAG, "Auth tokens saved securely")
 
-    }
-
-    fun saveAuthTokensRegister(authResponse: RegisterResponse) {
-        encryptedSharedPreferences.edit().apply {
-            putString(KEY_ACCESS_TOKEN, authResponse.accessToken)
-            putString(KEY_REFRESH_TOKEN, authResponse.refreshToken)
-            putString(KEY_USER_ID, authResponse._id)
-            apply()
-        }
-        Log.d(TAG, "Auth tokens saved securely")
     }
 
     fun getAccessToken(): String? {

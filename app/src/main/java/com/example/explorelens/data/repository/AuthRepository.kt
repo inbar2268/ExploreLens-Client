@@ -1,10 +1,10 @@
 package com.example.explorelens.data.repository
 
 import android.content.Context
+import com.example.explorelens.data.model.GoogleSignInRequest
 import com.example.explorelens.data.model.LoginRequest
 import com.example.explorelens.data.model.LoginResponse
 import com.example.explorelens.data.model.RegisterRequest
-import com.example.explorelens.data.model.RegisterResponse
 import com.example.explorelens.data.network.auth.AuthApi
 import com.example.explorelens.data.network.auth.AuthTokenManager
 import com.example.explorelens.data.network.auth.AuthClient
@@ -17,85 +17,78 @@ class AuthRepository(private val context: Context) {
     private val authApi: AuthApi = AuthClient.authApi
     private val tokenManager: AuthTokenManager = AuthTokenManager.getInstance(context)
 
-    // Register user
-//    suspend fun registerUser(username: String, email: String, password: String): Result<RegisterResponse> {
-//        val registerRequest = RegisterRequest(username, email, password)
-//        return try {
-//            val response: Response<RegisterResponse> = authApi.register(registerRequest)
-//            if (response.isSuccessful) {
-//                response.body()?.let { authResponse ->
-//                    // Save tokens securely
-//                    tokenManager.saveAuthTokensRegister(authResponse)
-//                    Result.success(authResponse)
-//                } ?: Result.failure(Exception("Registration failed: No response from server"))
-//            } else {
-//                Result.failure(Exception("Registration failed: ${response.errorBody()?.string()}"))
-//            }
-//        } catch (e: Exception) {
-//            Result.failure(e)
-//        }
-//    }
-
-
-    suspend fun registerUser(username: String, email: String, password: String): Result<RegisterResponse> {
+    suspend fun registerUser(name: String, email: String, password: String): Result<LoginResponse> {
+        val registerRequest = RegisterRequest(name, email, password, "")
         return try {
-            val registerRequest = RegisterRequest(username, email, password)
-
-            val mockResponse = RegisterResponse(
-                _id = "6800b714eb49a86f1666bb60",
-                username = username,
-                email = email,
-                accessToken = "mockAccessToken",
-                refreshToken = "mockRefreshToken"
-            )
-
-            // Save tokens securely
-            tokenManager.saveAuthTokensRegister(mockResponse)
-            Result.success(mockResponse)
+            val response = authApi.register(registerRequest)
+            if (response.isSuccessful) {
+                response.body()?.let {
+                    tokenManager.saveAuthTokens(it)
+                    Result.success(it)
+                } ?: Result.failure(Exception("Registration failed: Empty response body"))
+            } else {
+                Result.failure(Exception(parseErrorMessage(response)))
+            }
         } catch (e: Exception) {
-            Result.failure(e)
+            val errorMessage = handleNetworkError(e)
+            Result.failure(Exception(errorMessage))
         }
     }
 
+    private fun handleNetworkError(e: Exception): String {
+        val errorMessage = when {
+            e is java.net.ConnectException ||
+                    e is java.net.SocketTimeoutException ||
+                    e.message?.contains("Failed to connect") == true -> "Network error"
+            else -> e.message ?: "Unknown error"
+        }
+        return errorMessage
+    }
+    private fun parseErrorMessage(response: Response<*>): String {
+        val errorBody = response.errorBody()?.string()
+        return try {
+            val json = org.json.JSONObject(errorBody ?: "")
+            json.optString("message", "Unknown error occurred")
+        } catch (e: Exception) {
+            errorBody ?: "Unknown error occurred"
+        }
+    }
 
     // Login user
-//    suspend fun loginUser(email: String, password: String): Result<LoginResponse> {
-//        return try {
-//            val loginRequest = LoginRequest(email, password)
-//            val response: Response<LoginResponse> = authApi.login(loginRequest)
-//            if (response.isSuccessful) {
-//                response.body()?.let { authResponse ->
-//                    // Save tokens securely
-//                    tokenManager.saveAuthTokensLogin(authResponse)
-//                    Result.success(authResponse)
-//                } ?: Result.failure(Exception("Login failed: No response from server"))
-//            } else {
-//                Result.failure(Exception("Login failed: ${response.errorBody()?.string()}"))
-//            }
-//        } catch (e: Exception) {
-//            Result.failure(e)
-//        }
-//    }
-
-
     suspend fun loginUser(email: String, password: String): Result<LoginResponse> {
         return try {
-            // Mocked successful response
-            val mockResponse = LoginResponse(
-                _id = "6800b714eb49a86f1666bb60",
-                accessToken = "mockAccessToken",
-                refreshToken = "mockRefreshToken"
-            )
-
-            // Save tokens securely
-            tokenManager.saveAuthTokensLogin(mockResponse)
-            Result.success(mockResponse)
-
+            val response = authApi.login(LoginRequest(email, password))
+            if (response.isSuccessful) {
+                response.body()?.let {
+                    tokenManager.saveAuthTokens(it)
+                    Result.success(it)
+                } ?: Result.failure(Exception("Login failed: Empty response body"))
+            } else {
+                Result.failure(Exception(parseErrorMessage(response)))
+            }
         } catch (e: Exception) {
-            Result.failure(e)
+            val errorMessage = handleNetworkError(e)
+            Result.failure(Exception(errorMessage))
         }
     }
 
+    suspend fun googleSignIn(idToken: String): Result<LoginResponse> {
+        val googleAuthRequest = GoogleSignInRequest(idToken)
+        return try {
+            val response = authApi.googleSignIn(googleAuthRequest)
+            if (response.isSuccessful) {
+                response.body()?.let {
+                    tokenManager.saveAuthTokens(it)
+                    Result.success(it)
+                } ?: Result.failure(Exception("Empty response from server"))
+            } else {
+                Result.failure(Exception(parseErrorMessage(response)))
+            }
+        } catch (e: Exception) {
+            val errorMessage = handleNetworkError(e)
+            Result.failure(Exception(errorMessage))
+        }
+    }
 
     // Check if the user is logged in
     fun isLoggedIn(): Boolean {

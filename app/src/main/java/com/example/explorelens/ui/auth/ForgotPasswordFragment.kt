@@ -9,6 +9,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.R
 import com.example.explorelens.databinding.FragmentForgotPasswordBinding
+import com.example.explorelens.utils.LoadingManager
 
 class ForgotPasswordFragment : Fragment() {
 
@@ -53,6 +54,8 @@ class ForgotPasswordFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        LoadingManager.hideLoading()
         _binding = null
     }
+
 }
