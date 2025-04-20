@@ -31,4 +31,5 @@
   <color name="bottom_nav_background">#005861</color>
   <color name="bottom_nav_selected">#FFFFFF</color>
   <color name="bottom_nav_unselected">#CAE9DF</color>
+  <color name="semi_transparent_background">#80000000</color>
 </resources>
