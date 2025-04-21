@@ -81,6 +81,7 @@ class ArActivityView(val activity: ArActivity, renderer: AppRenderer) : DefaultL
     }
     currentSiteDetailsFragment = null
     siteDetailsContainer.visibility = View.GONE
+    activity.findViewById<View>(R.id.cameraButton)?.visibility = View.VISIBLE
   }
 
   fun post(action: Runnable) = root.post(action)

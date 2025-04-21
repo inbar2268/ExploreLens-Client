@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.View
 import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -891,6 +892,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
 
         // Pass the full description to DetailActivity if available
         activity.runOnUiThread {
+            activity.findViewById<View>(R.id.cameraButton)?.visibility = View.GONE
             // Show site details as an overlay instead of starting a new activity
             view.showSiteDetails(siteName, clickedAnchor.fullDescription)
         }
