@@ -138,20 +138,19 @@ class SiteDetailsFragment : Fragment() {
 
     private fun showCommentsDialog() {
         context?.let { ctx ->
-            val bottomSheetDialog = BottomSheetDialog(ctx, R.style.CustomBottomSheetDialogTheme)
+            // Replace BottomSheetDialog with AlertDialog
+            val builder = AlertDialog.Builder(ctx, R.style.RoundedDialog)
             val dialogView = layoutInflater.inflate(R.layout.dialog_comments, null)
-            bottomSheetDialog.setContentView(dialogView)
+            val dialog = builder.setView(dialogView).create()
 
-            // Make dialog background transparent to show the rounded corners
-            bottomSheetDialog.window?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.apply {
-                setBackgroundResource(android.R.color.transparent)
-            }
+            // Make dialog background transparent to show rounded corners
+            dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
             // Set up RecyclerView for comments
             val recyclerView = dialogView.findViewById<RecyclerView>(R.id.commentsRecyclerView)
             recyclerView.layoutManager = LinearLayoutManager(ctx)
 
-            // Create some mock comments for demonstration
+            // Create mock comments
             val comments = listOf(
                 CommentItem("John Doe", "This place is amazing! I visited last summer and the architecture is stunning.", null),
                 CommentItem("Jane Smith", "The historical significance of this site cannot be overstated. A must-visit!", null),
@@ -170,17 +169,18 @@ class SiteDetailsFragment : Fragment() {
             submitButton.setOnClickListener {
                 val commentText = commentInput.text.toString().trim()
                 if (commentText.isNotEmpty()) {
-                    // Here you would normally send this to your backend
-                    // For now, just show a toast and clear the input
                     Toast.makeText(ctx, "Comment submitted", Toast.LENGTH_SHORT).show()
                     commentInput.text.clear()
-
-                    // Could also add the comment to the recyclerView adapter if desired
-                    // (In a real app you would update the adapter with the new comment)
                 }
             }
 
-            bottomSheetDialog.show()
+            dialog.show()
+
+            // Set dialog size - make it taller
+            dialog.window?.setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                (resources.displayMetrics.heightPixels * 0.8).toInt() // 80% of screen height
+            )
         }
     }
     private fun showRatingDialog() {
