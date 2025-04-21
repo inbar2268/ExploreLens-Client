@@ -8,5 +8,5 @@ data class CommentItem(
     val user: String,
     val content: String,
     val date: String?,
-    val profilePicUrl: String? = null
+   // val profilePicUrl: String? = null
 )

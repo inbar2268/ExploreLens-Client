@@ -52,7 +52,7 @@ import com.example.explorelens.MainActivity
 import com.example.explorelens.R
 import com.example.explorelens.ui.site.SiteDetailsFragment
 import com.example.explorelens.Model
-import com.example.explorelens.data.network.SiteInfo
+import com.example.explorelens.data.network.SiteDetails
 import com.example.explorelens.model.ARLabeledAnchor
 
 
@@ -807,8 +807,8 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         Log.d(TAG, "Fetching site details for: $siteNameForRequest")
 
         AnalyzedResultsClient.siteDetailsApiClient.getSiteDetails(siteNameForRequest)
-            .enqueue(object : Callback<SiteInfo> {
-                override fun onResponse(call: Call<SiteInfo>, response: Response<SiteInfo>) {
+            .enqueue(object : Callback<SiteDetails> {
+                override fun onResponse(call: Call<SiteDetails>, response: Response<SiteDetails>) {
                     if (response.isSuccessful) {
                         val siteInfo = response.body()
                         if (siteInfo != null) {
@@ -842,7 +842,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
                     }
                 }
 
-                override fun onFailure(call: Call<SiteInfo>, t: Throwable) {
+                override fun onFailure(call: Call<SiteDetails>, t: Throwable) {
                     Log.e(TAG, "Network error fetching site details: ${t.message}")
                 }
             })

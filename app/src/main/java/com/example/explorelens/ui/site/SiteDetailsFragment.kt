@@ -20,7 +20,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.R
 import com.example.explorelens.data.network.AnalyzedResultsClient
-import com.example.explorelens.data.network.SiteInfo
+import com.example.explorelens.data.network.SiteDetails
 import com.example.explorelens.ui.site.RatingView
 import com.example.explorelens.ui.site.CommentsAdapter
 import com.example.explorelens.ui.site.CommentItem
@@ -39,6 +39,8 @@ class SiteDetailsFragment : Fragment() {
     private lateinit var ratingContainer: LinearLayout
     private lateinit var ratingView: RatingView
     private var siteRating: SiteRating? = null
+    private var SiteDetails: SiteDetails? = null
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -100,30 +102,32 @@ class SiteDetailsFragment : Fragment() {
         // Use the client from our networking package
         val call = AnalyzedResultsClient.siteDetailsApiClient.getSiteDetails(labelWithoutSpaces)
 
-        call.enqueue(object : Callback<SiteInfo> {
-            override fun onResponse(call: Call<SiteInfo>, response: Response<SiteInfo>) {
+        call.enqueue(object : Callback<SiteDetails> {
+            override fun onResponse(call: Call<SiteDetails>, response: Response<SiteDetails>) {
                 if (!isAdded) return  // Check if fragment is still attached
 
                 loadingIndicator.visibility = View.GONE
 
                 if (response.isSuccessful) {
-                    val siteInfo = response.body()
-                    if (siteInfo != null) {
+                    val SiteDetails = response.body()
+                    if (SiteDetails != null) {
                         // Update UI with site information
-                        descriptionTextView.text = siteInfo.description
+                        descriptionTextView.text = SiteDetails.description
 
                         // Update rating if available
-                        if (siteInfo.ratingCount > 0) {
-                            siteRating = SiteRating(label, siteInfo.averageRating, siteInfo.ratingCount)
-                            ratingView.setRating(siteInfo.averageRating)
+                        if (SiteDetails?.ratingCount ?: 0 > 0) {
+                            this@SiteDetailsFragment.siteRating = SiteRating(label, SiteDetails?.averageRating ?: 0f, SiteDetails?.ratingCount ?: 0)
+                            ratingView.setRating(SiteDetails?.averageRating ?: 0f)
                         }
 
                         // Store comments for later display
-                        if (siteInfo.comments.isNotEmpty()) {
-                            comments = siteInfo.comments.map {
+                        if (SiteDetails.comments.isNotEmpty()) {
+                            comments = SiteDetails.comments.map {
                                 CommentItem(it.user, it.content, it.date)
                             }
                         }
+                        Log.d("SiteDetailsFragment", "Received ${SiteDetails?.comments?.size ?: 0} comments from server")
+
                     } else {
                         Log.e("SiteDetailsFragment", "Response body is null")
                         showError("No data returned from server")
@@ -134,7 +138,7 @@ class SiteDetailsFragment : Fragment() {
                 }
             }
 
-            override fun onFailure(call: Call<SiteInfo>, t: Throwable) {
+            override fun onFailure(call: Call<SiteDetails>, t: Throwable) {
                 if (!isAdded) return  // Check if fragment is still attached
 
                 loadingIndicator.visibility = View.GONE
@@ -153,30 +157,78 @@ class SiteDetailsFragment : Fragment() {
     private var comments: List<CommentItem> = emptyList()
 
     private fun showCommentsDialog() {
+        Log.d("SiteDetailsFragment", "showCommentsDialog called")
         context?.let { ctx ->
-            // Replace BottomSheetDialog with AlertDialog
-            val builder = AlertDialog.Builder(ctx, R.style.RoundedDialog)
-            val dialogView = layoutInflater.inflate(R.layout.dialog_comments, null)
-            val dialog = builder.setView(dialogView).create()
+            try {
+                // Replace BottomSheetDialog with AlertDialog
+                val builder = AlertDialog.Builder(ctx, R.style.RoundedDialog)
+                val dialogView = layoutInflater.inflate(R.layout.dialog_comments, null)
+                Log.d("SiteDetailsFragment", "Dialog view inflated")
 
-            // Make dialog background transparent to show rounded corners
-            dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                val dialog = builder.setView(dialogView).create()
+                Log.d("SiteDetailsFragment", "Dialog created")
 
-            // Set up RecyclerView for comments
-            val recyclerView = dialogView.findViewById<RecyclerView>(R.id.commentsRecyclerView)
-            recyclerView.layoutManager = LinearLayoutManager(ctx)
+                // Make dialog background transparent to show rounded corners
+                dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                Log.d("SiteDetailsFragment", "Dialog background set")
 
-            // Use real comments if available, otherwise use mock data
-            val displayComments = if (comments.isNotEmpty()) comments else listOf(
-                CommentItem("John Doe", "This place is amazing! I visited last summer and the architecture is stunning.", null),
-                CommentItem("Jane Smith", "The historical significance of this site cannot be overstated. A must-visit!", null),
-                // etc...
-            )
+                // Set up RecyclerView for comments
+                val recyclerView = dialogView.findViewById<RecyclerView>(R.id.commentsRecyclerView)
+                if (recyclerView == null) {
+                    Log.e("SiteDetailsFragment", "commentsRecyclerView not found in layout")
+                    return@let
+                }
+                recyclerView.layoutManager = LinearLayoutManager(ctx)
+                Log.d("SiteDetailsFragment", "RecyclerView set up")
 
-            // Set adapter
-            recyclerView.adapter = CommentsAdapter(displayComments)
+                // Check if we have server comments stored in the fragment's SiteDetails property
+                val displayComments = if (SiteDetails?.comments != null && SiteDetails?.comments?.isNotEmpty() == true) {
+                    // Map server comments to CommentItem format
+                    Log.d("SiteDetailsFragment", "Using ${SiteDetails?.comments?.size} server comments")
+                    SiteDetails?.comments?.map {
+                        CommentItem(it.user, it.content, it.date)
+                    } ?: emptyList()
+                } else {
+                    // Use mock comments as fallback
+                    Log.d("SiteDetailsFragment", "Using mock comments")
+                    listOf(
+                        CommentItem("John Doe", "This place is amazing! I visited last summer and the architecture is stunning.", null),
+                        CommentItem("Jane Smith", "The historical significance of this site cannot be overstated. A must-visit!", null),
+                        CommentItem("Mark Johnson", "Great place to take photos. The lighting in the evening is perfect.", null),
+                        CommentItem("Sarah Williams", "I was disappointed by how crowded it was. Maybe visit during off-season if you can.", null),
+                        CommentItem("David Brown", "The tour guides are very knowledgeable and friendly. Definitely take a guided tour if available.", null)
+                    )
+                }
 
-            // Rest of your existing implementation...
+                // Set adapter
+                recyclerView.adapter = CommentsAdapter(displayComments)
+                Log.d("SiteDetailsFragment", "Adapter set")
+
+                // Set up comment submission
+                val commentInput = dialogView.findViewById<EditText>(R.id.commentInput)
+                val submitButton = dialogView.findViewById<Button>(R.id.submitCommentButton)
+
+                submitButton.setOnClickListener {
+                    val commentText = commentInput.text.toString().trim()
+                    if (commentText.isNotEmpty()) {
+                        Toast.makeText(ctx, "Comment submitted", Toast.LENGTH_SHORT).show()
+                        commentInput.text.clear()
+                    }
+                }
+
+                Log.d("SiteDetailsFragment", "About to show dialog")
+                dialog.show()
+                Log.d("SiteDetailsFragment", "Dialog shown")
+
+                // Set dialog size - make it taller
+                dialog.window?.setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    (resources.displayMetrics.heightPixels * 0.8).toInt() // 80% of screen height
+                )
+                Log.d("SiteDetailsFragment", "Dialog size set")
+            } catch (e: Exception) {
+                Log.e("SiteDetailsFragment", "Error showing dialog", e)
+            }
         }
     }
 
