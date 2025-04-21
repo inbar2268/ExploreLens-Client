@@ -6,7 +6,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.example.explorelens.BuildConfig
 
-val BASE_URL = "http://10.100.102.69:3000"
+val BASE_URL = BuildConfig.BASE_URL
 
 object AnalyzedResultsClient {
     private val okHttpClient: OkHttpClient by lazy {
