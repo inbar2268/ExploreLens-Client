@@ -706,12 +706,6 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
                 val dZ = closestPointZ - anchorPos[2]
                 val perpendicularDistance = sqrt(dX * dX + dY * dY + dZ * dZ)
 
-                // Consider an anchor to be clicked if it's:
-                // 1. In front of the camera (positive dot product)
-                // 2. Reasonably close to the ray from the camera through the touch point
-                // 3. Closer than any other candidate anchor
-
-                // Very generous touch threshold for better usability (0.5m or 50cm)
                 val touchThreshold = 0.5f
 
                 if (dotProduct > 0 && perpendicularDistance < touchThreshold) {
