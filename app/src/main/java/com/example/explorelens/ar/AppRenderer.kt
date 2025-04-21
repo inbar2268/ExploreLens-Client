@@ -14,7 +14,6 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.findNavController
 import com.example.explorelens.ArActivity
-import com.example.explorelens.DetailActivity
 import com.example.explorelens.extensions.convertYuv
 import com.example.explorelens.extensions.toFile
 import com.example.explorelens.model.Snapshot
@@ -53,6 +52,7 @@ import com.example.explorelens.MainActivity
 import com.example.explorelens.R
 import com.example.explorelens.ui.site.SiteDetailsFragment
 import com.example.explorelens.Model
+import com.example.explorelens.data.network.SiteDetails
 import com.example.explorelens.model.ARLabeledAnchor
 
 
@@ -807,31 +807,34 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         Log.d(TAG, "Fetching site details for: $siteNameForRequest")
 
         AnalyzedResultsClient.siteDetailsApiClient.getSiteDetails(siteNameForRequest)
-            .enqueue(object : Callback<String> {
-                override fun onResponse(call: Call<String>, response: Response<String>) {
+            .enqueue(object : Callback<SiteDetails> {
+                override fun onResponse(call: Call<SiteDetails>, response: Response<SiteDetails>) {
                     if (response.isSuccessful) {
-                        val description = response.body() ?: ""
+                        val siteInfo = response.body()
+                        if (siteInfo != null) {
+                            val description = siteInfo.description
 
-                        // Get first sentence or first line for preview
-                        val previewText = extractPreviewText(description)
+                            // Get first sentence or first line for preview
+                            val previewText = extractPreviewText(description)
 
-                        // Update the label text with fetched description
-                        val newLabelText = "$siteName||$previewText"
-                        Log.d(TAG, "Updated label with description: $newLabelText")
+                            // Update the label text with fetched description
+                            val newLabelText = "$siteName||$previewText"
+                            Log.d(TAG, "Updated label with description: $newLabelText")
 
-                        // Update the anchor label
-                        synchronized(arLabeledAnchors) {
-                            val index = arLabeledAnchors.indexOf(arLabeledAnchor)
-                            if (index != -1) {
-                                // Create a new anchor with updated label text
-                                val updatedAnchor = ARLabeledAnchor(
-                                    arLabeledAnchor.anchor,
-                                    newLabelText,
-                                    arLabeledAnchor.siteName
-                                )
-                                // Store full description for DetailActivity
-                                updatedAnchor.fullDescription = description
-                                arLabeledAnchors[index] = updatedAnchor
+                            // Update the anchor label
+                            synchronized(arLabeledAnchors) {
+                                val index = arLabeledAnchors.indexOf(arLabeledAnchor)
+                                if (index != -1) {
+                                    // Create a new anchor with updated label text
+                                    val updatedAnchor = ARLabeledAnchor(
+                                        arLabeledAnchor.anchor,
+                                        newLabelText,
+                                        arLabeledAnchor.siteName
+                                    )
+                                    // Store full description for DetailActivity
+                                    updatedAnchor.fullDescription = description
+                                    arLabeledAnchors[index] = updatedAnchor
+                                }
                             }
                         }
                     } else {
@@ -839,7 +842,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
                     }
                 }
 
-                override fun onFailure(call: Call<String>, t: Throwable) {
+                override fun onFailure(call: Call<SiteDetails>, t: Throwable) {
                     Log.e(TAG, "Network error fetching site details: ${t.message}")
                 }
             })
