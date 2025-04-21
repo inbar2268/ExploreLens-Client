@@ -20,10 +20,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.R
 import com.example.explorelens.data.network.AnalyzedResultsClient
+import com.example.explorelens.data.network.Comment
 import com.example.explorelens.data.network.SiteDetails
 import com.example.explorelens.ui.site.RatingView
 import com.example.explorelens.ui.site.CommentsAdapter
-import com.example.explorelens.ui.site.CommentItem
 import com.example.explorelens.ui.site.SiteRating
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import retrofit2.Call
@@ -169,8 +169,6 @@ class SiteDetailsFragment : Fragment() {
         }
     }
 
-    private var comments: List<CommentItem> = emptyList()
-
     private fun showCommentsDialog() {
         Log.d("SiteDetailsFragment", "showCommentsDialog called")
         context?.let { ctx ->
@@ -205,20 +203,38 @@ class SiteDetailsFragment : Fragment() {
 
                 // Check if we have server comments stored in the fragment's SiteDetails property
                 val displayComments = if (SiteDetails != null && SiteDetails?.comments?.isNotEmpty() == true) {
-                    // Map server comments to CommentItem format
+                    // Use server comments directly
                     Log.d("SiteDetailsFragment", "Using ${SiteDetails?.comments?.size} server comments")
-                    SiteDetails?.comments?.map {
-                        CommentItem(it.user, it.content, it.date ?: "")
-                    } ?: emptyList()
+                    SiteDetails?.comments ?: emptyList()
                 } else {
                     // Use mock comments as fallback
                     Log.d("SiteDetailsFragment", "Using mock comments")
                     listOf(
-                        CommentItem("John Doe", "This place is amazing! I visited last summer and the architecture is stunning.", null),
-                        CommentItem("Jane Smith", "The historical significance of this site cannot be overstated. A must-visit!", null),
-                        CommentItem("Mark Johnson", "Great place to take photos. The lighting in the evening is perfect.", null),
-                        CommentItem("Sarah Williams", "I was disappointed by how crowded it was. Maybe visit during off-season if you can.", null),
-                        CommentItem("David Brown", "The tour guides are very knowledgeable and friendly. Definitely take a guided tour if available.", null)
+                        Comment(
+                            user = "John Doe",
+                            content = "This place is amazing! I visited last summer and the architecture is stunning.",
+                            date = null
+                        ),
+                        Comment(
+                            user = "Jane Smith",
+                            content = "The historical significance of this site cannot be overstated. A must-visit!",
+                            date = null
+                        ),
+                        Comment(
+                            user = "Mark Johnson",
+                            content = "Great place to take photos. The lighting in the evening is perfect.",
+                            date = null
+                        ),
+                        Comment(
+                            user = "Sarah Williams",
+                            content = "I was disappointed by how crowded it was. Maybe visit during off-season if you can.",
+                            date = null
+                        ),
+                        Comment(
+                            user = "David Brown",
+                            content = "The tour guides are very knowledgeable and friendly. Definitely take a guided tour if available.",
+                            date = null
+                        )
                     )
                 }
 

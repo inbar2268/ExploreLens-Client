@@ -3,20 +3,18 @@ package com.example.explorelens.ui.site
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.R
-import com.example.explorelens.ui.site.CommentItem
+import com.example.explorelens.data.network.Comment
 
 /**
  * Adapter for displaying comments in a RecyclerView
  */
-class CommentsAdapter(private val comments: List<CommentItem>) :
+class CommentsAdapter(private val comments: List<Comment>) :
     RecyclerView.Adapter<CommentsAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        //val profilePic: ImageView = view.findViewById(R.id.profileImageView)
         val username: TextView = view.findViewById(R.id.usernameTextView)
         val commentText: TextView = view.findViewById(R.id.commentTextView)
     }
@@ -32,16 +30,10 @@ class CommentsAdapter(private val comments: List<CommentItem>) :
         holder.username.text = comment.user
         holder.commentText.text = comment.content
 
-        // Set default profile picture
-       // holder.profilePic.setImageResource(R.drawable.ic_default_profile)
-
-        // In a real app, you would load the profile image using Glide or similar
-        // if (comment.profilePicUrl != null) {
-        //     Glide.with(holder.itemView.context)
-        //         .load(comment.profilePicUrl)
-        //         .circleCrop()
-        //         .into(holder.profilePic)
-        // }
+        // Add date display if needed
+        // If you have a date TextView in your item_comment layout:
+        // val dateView = holder.itemView.findViewById<TextView>(R.id.dateTextView)
+        // dateView?.text = comment.date ?: ""
     }
 
     override fun getItemCount() = comments.size
