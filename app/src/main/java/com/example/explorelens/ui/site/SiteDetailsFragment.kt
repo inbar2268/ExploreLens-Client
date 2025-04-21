@@ -15,6 +15,7 @@ import android.widget.ProgressBar
 import android.widget.RatingBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -37,7 +38,7 @@ class SiteDetailsFragment : Fragment() {
     private lateinit var descriptionTextView: TextView
     private lateinit var loadingIndicator: ProgressBar
     private lateinit var commentsButton: View
-    private lateinit var ratingContainer: LinearLayout
+    private lateinit var ratingContainer: CardView
     private lateinit var ratingView: RatingView
     private var siteRating: SiteRating? = null
     private var SiteDetails: SiteDetails? = null

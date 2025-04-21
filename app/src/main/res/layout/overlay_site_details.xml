@@ -1,120 +1,192 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/siteDetailsOverlay"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#CCFFFFFF"
+    android:background="#99000000"
     android:visibility="gone">
 
-    <!-- Close button at the top -->
-    <ImageButton
-        android:id="@+id/closeOverlayButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_margin="16dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_close"
-        android:contentDescription="Close" />
-
-    <!-- Include your existing site details layout -->
-    <ScrollView
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="64dp"
-        android:background="#F5F5F5"
-        android:fillViewport="true">
+        android:layout_height="wrap_content"
+        android:layout_margin="24dp"
+        android:layout_gravity="center"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
 
-            <!-- Loading Indicator (ProgressBar) -->
+            <!-- Header with gradient -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:background="@drawable/site_details_header_gradient"
+                android:padding="16dp">
+
+                <!-- Site title -->
+                <TextView
+                    android:id="@+id/labelTextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_marginEnd="40dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <!-- Close button -->
+                <ImageButton
+                    android:id="@+id/closeOverlayButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="@drawable/cancel_button_background"
+                    android:contentDescription="Close"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    app:tint="#FFFFFF" />
+            </RelativeLayout>
+
+            <!-- Loading indicator -->
             <ProgressBar
                 android:id="@+id/loadingIndicator"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:layout_margin="16dp" />
 
-            <!-- Title TextView (Label) -->
-            <TextView
-                android:id="@+id/labelTextView"
+            <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:gravity="center"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="#333333" />
+                android:maxHeight="400dp">
 
-            <!-- Description Label -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Description"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="#555555" />
-
-            <!-- Description Container -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp"
-                android:background="@drawable/rounded_background">
-
-                <!-- Description TextView (Shortened) -->
-                <TextView
-                    android:id="@+id/descriptionTextView"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textSize="16sp"
-                    android:textColor="#444444" />
-            </LinearLayout>
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-            <!-- Action Buttons Container -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginTop="16dp">
+                    <!-- Description section -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginBottom="16dp">
 
-                <!-- Rating Button -->
-                <LinearLayout
-                    android:id="@+id/ratingContainer"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center"
-                    android:background="@drawable/rating_button_background"
-                    android:paddingVertical="8dp"
-                    android:paddingHorizontal="16dp"
-                    android:clickable="true"
-                    android:focusable="true">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="8dp">
 
-                    <com.example.explorelens.ui.site.RatingView
-                        android:id="@+id/ratingView"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@android:drawable/ic_menu_info_details"
+                                android:layout_marginEnd="8dp"
+                                app:tint="#4285F4" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="About"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="#333333" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="60dp"
+                            android:layout_height="2dp"
+                            android:background="#4285F4"
+                            android:layout_marginBottom="12dp" />
+
+                        <TextView
+                            android:id="@+id/descriptionTextView"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textSize="14sp"
+                            android:textColor="#444444"
+                            android:lineSpacingExtra="4dp" />
+                    </LinearLayout>
+
+                    <!-- Actions section -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <!-- Rating Button -->
+                        <LinearLayout
+                            android:id="@+id/ratingContainer"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:background="@drawable/rating_button_background"
+                            android:padding="8dp"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Rate"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="#333333"
+                                android:layout_marginBottom="4dp"/>
+
+                            <com.example.explorelens.ui.site.RatingView
+                                android:id="@+id/ratingView"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"/>
+                        </LinearLayout>
+
+                        <!-- Divider -->
+                        <View
+                            android:layout_width="1dp"
+                            android:layout_height="match_parent"
+                            android:background="#E0E0E0"
+                            android:layout_marginHorizontal="8dp"/>
+
+                        <!-- Comments Button -->
+                        <LinearLayout
+                            android:id="@+id/commentsButton"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?attr/selectableItemBackground"
+                            android:padding="8dp">
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/icon_comments"
+                                android:layout_marginBottom="4dp"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Comments"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="#333333"/>
+                        </LinearLayout>
+                    </LinearLayout>
                 </LinearLayout>
-
-                <!-- Comments Button -->
-                <ImageButton
-                    android:id="@+id/commentsButton"
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="View comments"
-                    android:padding="8dp"
-                    android:scaleType="fitCenter"
-                    android:layout_marginLeft="50dp"
-                    android:src="@drawable/icon_comments" />
-            </LinearLayout>
+            </ScrollView>
         </LinearLayout>
-    </ScrollView>
+    </androidx.cardview.widget.CardView>
 </FrameLayout>
