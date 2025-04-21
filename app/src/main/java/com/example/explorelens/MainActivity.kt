@@ -16,6 +16,8 @@ import com.example.explorelens.data.network.auth.AuthClient
 import com.example.explorelens.utils.LoadingManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.navigation.ui.onNavDestinationSelected
+import com.example.explorelens.ui.site.SiteDetailsFragment
+import androidx.activity.OnBackPressedCallback
 
 class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedListener {
 
@@ -51,7 +53,24 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
                 }
             }
         }
-        handleNavigationIntents(intent)
+       // handleNavigationIntents(intent)
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val currentFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
+                    ?.childFragmentManager?.fragments?.firstOrNull()
+
+                if (currentFragment is SiteDetailsFragment && intent.hasExtra("NAVIGATE_TO")) {
+                    // Create a new intent to return to ArActivity
+                    val arIntent = Intent(this@MainActivity, ArActivity::class.java)
+                    startActivity(arIntent)
+                    finish()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                }
+            }
+        })
     }
 
     override fun onDestinationChanged(
@@ -82,49 +101,4 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
         LoadingManager.cleanup()
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)  // Store the new intent
-        // Only handle navigation if already resumed
-        if (hasWindowFocus()) {
-            handleNavigationIntents(intent)
-        }
-    }
-
-    private fun handleNavigationIntents(intent: Intent) {
-        if (intent.hasExtra("NAVIGATE_TO")) {
-            // Get the navigation target
-            val navigateTo = intent.getStringExtra("NAVIGATE_TO") ?: return
-
-            // Use a post-delayed handler to ensure the activity is fully ready
-            Handler(Looper.getMainLooper()).postDelayed({
-                when (navigateTo) {
-                    "SITE_DETAILS_FRAGMENT" -> {
-                        val label = intent.getStringExtra("LABEL_KEY") ?: return@postDelayed
-                        val bundle = Bundle().apply {
-                            putString("LABEL_KEY", label)
-                            if (intent.hasExtra("DESCRIPTION_KEY")) {
-                                putString("DESCRIPTION_KEY", intent.getStringExtra("DESCRIPTION_KEY"))
-                            }
-                        }
-
-                        try {
-                            // Ensure NavController is ready
-                            navController.navigate(R.id.siteDetailsFragment, bundle)
-
-                            // Clear the intent data to prevent reprocessing
-                            intent.removeExtra("NAVIGATE_TO")
-                        } catch (e: Exception) {
-                            Log.e("MainActivity", "Navigation failed", e)
-                        }
-                    }
-                }
-            }, 100) // Small delay to ensure UI is ready
-        }
-    }
-    override fun onResume() {
-        super.onResume()
-        // Handle navigation intents after the activity is fully resumed
-        handleNavigationIntents(intent)
-    }
 }

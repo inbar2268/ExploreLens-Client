@@ -21,4 +21,11 @@ interface AuthApi {
 
     @POST("/auth/logout")
     suspend fun logout(@Body request: LogoutRequest): Response<Unit>
+
+    @POST("auth/forgot")
+    suspend fun forgotPassword(@Body forgotPasswordRequest: ForgotPasswordRequest): Response<Unit>
+
+    @POST("auth/reset")
+    suspend fun resetPassword(@Body resetPasswordRequest: ResetPasswordRequest): Response<Unit>
+
 }
