@@ -41,16 +41,6 @@
     </fragment>
 
     <fragment
-        android:id="@+id/forgotPasswordFragment"
-        android:name="com.example.explorelens.ui.ForgotPasswordFragment"
-        android:label="Forgot Password"
-        tools:layout="@layout/fragment_forgot_password">
-        <action
-            android:id="@+id/action_forgotPasswordFragment_to_loginFragment"
-            app:destination="@+id/loginFragment" />
-    </fragment>
-
-    <fragment
         android:id="@+id/profileFragment"
         android:name="com.example.explorelens.ui.user.ProfileFragment"
         android:label="Profile"
@@ -60,6 +50,25 @@
             app:destination="@+id/loginFragment" />
     </fragment>
 
+    <fragment
+        android:id="@+id/forgotPasswordFragment"
+        android:name="com.example.explorelens.ui.auth.ForgotPasswordFragment"
+        android:label="Forgot Password"
+        tools:layout="@layout/fragment_forgot_password">
+        <action
+            android:id="@+id/action_forgotPasswordFragment_to_resetPasswordFragment"
+            app:destination="@+id/resetPasswordFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/resetPasswordFragment"
+        android:name="com.example.explorelens.ui.auth.ResetPasswordFragment"
+        android:label="Reset Password"
+        tools:layout="@layout/fragment_reset_password">
+        <action
+            android:id="@+id/action_resetPasswordFragment_to_loginFragment"
+            app:destination="@+id/loginFragment" />
+    </fragment>
 
     <activity
         android:id="@+id/arActivity"

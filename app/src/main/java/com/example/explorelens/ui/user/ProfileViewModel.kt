@@ -32,7 +32,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     fun logout() {
         viewModelScope.launch {
             userRepository.clearUserData()
-            authRepository.deleteTokens()
+            authRepository.logout()
             _userState.postValue(UserState.Logout)
         }
     }
