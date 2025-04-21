@@ -3,6 +3,7 @@ package com.example.explorelens.ui.site
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.R
@@ -15,6 +16,7 @@ class CommentsAdapter(private val comments: List<Comment>) :
     RecyclerView.Adapter<CommentsAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val profilePic: ImageView = view.findViewById(R.id.profileImageView)
         val username: TextView = view.findViewById(R.id.usernameTextView)
         val commentText: TextView = view.findViewById(R.id.commentTextView)
     }
@@ -29,6 +31,7 @@ class CommentsAdapter(private val comments: List<Comment>) :
         val comment = comments[position]
         holder.username.text = comment.user
         holder.commentText.text = comment.content
+        holder.profilePic.setImageResource(R.drawable.avatar_placeholder)
 
         // Add date display if needed
         // If you have a date TextView in your item_comment layout:

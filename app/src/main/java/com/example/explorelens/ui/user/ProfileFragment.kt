@@ -71,7 +71,7 @@ class ProfileFragment : Fragment() {
                             .error(R.drawable.ic_default_profile)
                             .into(binding.profileImage)
                     } else {
-                        binding.profileImage.setImageResource(R.drawable.ic_default_profile)
+                        binding.profileImage.setImageResource(R.drawable.avatar_placeholder)
                     }
                 }
                 is UserState.Error -> {
