@@ -79,12 +79,16 @@ class SiteDetailsFragment : Fragment() {
             // Check if we already have the description from AR
             val passedDescription = args.getString("DESCRIPTION_KEY")
             if (passedDescription != null && passedDescription.isNotEmpty()) {
-                // Use the passed description directly
-                Log.d("SiteDetailsFragment", "Using passed description")
-                loadingIndicator.visibility = View.GONE
+                // Use the passed description directly for UI
+                Log.d("SiteDetailsFragment", "Using passed description for UI")
                 descriptionTextView.text = passedDescription
+
+                // Still fetch details to get ratings and comments
+                Log.d("SiteDetailsFragment", "Fetching additional details for ratings and comments")
+                fetchSiteDetails(label)
             } else {
-                // Need to fetch the description
+                // Need to fetch everything including the description
+                Log.d("SiteDetailsFragment", "No description passed, fetching all details")
                 loadingIndicator.visibility = View.VISIBLE
                 fetchSiteDetails(label)
             }
@@ -110,12 +114,19 @@ class SiteDetailsFragment : Fragment() {
 
                 if (response.isSuccessful) {
                     val siteDetailsResponse = response.body()
+                    Log.d("SiteDetailsFragment", "Response received: $siteDetailsResponse")
+
                     if (siteDetailsResponse != null) {
                         // Store the complete SiteDetails object
                         this@SiteDetailsFragment.SiteDetails = siteDetailsResponse
 
-                        // Update UI with site information
-                        descriptionTextView.text = siteDetailsResponse.description
+                        // Only update description if we don't already have one
+                        val hasPassedDescription = arguments?.getString("DESCRIPTION_KEY")?.isNotEmpty() == true
+                        if (!hasPassedDescription) {
+                            descriptionTextView.text = siteDetailsResponse.description
+                        }
+
+                        Log.d("SiteDetailsFragment", "Rating from server: ${siteDetailsResponse.averageRating}, count: ${siteDetailsResponse.ratingCount}")
 
                         // Update rating if available
                         if (siteDetailsResponse.ratingCount > 0) {
@@ -125,13 +136,13 @@ class SiteDetailsFragment : Fragment() {
                                 siteDetailsResponse.ratingCount
                             )
                             ratingView.setRating(siteDetailsResponse.averageRating)
+                            Log.d("SiteDetailsFragment", "Updated rating view to: ${siteDetailsResponse.averageRating}")
+                        } else {
+                            Log.d("SiteDetailsFragment", "No ratings available, using default")
                         }
 
                         // Log comment details for debugging
                         Log.d("SiteDetailsFragment", "Received ${siteDetailsResponse.comments.size} comments from server")
-                        siteDetailsResponse.comments.forEachIndexed { index, comment ->
-                            Log.d("SiteDetailsFragment", "Comment $index: User=${comment.user}, Content=${comment.content}")
-                        }
                     } else {
                         Log.e("SiteDetailsFragment", "Response body is null")
                         showError("No data returned from server")
