@@ -226,6 +226,11 @@ class SiteDetailsFragment : Fragment() {
                     (resources.displayMetrics.heightPixels * 0.8).toInt() // 80% of screen height
                 )
                 Log.d("SiteDetailsFragment", "Dialog size set")
+                val cancelButton = dialog.findViewById<Button>(R.id.cancelButton)
+                cancelButton?.setOnClickListener {
+                    dialog.dismiss()
+                }
+
             } catch (e: Exception) {
                 Log.e("SiteDetailsFragment", "Error showing dialog", e)
             }
