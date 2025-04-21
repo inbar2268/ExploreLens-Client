@@ -19,11 +19,6 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyB-1DEY6SglyANF6MN7h3Bw3NtGm3s60ZQ"/>
-      <activity
-          android:name="com.example.explorelens.DetailActivity"
-          android:exported="false"
-          android:label="@string/title_activity_detail"
-          android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
         <activity
             android:name="com.example.explorelens.ArActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"

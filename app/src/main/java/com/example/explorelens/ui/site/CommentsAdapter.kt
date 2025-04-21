@@ -29,8 +29,8 @@ class CommentsAdapter(private val comments: List<CommentItem>) :
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val comment = comments[position]
-        holder.username.text = comment.username
-        holder.commentText.text = comment.text
+        holder.username.text = comment.user
+        holder.commentText.text = comment.content
 
         // Set default profile picture
        // holder.profilePic.setImageResource(R.drawable.ic_default_profile)

@@ -13,6 +13,7 @@ import com.example.explorelens.ArActivity
 import com.example.explorelens.common.helpers.SnackbarHelper
 import com.example.explorelens.common.samplerender.SampleRender
 import com.example.explorelens.R
+import com.example.explorelens.data.network.SiteInfo
 import com.example.explorelens.ui.site.SiteDetailsFragment
 
 class ArActivityView(val activity: ArActivity, renderer: AppRenderer) : DefaultLifecycleObserver {

@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.R
 import com.example.explorelens.data.network.AnalyzedResultsClient
+import com.example.explorelens.data.network.SiteInfo
 import com.example.explorelens.ui.site.RatingView
 import com.example.explorelens.ui.site.CommentsAdapter
 import com.example.explorelens.ui.site.CommentItem
@@ -99,17 +100,30 @@ class SiteDetailsFragment : Fragment() {
         // Use the client from our networking package
         val call = AnalyzedResultsClient.siteDetailsApiClient.getSiteDetails(labelWithoutSpaces)
 
-        call.enqueue(object : Callback<String> {
-            override fun onResponse(call: Call<String>, response: Response<String>) {
+        call.enqueue(object : Callback<SiteInfo> {
+            override fun onResponse(call: Call<SiteInfo>, response: Response<SiteInfo>) {
                 if (!isAdded) return  // Check if fragment is still attached
 
                 loadingIndicator.visibility = View.GONE
 
                 if (response.isSuccessful) {
-                    val responseBody = response.body()
-                    if (responseBody != null) {
-                        // Update UI with the string response
-                        descriptionTextView.text = responseBody
+                    val siteInfo = response.body()
+                    if (siteInfo != null) {
+                        // Update UI with site information
+                        descriptionTextView.text = siteInfo.description
+
+                        // Update rating if available
+                        if (siteInfo.ratingCount > 0) {
+                            siteRating = SiteRating(label, siteInfo.averageRating, siteInfo.ratingCount)
+                            ratingView.setRating(siteInfo.averageRating)
+                        }
+
+                        // Store comments for later display
+                        if (siteInfo.comments.isNotEmpty()) {
+                            comments = siteInfo.comments.map {
+                                CommentItem(it.user, it.content, it.date)
+                            }
+                        }
                     } else {
                         Log.e("SiteDetailsFragment", "Response body is null")
                         showError("No data returned from server")
@@ -120,7 +134,7 @@ class SiteDetailsFragment : Fragment() {
                 }
             }
 
-            override fun onFailure(call: Call<String>, t: Throwable) {
+            override fun onFailure(call: Call<SiteInfo>, t: Throwable) {
                 if (!isAdded) return  // Check if fragment is still attached
 
                 loadingIndicator.visibility = View.GONE
@@ -136,6 +150,8 @@ class SiteDetailsFragment : Fragment() {
         }
     }
 
+    private var comments: List<CommentItem> = emptyList()
+
     private fun showCommentsDialog() {
         context?.let { ctx ->
             // Replace BottomSheetDialog with AlertDialog
@@ -150,39 +166,20 @@ class SiteDetailsFragment : Fragment() {
             val recyclerView = dialogView.findViewById<RecyclerView>(R.id.commentsRecyclerView)
             recyclerView.layoutManager = LinearLayoutManager(ctx)
 
-            // Create mock comments
-            val comments = listOf(
+            // Use real comments if available, otherwise use mock data
+            val displayComments = if (comments.isNotEmpty()) comments else listOf(
                 CommentItem("John Doe", "This place is amazing! I visited last summer and the architecture is stunning.", null),
                 CommentItem("Jane Smith", "The historical significance of this site cannot be overstated. A must-visit!", null),
-                CommentItem("Mark Johnson", "Great place to take photos. The lighting in the evening is perfect.", null),
-                CommentItem("Sarah Williams", "I was disappointed by how crowded it was. Maybe visit during off-season if you can.", null),
-                CommentItem("David Brown", "The tour guides are very knowledgeable and friendly. Definitely take a guided tour if available.", null)
+                // etc...
             )
 
             // Set adapter
-            recyclerView.adapter = CommentsAdapter(comments)
+            recyclerView.adapter = CommentsAdapter(displayComments)
 
-            // Set up comment submission
-            val commentInput = dialogView.findViewById<EditText>(R.id.commentInput)
-            val submitButton = dialogView.findViewById<Button>(R.id.submitCommentButton)
-
-            submitButton.setOnClickListener {
-                val commentText = commentInput.text.toString().trim()
-                if (commentText.isNotEmpty()) {
-                    Toast.makeText(ctx, "Comment submitted", Toast.LENGTH_SHORT).show()
-                    commentInput.text.clear()
-                }
-            }
-
-            dialog.show()
-
-            // Set dialog size - make it taller
-            dialog.window?.setLayout(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                (resources.displayMetrics.heightPixels * 0.8).toInt() // 80% of screen height
-            )
+            // Rest of your existing implementation...
         }
     }
+
     private fun showRatingDialog() {
         context?.let { ctx ->
             // Create and show dialog

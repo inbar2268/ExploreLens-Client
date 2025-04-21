@@ -5,7 +5,8 @@ package com.example.explorelens.ui.site
  */
 
 data class CommentItem(
-    val username: String,
-    val text: String,
+    val user: String,
+    val content: String,
+    val date: String?,
     val profilePicUrl: String? = null
 )
