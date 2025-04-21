@@ -9,14 +9,14 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.R
-import com.example.explorelens.databinding.FragmentForgotPasswordBinding
+import com.example.explorelens.databinding.FragmentResetPasswordBinding
 import com.example.explorelens.data.repository.AuthRepository
 import com.example.explorelens.utils.LoadingManager
 import kotlinx.coroutines.launch
 
-class ForgotPasswordFragment : Fragment() {
+class ResetPasswordFragment : Fragment() {
 
-    private var _binding: FragmentForgotPasswordBinding? = null
+    private var _binding: FragmentResetPasswordBinding? = null
     private val binding get() = _binding!!
     private lateinit var authRepository: AuthRepository
 
@@ -25,7 +25,7 @@ class ForgotPasswordFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentForgotPasswordBinding.inflate(inflater, container, false)
+        _binding = FragmentResetPasswordBinding.inflate(inflater, container, false)
         authRepository = AuthRepository(requireContext())
         return binding.root
     }
@@ -37,35 +37,50 @@ class ForgotPasswordFragment : Fragment() {
             findNavController().navigateUp()
         }
 
-        binding.btnResetPassword.setOnClickListener {
+        binding.btnSubmitReset.setOnClickListener {
             attemptPasswordReset()
         }
     }
 
     private fun attemptPasswordReset() {
-        val email = binding.etEmail.text.toString().trim()
+        val token = binding.etToken.text.toString().trim()
+        val newPassword = binding.etNewPassword.text.toString()
+        val confirmPassword = binding.etConfirmPassword.text.toString()
 
-        if (email.isEmpty()) {
-            binding.etEmail.error = "Email is required"
+        // Validate inputs
+        if (token.isEmpty()) {
+            binding.etToken.error = "Token is required"
             return
-        } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            binding.etEmail.error = "Please enter a valid email address"
+        }
+
+        if (newPassword.isEmpty()) {
+            binding.etNewPassword.error = "Password is required"
+            return
+        }
+
+        if (newPassword.length < 6) {
+            binding.etNewPassword.error = "Password must be at least 6 characters"
+            return
+        }
+
+        if (newPassword != confirmPassword) {
+            binding.etConfirmPassword.error = "Passwords do not match"
             return
         }
 
         LoadingManager.showLoading(requireActivity())
 
         viewLifecycleOwner.lifecycleScope.launch {
-            val result = authRepository.forgotPassword(email)
+            val result = authRepository.resetPassword(token, newPassword)
             LoadingManager.hideLoading()
 
             result.fold(
                 onSuccess = {
-                    Toast.makeText(context, "Password reset email sent.", Toast.LENGTH_LONG).show()
-                    findNavController().navigate(R.id.action_forgotPasswordFragment_to_resetPasswordFragment)
+                    Toast.makeText(context, "Password has been reset successfully!", Toast.LENGTH_LONG).show()
+                    findNavController().navigate(R.id.action_resetPasswordFragment_to_loginFragment)
                 },
                 onFailure = { exception ->
-                    val errorMessage = exception.message ?: "Failed to send password reset email"
+                    val errorMessage = exception.message ?: "Failed to reset password"
                     Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                 }
             )

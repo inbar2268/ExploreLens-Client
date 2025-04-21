@@ -1,10 +1,12 @@
 package com.example.explorelens.data.repository
 
 import android.content.Context
+import com.example.explorelens.data.model.ForgotPasswordRequest
 import com.example.explorelens.data.model.GoogleSignInRequest
 import com.example.explorelens.data.model.LoginRequest
 import com.example.explorelens.data.model.LoginResponse
 import com.example.explorelens.data.model.RegisterRequest
+import com.example.explorelens.data.model.ResetPasswordRequest
 import com.example.explorelens.data.network.auth.AuthApi
 import com.example.explorelens.data.network.auth.AuthTokenManager
 import com.example.explorelens.data.network.auth.AuthClient
@@ -81,6 +83,35 @@ class AuthRepository(private val context: Context) {
                     tokenManager.saveAuthTokens(it)
                     Result.success(it)
                 } ?: Result.failure(Exception("Empty response from server"))
+            } else {
+                Result.failure(Exception(parseErrorMessage(response)))
+            }
+        } catch (e: Exception) {
+            val errorMessage = handleNetworkError(e)
+            Result.failure(Exception(errorMessage))
+        }
+    }
+    suspend fun forgotPassword(email: String): Result<Unit> {
+        val forgotPasswordRequest = ForgotPasswordRequest(email)
+        return try {
+            val response = authApi.forgotPassword(forgotPasswordRequest)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(parseErrorMessage(response)))
+            }
+        } catch (e: Exception) {
+            val errorMessage = handleNetworkError(e)
+            Result.failure(Exception(errorMessage))
+        }
+    }
+
+    suspend fun resetPassword(token: String, newPassword: String): Result<Unit> {
+        val resetPasswordRequest = ResetPasswordRequest(token, newPassword)
+        return try {
+            val response = authApi.resetPassword(resetPasswordRequest)
+            if (response.isSuccessful) {
+                Result.success(Unit)
             } else {
                 Result.failure(Exception(parseErrorMessage(response)))
             }
