@@ -5,6 +5,7 @@ import com.example.explorelens.data.model.ForgotPasswordRequest
 import com.example.explorelens.data.model.GoogleSignInRequest
 import com.example.explorelens.data.model.LoginRequest
 import com.example.explorelens.data.model.LoginResponse
+import com.example.explorelens.data.model.LogoutRequest
 import com.example.explorelens.data.model.RegisterRequest
 import com.example.explorelens.data.model.ResetPasswordRequest
 import com.example.explorelens.data.network.auth.AuthApi
@@ -105,7 +106,6 @@ class AuthRepository(private val context: Context) {
             Result.failure(Exception(errorMessage))
         }
     }
-
     suspend fun resetPassword(token: String, newPassword: String): Result<Unit> {
         val resetPasswordRequest = ResetPasswordRequest(token, newPassword)
         return try {
@@ -121,22 +121,32 @@ class AuthRepository(private val context: Context) {
         }
     }
 
-    // Check if the user is logged in
     fun isLoggedIn(): Boolean {
         return tokenManager.isLoggedIn()
     }
 
-    // Get the stored access token
-    fun getAccessToken(): String? {
-        return tokenManager.getAccessToken()
+    suspend fun logout(): Result<Unit> {
+        val refreshToken = tokenManager.getRefreshToken()
+        deleteTokens()
+        return if (refreshToken != null) {
+            try {
+                val request = LogoutRequest(refreshToken)
+                val response = authApi.logout(request)
+                if (response.isSuccessful) {
+                    Result.success(Unit)
+                } else {
+                    Result.failure(Exception(parseErrorMessage(response)))
+                }
+            } catch (e: Exception) {
+                val errorMessage = handleNetworkError(e)
+                Result.failure(Exception(errorMessage))
+            }
+        } else {
+            Result.failure(Exception("No refresh token found"))
+        }
+
     }
 
-    // Get the stored refresh token
-    fun getRefreshToken(): String? {
-        return tokenManager.getRefreshToken()
-    }
-
-    // Clear user data and tokens (log out)
     suspend fun deleteTokens() {
         withContext(Dispatchers.IO) {
             tokenManager.clearTokens()
