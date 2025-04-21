@@ -7,6 +7,7 @@ import retrofit2.Response
 import android.opengl.Matrix
 import android.os.Bundle
 import android.util.Log
+import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.findNavController
@@ -46,6 +47,7 @@ import java.lang.Thread.sleep
 import java.util.Collections
 import kotlin.math.sqrt
 import com.example.explorelens.BuildConfig
+import com.example.explorelens.MainActivity
 import com.example.explorelens.R
 import com.example.explorelens.ui.site.SiteDetailsFragment
 
@@ -609,17 +611,13 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         activity.runOnUiThread {
             Log.d(TAG, "Opening SiteDetailsFragment with label: $label, description available: ${description != null}")
 
-            // Create bundle with arguments
-            val bundle = Bundle().apply {
-                putString("LABEL_KEY", label)
-                description?.let { putString("DESCRIPTION_KEY", it) }
+            // Pass the data to the activity
+            if (activity is ArActivity) {
+                (activity as ArActivity).navigateToSiteDetails(label, description)
             }
-
-            // Navigate using the Navigation Controller
-            activity.findNavController(R.id.nav_host_fragment)
-                .navigate(R.id.action_arActivity_to_siteDetailsFragment, bundle)
         }
     }
+
     private fun distanceBetween(pose1: Pose, pose2: Pose): Float {
         val dx = pose1.tx() - pose2.tx()
         val dy = pose1.ty() - pose2.ty()

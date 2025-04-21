@@ -1,5 +1,8 @@
 package com.example.explorelens
+import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -108,6 +111,29 @@ class ArActivity : AppCompatActivity() {
       renderer.handleTouch(x, y)
     }
     return super.onTouchEvent(event)
+  }
+
+  fun navigateToSiteDetails(label: String, description: String?) {
+    // Create the intent
+    val intent = Intent(this, MainActivity::class.java)
+
+    // Add data as extras
+    intent.putExtra("NAVIGATE_TO", "SITE_DETAILS_FRAGMENT")
+    intent.putExtra("LABEL_KEY", label)
+    if (description != null) {
+      intent.putExtra("DESCRIPTION_KEY", description)
+    }
+
+    // Use different flags to handle the task stack properly
+    intent.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+
+    // Start the activity first
+    startActivity(intent)
+
+    // Then finish this activity with a slight delay to prevent task management issues
+    Handler(Looper.getMainLooper()).postDelayed({
+      finish()
+    }, 100) // Small delay to allow the new activity to start
   }
 
 }

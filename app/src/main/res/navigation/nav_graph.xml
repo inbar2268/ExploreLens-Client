@@ -91,4 +91,7 @@
     <action
         android:id="@+id/action_arActivity_to_siteDetailsFragment"
         app:destination="@id/siteDetailsFragment" />
+    <action
+        android:id="@+id/action_profileFragment_to_arActivity"
+        app:destination="@+id/arActivity" />
 </navigation>
