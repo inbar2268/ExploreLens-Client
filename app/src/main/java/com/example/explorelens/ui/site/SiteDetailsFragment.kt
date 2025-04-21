@@ -18,6 +18,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.explorelens.ArActivity
 import com.example.explorelens.R
 import com.example.explorelens.data.network.AnalyzedResultsClient
 import com.example.explorelens.data.network.Comment
@@ -61,6 +62,11 @@ class SiteDetailsFragment : Fragment() {
         ratingContainer = view.findViewById(R.id.ratingContainer)
         ratingView = view.findViewById(R.id.ratingView)
 
+        val closeButton = view.findViewById<Button>(R.id.closeButton)
+        closeButton.setOnClickListener {
+            // Dismiss the fragment
+            dismissSiteDetails()
+        }
         // Set up comments button click listener
         commentsButton.setOnClickListener {
             showCommentsDialog()
@@ -337,6 +343,20 @@ class SiteDetailsFragment : Fragment() {
             // First rating
             siteRating = SiteRating(labelTextView.text.toString(), newRating, 1)
             ratingView.setRating(newRating)
+        }
+    }
+    private fun dismissSiteDetails() {
+        // If using an overlay in AR activity
+        val activity = activity as? ArActivity
+        if (activity != null) {
+            // Hide the site details container
+            activity.view.hideSiteDetails()
+
+            // Make sure the camera button is visible again
+            activity.findViewById<View>(R.id.cameraButton)?.visibility = View.VISIBLE
+        } else {
+            // For regular fragment navigation
+            parentFragmentManager.beginTransaction().remove(this).commit()
         }
     }
 }
