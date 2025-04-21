@@ -38,12 +38,13 @@
                 android:id="@+id/cancelButton"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
+                android:layout_margin="16dp"
                 android:background="@drawable/cancel_button_background"
                 android:text="✕"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="16sp"
-                android:layout_gravity="center_vertical"/>
+                android:layout_gravity="top|end" />
         </LinearLayout>
 
 
