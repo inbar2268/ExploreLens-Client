@@ -63,13 +63,22 @@ class ARCoreSessionLifecycleHelper(
       return
     }
 
-    val session = tryCreateSession() ?: return
-    try {
-      beforeSessionResume?.invoke(session)
-      session.resume()
-      sessionCache = session
-    } catch (e: CameraNotAvailableException) {
-      exceptionCallback?.invoke(e)
+    if (sessionCache == null) {
+      val session = tryCreateSession() ?: return
+      try {
+        beforeSessionResume?.invoke(session)
+        session.resume()
+        sessionCache = session
+      } catch (e: CameraNotAvailableException) {
+        exceptionCallback?.invoke(e)
+      }
+    } else {
+      try {
+        beforeSessionResume?.invoke(sessionCache!!)
+        sessionCache!!.resume()
+      } catch (e: CameraNotAvailableException) {
+        exceptionCallback?.invoke(e)
+      }
     }
   }
 
