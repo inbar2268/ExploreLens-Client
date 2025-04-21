@@ -14,5 +14,5 @@ data class SiteDetails(
 data class Comment(
     @SerializedName("user") val user: String,
     @SerializedName("content") val content: String,
-    @SerializedName("date") val date: String
+    @SerializedName("date") val date: String?
 )

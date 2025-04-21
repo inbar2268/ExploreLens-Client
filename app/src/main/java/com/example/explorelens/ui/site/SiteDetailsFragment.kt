@@ -109,25 +109,29 @@ class SiteDetailsFragment : Fragment() {
                 loadingIndicator.visibility = View.GONE
 
                 if (response.isSuccessful) {
-                    val SiteDetails = response.body()
-                    if (SiteDetails != null) {
+                    val siteDetailsResponse = response.body()
+                    if (siteDetailsResponse != null) {
+                        // Store the complete SiteDetails object
+                        this@SiteDetailsFragment.SiteDetails = siteDetailsResponse
+
                         // Update UI with site information
-                        descriptionTextView.text = SiteDetails.description
+                        descriptionTextView.text = siteDetailsResponse.description
 
                         // Update rating if available
-                        if (SiteDetails?.ratingCount ?: 0 > 0) {
-                            this@SiteDetailsFragment.siteRating = SiteRating(label, SiteDetails?.averageRating ?: 0f, SiteDetails?.ratingCount ?: 0)
-                            ratingView.setRating(SiteDetails?.averageRating ?: 0f)
+                        if (siteDetailsResponse.ratingCount > 0) {
+                            this@SiteDetailsFragment.siteRating = SiteRating(
+                                label,
+                                siteDetailsResponse.averageRating,
+                                siteDetailsResponse.ratingCount
+                            )
+                            ratingView.setRating(siteDetailsResponse.averageRating)
                         }
 
-                        // Store comments for later display
-                        if (SiteDetails.comments.isNotEmpty()) {
-                            comments = SiteDetails.comments.map {
-                                CommentItem(it.user, it.content, it.date)
-                            }
+                        // Log comment details for debugging
+                        Log.d("SiteDetailsFragment", "Received ${siteDetailsResponse.comments.size} comments from server")
+                        siteDetailsResponse.comments.forEachIndexed { index, comment ->
+                            Log.d("SiteDetailsFragment", "Comment $index: User=${comment.user}, Content=${comment.content}")
                         }
-                        Log.d("SiteDetailsFragment", "Received ${SiteDetails?.comments?.size ?: 0} comments from server")
-
                     } else {
                         Log.e("SiteDetailsFragment", "Response body is null")
                         showError("No data returned from server")
@@ -181,12 +185,19 @@ class SiteDetailsFragment : Fragment() {
                 recyclerView.layoutManager = LinearLayoutManager(ctx)
                 Log.d("SiteDetailsFragment", "RecyclerView set up")
 
+                // Debug SiteDetails status
+                if (SiteDetails == null) {
+                    Log.d("SiteDetailsFragment", "SiteDetails is null")
+                } else {
+                    Log.d("SiteDetailsFragment", "SiteDetails has ${SiteDetails?.comments?.size ?: 0} comments")
+                }
+
                 // Check if we have server comments stored in the fragment's SiteDetails property
-                val displayComments = if (SiteDetails?.comments != null && SiteDetails?.comments?.isNotEmpty() == true) {
+                val displayComments = if (SiteDetails != null && SiteDetails?.comments?.isNotEmpty() == true) {
                     // Map server comments to CommentItem format
                     Log.d("SiteDetailsFragment", "Using ${SiteDetails?.comments?.size} server comments")
                     SiteDetails?.comments?.map {
-                        CommentItem(it.user, it.content, it.date)
+                        CommentItem(it.user, it.content, it.date ?: "")
                     } ?: emptyList()
                 } else {
                     // Use mock comments as fallback
@@ -202,7 +213,7 @@ class SiteDetailsFragment : Fragment() {
 
                 // Set adapter
                 recyclerView.adapter = CommentsAdapter(displayComments)
-                Log.d("SiteDetailsFragment", "Adapter set")
+                Log.d("SiteDetailsFragment", "Adapter set with ${displayComments.size} comments")
 
                 // Set up comment submission
                 val commentInput = dialogView.findViewById<EditText>(R.id.commentInput)
@@ -236,7 +247,6 @@ class SiteDetailsFragment : Fragment() {
             }
         }
     }
-
     private fun showRatingDialog() {
         context?.let { ctx ->
             // Create and show dialog
