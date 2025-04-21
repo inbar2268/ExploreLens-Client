@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    tools:parentTag="android.widget.LinearLayout"
+    tools:orientation="horizontal">
+
+    <ImageView
+        android:id="@+id/star1"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:contentDescription="Star 1"
+        tools:src="@drawable/ic_star_full" />
+
+    <ImageView
+        android:id="@+id/star2"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="2dp"
+        android:contentDescription="Star 2"
+        tools:src="@drawable/ic_star_full" />
+
+    <ImageView
+        android:id="@+id/star3"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="2dp"
+        android:contentDescription="Star 3"
+        tools:src="@drawable/ic_star_full" />
+
+    <ImageView
+        android:id="@+id/star4"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="2dp"
+        android:contentDescription="Star 4"
+        tools:src="@drawable/ic_star_empty" />
+
+    <ImageView
+        android:id="@+id/star5"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="2dp"
+        android:contentDescription="Star 5"
+        tools:src="@drawable/ic_star_empty" />
+
+    <TextView
+        android:id="@+id/ratingText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        tools:text="4.5" />
+
+</merge>

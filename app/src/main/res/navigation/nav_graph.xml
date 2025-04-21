@@ -70,6 +70,26 @@
             app:destination="@+id/loginFragment" />
     </fragment>
 
+    <fragment
+        android:id="@+id/siteDetailsFragment"
+        android:name="com.example.explorelens.ui.site.SiteDetailsFragment"
+        android:label="Site Details"
+        tools:layout="@layout/fragment_site_details">
+        <argument
+            android:name="LABEL_KEY"
+            app:argType="string" />
+        <argument
+            android:name="DESCRIPTION_KEY"
+            app:argType="string"
+            app:nullable="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/mapFragment"
+        android:name="com.example.explorelens.ui.map.MapFragment"
+        android:label="Map"
+        tools:layout="@layout/fragment_map" />
+
     <activity
         android:id="@+id/arActivity"
         android:name="com.example.explorelens.ArActivity"
@@ -78,4 +98,10 @@
     <action
         android:id="@+id/action_arActivity_to_profileFragment"
         app:destination="@+id/profileFragment" />
+    <action
+        android:id="@+id/action_arActivity_to_siteDetailsFragment"
+        app:destination="@id/siteDetailsFragment" />
+    <action
+        android:id="@+id/action_profileFragment_to_arActivity"
+        app:destination="@+id/arActivity" />
 </navigation>

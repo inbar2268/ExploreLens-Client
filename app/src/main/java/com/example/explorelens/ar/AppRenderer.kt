@@ -5,11 +5,14 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import android.opengl.Matrix
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.navigation.findNavController
 import com.example.explorelens.ArActivity
 import com.example.explorelens.DetailActivity
 import com.example.explorelens.extensions.convertYuv
@@ -46,6 +49,9 @@ import java.lang.Thread.sleep
 import java.util.Collections
 import kotlin.math.sqrt
 import com.example.explorelens.BuildConfig
+import com.example.explorelens.MainActivity
+import com.example.explorelens.R
+import com.example.explorelens.ui.site.SiteDetailsFragment
 import com.example.explorelens.Model
 import com.example.explorelens.model.ARLabeledAnchor
 
@@ -94,7 +100,6 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             view.setScanningActive(true)
             hideSnackbar()
         }
-
     }
 
     override fun onSurfaceCreated(render: SampleRender) {
@@ -539,7 +544,6 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
     } catch (e: Throwable) {
         throw e
     }
-
     fun getAnalyzedResult(path: String) {
         Log.d("AnalyzeImage", "Starting image analysis")
         launch(Dispatchers.IO) {
@@ -649,23 +653,6 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         Log.d(TAG, "Touch received at x=$x, y=$y")
         pendingTouchX = x
         pendingTouchY = y
-    }
-
-
-    private fun openDetailActivity(label: String, description: String? = null) {
-        activity.runOnUiThread {
-            Log.d(
-                TAG,
-                "Opening DetailActivity with label: $label, description available: ${description != null}"
-            )
-            val intent = Intent(activity, DetailActivity::class.java)
-            intent.putExtra("LABEL_KEY", label)
-            // If we have a description, pass it to avoid another API call
-            if (description != null) {
-                intent.putExtra("DESCRIPTION_KEY", description)
-            }
-            activity.startActivity(intent)
-        }
     }
 
     private fun distanceBetween(pose1: Pose, pose2: Pose): Float {
@@ -786,7 +773,6 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             Log.e(TAG, "Error processing touch", e)
         }
     }
-
     private fun fetchAndCreateAnchor(
         session: Session,
         snapshotData: Snapshot,
@@ -801,6 +787,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
             Log.e(TAG, "Missing location data or site name")
             return null
         }
+
         // Create anchor first so we can proceed with AR display
         val anchor = placeLabelAccurateWithSnapshot(
             session,
@@ -863,6 +850,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
     // Helper function to extract a single line or sentence for preview
     private fun extractPreviewText(description: String): String {
         if (description.isEmpty()) return ""
+
         // First try to get the first sentence
         val firstSentenceEnd = description.indexOfAny(charArrayOf('.', '!', '?'), 0)
 
@@ -893,7 +881,6 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         // Otherwise return the whole description
         return description.trim()
     }
-
     private fun handleAnchorClick(clickedAnchor: ARLabeledAnchor) {
         // Use the siteName directly if available, otherwise extract from the label
         val siteName = clickedAnchor.siteName ?: clickedAnchor.label.split("||")[0]
@@ -901,8 +888,8 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
 
         // Pass the full description to DetailActivity if available
         activity.runOnUiThread {
-            // Make sure to pass the full description, not just the first line
-            openDetailActivity(siteName, clickedAnchor.fullDescription)
+            // Show site details as an overlay instead of starting a new activity
+            view.showSiteDetails(siteName, clickedAnchor.fullDescription)
         }
     }
 
