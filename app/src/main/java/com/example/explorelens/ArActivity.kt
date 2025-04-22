@@ -86,7 +86,6 @@ class ArActivity : AppCompatActivity() {
 
     val closeButton = findViewById<ImageButton>(R.id.closeButton)
     closeButton?.setOnClickListener {
-      findNavController(R.id.nav_host_fragment).navigate(R.id.action_arActivity_to_profileFragment)
       finish()
     }
   }

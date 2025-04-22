@@ -13,17 +13,36 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="24dp"
-        android:gravity="center_horizontal"
         android:background="@drawable/dialog_background">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Title and Cancel button in same row -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Rate this site"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="#333333"
-            android:layout_marginBottom="16dp" />
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Rate this site"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="#333333" />
+
+            <Button
+                android:id="@+id/cancelButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/cancel_button_background"
+                android:text="x"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:layout_gravity="center_vertical"/>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/siteName"
@@ -32,7 +51,8 @@
             android:text="Site Name"
             android:textSize="18sp"
             android:textColor="#666666"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="24dp"
+            android:layout_gravity="center_horizontal" />
 
         <RatingBar
             android:id="@+id/ratingBar"
@@ -43,37 +63,19 @@
             android:rating="0"
             android:progressTint="#FFC107"
             android:progressBackgroundTint="#E0E0E0"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="24dp"
+            android:layout_gravity="center_horizontal" />
 
-        <LinearLayout
+        <!-- Submit button at the bottom -->
+        <Button
+            android:id="@+id/submitRatingButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="end">
-
-            <Button
-                android:id="@+id/cancelButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/submit_button_background"
-                android:paddingHorizontal="24dp"
-                android:paddingVertical="8dp"
-                android:layout_marginRight="90dp"
-                android:text="Cancel"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF" />
-
-            <Button
-                android:id="@+id/submitRatingButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/submit_button_background"
-                android:paddingHorizontal="24dp"
-                android:paddingVertical="8dp"
-                android:layout_marginRight="40dp"
-                android:text="Submit"
-                android:textColor="#FFFFFF"
-                android:textAllCaps="false" />
-        </LinearLayout>
+            android:background="@drawable/submit_button_background"
+            android:paddingVertical="10dp"
+            android:text="Submit"
+            android:textColor="#FFFFFF"
+            android:textAllCaps="false"
+            android:textSize="16sp" />
     </LinearLayout>
 </androidx.cardview.widget.CardView>

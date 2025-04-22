@@ -18,12 +18,13 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.explorelens.ArActivity
 import com.example.explorelens.R
 import com.example.explorelens.data.network.AnalyzedResultsClient
+import com.example.explorelens.data.network.Comment
 import com.example.explorelens.data.network.SiteDetails
 import com.example.explorelens.ui.site.RatingView
 import com.example.explorelens.ui.site.CommentsAdapter
-import com.example.explorelens.ui.site.CommentItem
 import com.example.explorelens.ui.site.SiteRating
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import retrofit2.Call
@@ -61,6 +62,11 @@ class SiteDetailsFragment : Fragment() {
         ratingContainer = view.findViewById(R.id.ratingContainer)
         ratingView = view.findViewById(R.id.ratingView)
 
+        val closeButton = view.findViewById<Button>(R.id.closeButton)
+        closeButton.setOnClickListener {
+            // Dismiss the fragment
+            dismissSiteDetails()
+        }
         // Set up comments button click listener
         commentsButton.setOnClickListener {
             showCommentsDialog()
@@ -79,12 +85,16 @@ class SiteDetailsFragment : Fragment() {
             // Check if we already have the description from AR
             val passedDescription = args.getString("DESCRIPTION_KEY")
             if (passedDescription != null && passedDescription.isNotEmpty()) {
-                // Use the passed description directly
-                Log.d("SiteDetailsFragment", "Using passed description")
-                loadingIndicator.visibility = View.GONE
+                // Use the passed description directly for UI
+                Log.d("SiteDetailsFragment", "Using passed description for UI")
                 descriptionTextView.text = passedDescription
+
+                // Still fetch details to get ratings and comments
+                Log.d("SiteDetailsFragment", "Fetching additional details for ratings and comments")
+                fetchSiteDetails(label)
             } else {
-                // Need to fetch the description
+                // Need to fetch everything including the description
+                Log.d("SiteDetailsFragment", "No description passed, fetching all details")
                 loadingIndicator.visibility = View.VISIBLE
                 fetchSiteDetails(label)
             }
@@ -109,25 +119,36 @@ class SiteDetailsFragment : Fragment() {
                 loadingIndicator.visibility = View.GONE
 
                 if (response.isSuccessful) {
-                    val SiteDetails = response.body()
-                    if (SiteDetails != null) {
-                        // Update UI with site information
-                        descriptionTextView.text = SiteDetails.description
+                    val siteDetailsResponse = response.body()
+                    Log.d("SiteDetailsFragment", "Response received: $siteDetailsResponse")
+
+                    if (siteDetailsResponse != null) {
+                        // Store the complete SiteDetails object
+                        this@SiteDetailsFragment.SiteDetails = siteDetailsResponse
+
+                        // Only update description if we don't already have one
+                        val hasPassedDescription = arguments?.getString("DESCRIPTION_KEY")?.isNotEmpty() == true
+                        if (!hasPassedDescription) {
+                            descriptionTextView.text = siteDetailsResponse.description
+                        }
+
+                        Log.d("SiteDetailsFragment", "Rating from server: ${siteDetailsResponse.averageRating}, count: ${siteDetailsResponse.ratingCount}")
 
                         // Update rating if available
-                        if (SiteDetails?.ratingCount ?: 0 > 0) {
-                            this@SiteDetailsFragment.siteRating = SiteRating(label, SiteDetails?.averageRating ?: 0f, SiteDetails?.ratingCount ?: 0)
-                            ratingView.setRating(SiteDetails?.averageRating ?: 0f)
+                        if (siteDetailsResponse.ratingCount > 0) {
+                            this@SiteDetailsFragment.siteRating = SiteRating(
+                                label,
+                                siteDetailsResponse.averageRating,
+                                siteDetailsResponse.ratingCount
+                            )
+                            ratingView.setRating(siteDetailsResponse.averageRating)
+                            Log.d("SiteDetailsFragment", "Updated rating view to: ${siteDetailsResponse.averageRating}")
+                        } else {
+                            Log.d("SiteDetailsFragment", "No ratings available, using default")
                         }
 
-                        // Store comments for later display
-                        if (SiteDetails.comments.isNotEmpty()) {
-                            comments = SiteDetails.comments.map {
-                                CommentItem(it.user, it.content, it.date)
-                            }
-                        }
-                        Log.d("SiteDetailsFragment", "Received ${SiteDetails?.comments?.size ?: 0} comments from server")
-
+                        // Log comment details for debugging
+                        Log.d("SiteDetailsFragment", "Received ${siteDetailsResponse.comments.size} comments from server")
                     } else {
                         Log.e("SiteDetailsFragment", "Response body is null")
                         showError("No data returned from server")
@@ -154,8 +175,6 @@ class SiteDetailsFragment : Fragment() {
         }
     }
 
-    private var comments: List<CommentItem> = emptyList()
-
     private fun showCommentsDialog() {
         Log.d("SiteDetailsFragment", "showCommentsDialog called")
         context?.let { ctx ->
@@ -181,28 +200,53 @@ class SiteDetailsFragment : Fragment() {
                 recyclerView.layoutManager = LinearLayoutManager(ctx)
                 Log.d("SiteDetailsFragment", "RecyclerView set up")
 
+                // Debug SiteDetails status
+                if (SiteDetails == null) {
+                    Log.d("SiteDetailsFragment", "SiteDetails is null")
+                } else {
+                    Log.d("SiteDetailsFragment", "SiteDetails has ${SiteDetails?.comments?.size ?: 0} comments")
+                }
+
                 // Check if we have server comments stored in the fragment's SiteDetails property
-                val displayComments = if (SiteDetails?.comments != null && SiteDetails?.comments?.isNotEmpty() == true) {
-                    // Map server comments to CommentItem format
+                val displayComments = if (SiteDetails != null && SiteDetails?.comments?.isNotEmpty() == true) {
+                    // Use server comments directly
                     Log.d("SiteDetailsFragment", "Using ${SiteDetails?.comments?.size} server comments")
-                    SiteDetails?.comments?.map {
-                        CommentItem(it.user, it.content, it.date)
-                    } ?: emptyList()
+                    SiteDetails?.comments ?: emptyList()
                 } else {
                     // Use mock comments as fallback
                     Log.d("SiteDetailsFragment", "Using mock comments")
                     listOf(
-                        CommentItem("John Doe", "This place is amazing! I visited last summer and the architecture is stunning.", null),
-                        CommentItem("Jane Smith", "The historical significance of this site cannot be overstated. A must-visit!", null),
-                        CommentItem("Mark Johnson", "Great place to take photos. The lighting in the evening is perfect.", null),
-                        CommentItem("Sarah Williams", "I was disappointed by how crowded it was. Maybe visit during off-season if you can.", null),
-                        CommentItem("David Brown", "The tour guides are very knowledgeable and friendly. Definitely take a guided tour if available.", null)
+                        Comment(
+                            user = "John Doe",
+                            content = "This place is amazing! I visited last summer and the architecture is stunning.",
+                            date = null
+                        ),
+                        Comment(
+                            user = "Jane Smith",
+                            content = "The historical significance of this site cannot be overstated. A must-visit!",
+                            date = null
+                        ),
+                        Comment(
+                            user = "Mark Johnson",
+                            content = "Great place to take photos. The lighting in the evening is perfect.",
+                            date = null
+                        ),
+                        Comment(
+                            user = "Sarah Williams",
+                            content = "I was disappointed by how crowded it was. Maybe visit during off-season if you can.",
+                            date = null
+                        ),
+                        Comment(
+                            user = "David Brown",
+                            content = "The tour guides are very knowledgeable and friendly. Definitely take a guided tour if available.",
+                            date = null
+                        )
                     )
                 }
 
                 // Set adapter
                 recyclerView.adapter = CommentsAdapter(displayComments)
-                Log.d("SiteDetailsFragment", "Adapter set")
+                Log.d("SiteDetailsFragment", "Adapter set with ${displayComments.size} comments")
 
                 // Set up comment submission
                 val commentInput = dialogView.findViewById<EditText>(R.id.commentInput)
@@ -236,7 +280,6 @@ class SiteDetailsFragment : Fragment() {
             }
         }
     }
-
     private fun showRatingDialog() {
         context?.let { ctx ->
             // Create and show dialog
@@ -300,6 +343,20 @@ class SiteDetailsFragment : Fragment() {
             // First rating
             siteRating = SiteRating(labelTextView.text.toString(), newRating, 1)
             ratingView.setRating(newRating)
+        }
+    }
+    private fun dismissSiteDetails() {
+        // If using an overlay in AR activity
+        val activity = activity as? ArActivity
+        if (activity != null) {
+            // Hide the site details container
+            activity.view.hideSiteDetails()
+
+            // Make sure the camera button is visible again
+            activity.findViewById<View>(R.id.cameraButton)?.visibility = View.VISIBLE
+        } else {
+            // For regular fragment navigation
+            parentFragmentManager.beginTransaction().remove(this).commit()
         }
     }
 }
