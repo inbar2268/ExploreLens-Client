@@ -5,6 +5,9 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.example.explorelens.BuildConfig
+import com.example.explorelens.data.network.detectionResult.AnalyzedResultApi
+import com.example.explorelens.data.network.detectionResult.AnalyzedResultInterceptor
+import com.example.explorelens.data.network.siteDetails.SiteDetailsApi
 
 val BASE_URL = BuildConfig.BASE_URL
 
@@ -33,6 +36,9 @@ object AnalyzedResultsClient {
 
     val siteDetailsApiClient: SiteDetailsApi by lazy {
         createRetrofitClient().create(SiteDetailsApi::class.java)
+    }
+    val siteCommentsApiClient: CommentsApi by lazy {
+        createRetrofitClient().create(CommentsApi::class.java)
     }
 
     private fun createRetrofitClient(): Retrofit {

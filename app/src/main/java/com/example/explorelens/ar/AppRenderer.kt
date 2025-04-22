@@ -1,19 +1,15 @@
 package com.example.explorelens.ar
 
-import android.content.Intent
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import android.opengl.Matrix
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
-import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import androidx.navigation.findNavController
 import com.example.explorelens.ArActivity
 import com.example.explorelens.extensions.convertYuv
 import com.example.explorelens.extensions.toFile
@@ -26,8 +22,8 @@ import com.example.explorelens.common.samplerender.arcore.BackgroundRenderer
 import com.example.explorelens.ar.classification.utils.ImageUtils
 import com.example.explorelens.ar.render.LabelRender
 import com.example.explorelens.ar.render.PointCloudRender
-import com.example.explorelens.data.network.allImageAnalyzedResults
-import com.example.explorelens.data.network.ImageAnalyzedResult
+import com.example.explorelens.data.model.siteDetectionData.allImageAnalyzedResults
+import com.example.explorelens.data.model.siteDetectionData.ImageAnalyzedResult
 import com.google.ar.core.Anchor
 import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Pose
@@ -41,7 +37,7 @@ import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import com.example.explorelens.data.network.AnalyzedResultsClient
-import com.example.explorelens.data.network.SiteInformation
+import com.example.explorelens.data.model.siteDetectionData.SiteInformation
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import java.io.File
@@ -49,11 +45,9 @@ import java.lang.Thread.sleep
 import java.util.Collections
 import kotlin.math.sqrt
 import com.example.explorelens.BuildConfig
-import com.example.explorelens.MainActivity
 import com.example.explorelens.R
-import com.example.explorelens.ui.site.SiteDetailsFragment
 import com.example.explorelens.Model
-import com.example.explorelens.data.network.SiteDetails
+import com.example.explorelens.data.model.SiteDetails
 import com.example.explorelens.model.ARLabeledAnchor
 
 
