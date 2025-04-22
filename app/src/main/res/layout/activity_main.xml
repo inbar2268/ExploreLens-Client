@@ -17,21 +17,33 @@
         android:layout_height="80dp"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="40dp"
-        android:background="@drawable/camera_icon"
+        android:background="@drawable/ic_camera_shutter_btn"
         android:elevation="4dp" />
+
+<!--    <ImageButton-->
+<!--        android:id="@+id/closeButton"-->
+<!--        android:layout_width="48dp"-->
+<!--        android:layout_height="48dp"-->
+<!--        android:layout_gravity="top|start"-->
+<!--        android:layout_margin="16dp"-->
+<!--        android:background="?android:attr/selectableItemBackgroundBorderless"-->
+<!--        android:contentDescription="close"-->
+<!--        android:padding="8dp"-->
+<!--        android:scaleType="fitCenter"-->
+<!--        android:src="@drawable/ic_close"-->
+<!--        app:tint="@color/white"/>-->
 
     <ImageButton
         android:id="@+id/closeButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_margin="20dp"
         android:layout_gravity="top|start"
-        android:layout_margin="16dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:contentDescription="close"
-        android:padding="8dp"
-        android:scaleType="fitCenter"
+        android:background="@android:color/transparent"
         android:src="@drawable/ic_close"
-        app:tint="@color/white"/>
+        android:contentDescription="Back button"
+        android:scaleType="centerInside"
+        app:tint="#FFFFFF"/>
 
     <!-- Site Details Overlay Container -->
     <FrameLayout
