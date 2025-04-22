@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.RatingBar
@@ -63,7 +64,7 @@ class SiteDetailsFragment : Fragment() {
         ratingContainer = view.findViewById(R.id.ratingContainer)
         ratingView = view.findViewById(R.id.ratingView)
 
-        val closeButton = view.findViewById<Button>(R.id.closeButton)
+        val closeButton = view.findViewById<ImageButton>(R.id.closeButton)
         closeButton.setOnClickListener {
             // Dismiss the fragment
             dismissSiteDetails()
@@ -149,7 +150,7 @@ class SiteDetailsFragment : Fragment() {
                         }
 
                         // Log comment details for debugging
-                        Log.d("SiteDetailsFragment", "Received ${siteDetailsResponse.comments.size} comments from server")
+                        //Log.d("SiteDetailsFragment", "Received ${siteDetailsResponse.comments.size} comments from server")
                     } else {
                         Log.e("SiteDetailsFragment", "Response body is null")
                         showError("No data returned from server")
