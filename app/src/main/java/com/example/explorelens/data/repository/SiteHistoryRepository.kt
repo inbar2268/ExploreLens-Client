@@ -19,6 +19,7 @@ import com.google.gson.Gson
 
 
 class SiteHistoryRepository(context: Context) {
+    private val TAG = "SiteHistoryRepository"
     private val siteHistoryApi = AuthClient.siteApi
     private val siteHistoryDao = AppDatabase.getInstance(context).siteHistoryDao()
     private val tokenManager: AuthTokenManager = AuthTokenManager.getInstance(context)
@@ -36,12 +37,6 @@ class SiteHistoryRepository(context: Context) {
 
         val userId = tokenManager.getUserId()
 
-        if (userId != null) {
-            Log.d("USERID", userId)
-        } else{
-            Log.d("USERID", "not found userid")
-
-        }
 
         withContext(Dispatchers.IO) {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
@@ -108,15 +103,15 @@ class SiteHistoryRepository(context: Context) {
                     // Handle deletions - remove items that exist locally but not on server
                     localHistoryItems.forEach { localItem ->
                         if (localItem.id !in serverItemIds) {
-                            Log.d("TAG", "Deleting removed item: $localItem")
+                            Log.d(TAG, "Deleting removed item: $localItem")
                             siteHistoryDao.deleteSiteHistory(localItem)
                         }
                     }
                 } else {
-                    Log.e("TAG", "Failed to fetch history from server: ${response.message()}")
+                    Log.e(TAG, "Failed to fetch history from server: ${response.message()}")
                 }
             } catch (e: Exception) {
-                Log.e("TAG", "Error syncing site history", e)
+                Log.e(TAG, "Error syncing site history", e)
                 e.printStackTrace()
             }
         }

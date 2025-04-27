@@ -21,7 +21,6 @@ class UserRepository(context: Context) {
     // Fetch user from API and save to database
     suspend fun fetchAndSaveUser(): Result<User> {
         val userId = tokenManager.getUserId() ?: return Result.failure(IllegalStateException("User ID not found"))
-        Log.d("ACCESSTOKEN1", tokenManager.getAccessToken()!!)
 
         return try {
             val response: Response<UserResponse> = userApiService.getUserById(userId)
