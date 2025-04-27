@@ -90,6 +90,12 @@
         android:label="Map"
         tools:layout="@layout/fragment_map" />
 
+    <fragment
+        android:id="@+id/siteHistoryFragment"
+        android:name="com.example.explorelens.ui.site.SiteHistoryFragment"
+        android:label="history"
+        tools:layout="@layout/fragment_site_history" />
+
     <activity
         android:id="@+id/arActivity"
         android:name="com.example.explorelens.ArActivity"

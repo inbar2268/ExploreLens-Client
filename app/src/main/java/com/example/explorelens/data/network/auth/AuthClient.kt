@@ -2,6 +2,7 @@ package com.example.explorelens.data.network.auth
 
 import android.content.Context
 import com.example.explorelens.BuildConfig
+import com.example.explorelens.data.network.site.SiteHistoryApi
 import com.example.explorelens.data.network.user.UserApi
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -50,14 +51,16 @@ object AuthClient {
         builder.build()
     }
 
-    // Use default client for auth API (no interceptor)
     val authApi: AuthApi by lazy {
         createRetrofitClient(defaultOkHttpClient).create(AuthApi::class.java)
     }
 
-    // Use authenticated client for user API
     val userApi: UserApi by lazy {
         createRetrofitClient(authenticatedOkHttpClient).create(UserApi::class.java)
+    }
+
+    val siteApi: SiteHistoryApi by lazy {
+        createRetrofitClient(authenticatedOkHttpClient).create(SiteHistoryApi::class.java)
     }
 
     private fun createRetrofitClient(client: OkHttpClient): Retrofit {
