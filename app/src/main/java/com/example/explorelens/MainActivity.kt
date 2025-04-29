@@ -2,9 +2,6 @@ package com.example.explorelens
 
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
@@ -15,14 +12,15 @@ import androidx.navigation.ui.setupWithNavController
 import com.example.explorelens.data.network.auth.AuthClient
 import com.example.explorelens.utils.LoadingManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import androidx.navigation.ui.onNavDestinationSelected
 import com.example.explorelens.ui.site.SiteDetailsFragment
 import androidx.activity.OnBackPressedCallback
+import com.example.explorelens.utils.FragmentNavigationManager
 
 class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedListener {
 
     private lateinit var navController: NavController
     private lateinit var bottomNavigationView: BottomNavigationView
+    private var returnedFromAr = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,20 +34,22 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         navController = navHostFragment.navController
 
-        navController.addOnDestinationChangedListener(this)
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            FragmentNavigationManager.setCurrentFragmentId(destination.id)
+        }
 
         bottomNavigationView.setupWithNavController(navController)
 
         bottomNavigationView.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.arActivity -> {
-                    // Start AR activity
-                    navController.navigate(R.id.arActivity)
-                    true
+                    launchArActivity()
+                    false
                 }
                 else -> {
-                    // For all other items, let the NavigationUI handle it
+                    FragmentNavigationManager.setCurrentFragmentId(item.itemId)
                     item.onNavDestinationSelected(navController) || super.onOptionsItemSelected(item)
+                    true
                 }
             }
         }
@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
             }
         })
     }
+
 
     override fun onDestinationChanged(
         controller: NavController,
@@ -99,6 +100,32 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
     override fun onDestroy() {
         super.onDestroy()
         LoadingManager.cleanup()
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Check if we're returning from AR activity
+        if (returnedFromAr) {
+            returnedFromAr = false
+
+            // Navigate to the last fragment
+            val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+            val navController = navHostFragment.navController
+            val fragmentId = FragmentNavigationManager.getLastFragmentId()
+
+            // Navigate only if we're not already on that destination
+            if (navController.currentDestination?.id != fragmentId) {
+                navController.navigate(fragmentId)
+            }
+        }
+    }
+
+    // Add this to the end of your launchArActivity() method:
+    fun launchArActivity() {
+        val intent = Intent(this, ArActivity::class.java)
+        startActivity(intent)
+        returnedFromAr = true
     }
 
 }

@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.example.explorelens.MainActivity
 import com.example.explorelens.R
 import com.example.explorelens.databinding.FragmentRegisterBinding
 import com.example.explorelens.data.network.auth.GoogleSignInHelper
@@ -43,7 +44,7 @@ class RegisterFragment : Fragment() {
                 showLoading = { showLoading() },
                 hideLoading = { hideLoading() },
                 onSuccess = {
-                    findNavController().navigate(R.id.action_registerFragment_to_profileFragment)
+                    (requireActivity() as MainActivity).launchArActivity()
                 }
             )
         } else {
@@ -93,25 +94,6 @@ class RegisterFragment : Fragment() {
         })
     }
 
-    private fun handleGoogleSignInResult(data: android.content.Intent?) {
-        val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-        googleSignInHelper.handleSignInResult(task) { idToken ->
-            // Loading is already shown in signInWithGoogle
-            CoroutineScope(Dispatchers.Main).launch {
-                val result = authRepository.googleSignIn(idToken)
-                hideLoading()
-
-                if (result.isSuccess) {
-                    Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
-                    findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
-                } else {
-                    Log.e(TAG, "Google login failed: ${result.exceptionOrNull()?.message}")
-                    Toast.makeText(context, "Google login failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
     private fun signUpWithGoogle() {
         googleSignInHelper.performGoogleSignIn(
             googleSignInLauncher,
@@ -154,7 +136,7 @@ class RegisterFragment : Fragment() {
 
             if (result.isSuccess) {
                 Toast.makeText(context, "Registration successful", Toast.LENGTH_SHORT).show()
-                findNavController().navigate(R.id.action_registerFragment_to_profileFragment)
+                (requireActivity() as MainActivity).launchArActivity()
             } else {
                 Log.d(TAG, "Registration failed: ${result.exceptionOrNull()?.message}")
                 Toast.makeText(
