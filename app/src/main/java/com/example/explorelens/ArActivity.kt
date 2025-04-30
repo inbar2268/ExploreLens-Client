@@ -1,8 +1,11 @@
 package com.example.explorelens
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.Manifest
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -20,21 +23,54 @@ import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationExceptio
 import android.view.MotionEvent
 import android.widget.ImageButton
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
+import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
 import com.example.explorelens.ar.ARCoreSessionLifecycleHelper
 import com.example.explorelens.ar.AppRenderer
 import com.example.explorelens.ar.ArActivityView
+import com.example.explorelens.data.repository.SiteHistoryRepository
+import com.example.explorelens.utils.GeoLocationUtils
+
 
 class ArActivity : AppCompatActivity() {
+
   val TAG = "MainActivity"
   lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
   lateinit var renderer: AppRenderer
   lateinit var view: ArActivityView
+  private lateinit var geoLocationUtils: GeoLocationUtils
+  private val LOCATION_PERMISSION_REQUEST = 1001
+  private val CAMERA_PERMISSION_REQUEST = 1002
+  private lateinit var siteHistoryViewModel: SiteHistoryViewModel
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
+    geoLocationUtils = GeoLocationUtils(applicationContext)
+    val siteRepository = SiteHistoryRepository(applicationContext)
+    siteHistoryViewModel = ViewModelProvider(
+      this,
+      SiteHistoryViewModel.Factory(siteRepository, geoLocationUtils)
+    )[SiteHistoryViewModel::class.java]
+
+    when {
+      !hasLocationPermissions() -> {
+        requestLocationPermissions()
+      }
+      !hasCameraPermission() -> {
+        requestCameraPermission()
+      }
+      else -> {
+        setupAr()
+      }
+    }
+
+  }
+
+  private fun setupAr(){
     // Setup ARCore session lifecycle helper and configuration.
     arCoreSessionHelper = ARCoreSessionLifecycleHelper(this)
     // When session creation or session.resume fails, we display a message and log detailed information.
@@ -75,7 +111,7 @@ class ArActivity : AppCompatActivity() {
     lifecycle.addObserver(arCoreSessionHelper)
 
     // Set up AR renderer
-    renderer = AppRenderer(this)
+    renderer = AppRenderer(this, geoLocationUtils, siteHistoryViewModel)
     lifecycle.addObserver(renderer)
 
     // Set up AR UI
@@ -90,13 +126,74 @@ class ArActivity : AppCompatActivity() {
     }
   }
 
+  private fun hasLocationPermissions(): Boolean {
+    return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+  }
+
+  private fun hasCameraPermission(): Boolean {
+    return ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+  }
+
+
+  private fun requestLocationPermissions() {
+    ActivityCompat.requestPermissions(
+      this,
+      arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+      ),
+      LOCATION_PERMISSION_REQUEST
+    )
+  }
+
+  private fun requestCameraPermission() {
+    ActivityCompat.requestPermissions(
+      this,
+      arrayOf(Manifest.permission.CAMERA),
+      CAMERA_PERMISSION_REQUEST
+    )
+  }
+
   override fun onRequestPermissionsResult(
     requestCode: Int,
     permissions: Array<out String>,
     grantResults: IntArray
   ) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-    arCoreSessionHelper.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+    when (requestCode) {
+      LOCATION_PERMISSION_REQUEST -> {
+        if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+          if (!hasCameraPermission()) {
+            requestCameraPermission()
+          } else {
+            setupAr()
+          }
+        } else {
+          Toast.makeText(this, "Location permissions are required for this feature.", Toast.LENGTH_LONG).show()
+          finish()
+        }
+      }
+      CAMERA_PERMISSION_REQUEST -> {
+        if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+          // Camera permission granted, we can proceed
+          setupAr()
+        } else {
+          // Camera permission denied
+          Toast.makeText(this, "Camera permission is required for AR features.", Toast.LENGTH_LONG).show()
+          finish()
+        }
+      }
+      else -> {
+        if (::arCoreSessionHelper.isInitialized) {
+          arCoreSessionHelper.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        }
+      }
+    }
   }
 
   override fun onWindowFocusChanged(hasFocus: Boolean) {

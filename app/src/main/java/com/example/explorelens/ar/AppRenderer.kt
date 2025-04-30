@@ -1,5 +1,6 @@
 package com.example.explorelens.ar
 
+import android.location.Location
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -47,11 +48,18 @@ import kotlin.math.sqrt
 import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
 import com.example.explorelens.Model
-import com.example.explorelens.data.model.SiteDetails
+import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
+import com.example.explorelens.data.network.SiteDetails
 import com.example.explorelens.model.ARLabeledAnchor
+import com.example.explorelens.utils.GeoLocationUtils
+import androidx.lifecycle.ViewModelProvider
+import ch.hsr.geohash.GeoHash
+import com.example.explorelens.data.repository.SiteHistoryRepository
 
-
-class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRender.Renderer,
+class AppRenderer(val activity: ArActivity,
+                  private val geoLocationUtils: GeoLocationUtils,
+                  private val siteHistoryViewModel: SiteHistoryViewModel
+) : DefaultLifecycleObserver, SampleRender.Renderer,
     CoroutineScope by MainScope() {
     companion object {
         val TAG = "HelloArRenderer"
@@ -90,6 +98,7 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
 
     fun bindView(view: ArActivityView) {
         this.view = view
+
         view.snapshotButton.setOnClickListener {
             scanButtonWasPressed = true
             view.setScanningActive(true)
@@ -204,6 +213,12 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
 
             val anchors = objects.mapNotNull { obj ->
                 fetchAndCreateAnchor(session, snapshotData, obj, frame)
+            }
+
+            launch {
+                val currentLocation = geoLocationUtils.getSingleCurrentLocation() // Await the result
+                addAnchorToDatabase(anchors)
+                createSiteHistoryForDetectedObjects(objects, currentLocation) // Pass the location
             }
 
             addAnchorToDatabase(anchors)
@@ -522,6 +537,8 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
                 view.setScanningActive(false)
             }
         }
+
+
 
         val snapshot = Snapshot(
             timestamp = frame.timestamp,
@@ -902,10 +919,33 @@ class AppRenderer(val activity: ArActivity) : DefaultLifecycleObserver, SampleRe
         }
     }
 
-
     private fun addAnchorToDatabase(anchors: List<ARLabeledAnchor>) {
         Model.shared.addArLabelAnchors(anchors) {
             getAllAnchors()
+        }
+    }
+
+    private fun createSiteHistoryForDetectedObjects(objects: List<ImageAnalyzedResult>, location: Location?) {
+        objects.forEach { result ->
+            result.siteInformation?.let { siteInfo ->
+                launch { // Launch a coroutine to call suspend functions
+                    // Use getSingleCurrentLocation to get the location once
+                    val currentLocation = geoLocationUtils.getSingleCurrentLocation() ?: return@launch // Await and handle null
+
+                    // The GeoLocationUtils will update its internal geoHash
+                    geoLocationUtils.updateLocation(currentLocation)
+                    val geoHash = geoLocationUtils.getGeoHash() ?: ""
+
+                    siteHistoryViewModel.createSiteHistory(
+
+                        "6123456789abcdef01234567",
+                        currentLocation
+                    )
+                    Log.d(TAG, "Saved site history with geoHash: $geoHash, lat: ${currentLocation.latitude}, long: ${currentLocation.longitude}")
+
+
+                }
+            }
         }
     }
 }
