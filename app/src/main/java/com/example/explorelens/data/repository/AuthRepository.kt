@@ -10,14 +10,14 @@ import com.example.explorelens.data.model.RegisterRequest
 import com.example.explorelens.data.model.ResetPasswordRequest
 import com.example.explorelens.data.network.auth.AuthApi
 import com.example.explorelens.data.network.auth.AuthTokenManager
-import com.example.explorelens.data.network.auth.AuthClient
+import com.example.explorelens.data.network.ExploreLensApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Response
 
 class AuthRepository(private val context: Context) {
 
-    private val authApi: AuthApi = AuthClient.authApi
+    private val authApi: AuthApi = ExploreLensApiClient.authApi
     private val tokenManager: AuthTokenManager = AuthTokenManager.getInstance(context)
 
     suspend fun registerUser(name: String, email: String, password: String): Result<LoginResponse> {

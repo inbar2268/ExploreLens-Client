@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LiveData
 import com.example.explorelens.data.db.AppDatabase
-import com.example.explorelens.data.network.auth.AuthClient
+import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.model.CreateSiteHistoryRequest
 import com.example.explorelens.data.model.SiteHistoryItemResponse
@@ -20,7 +20,7 @@ import com.google.gson.Gson
 
 class SiteHistoryRepository(context: Context) {
     private val TAG = "SiteHistoryRepository"
-    private val siteHistoryApi = AuthClient.siteApi
+    private val siteHistoryApi = ExploreLensApiClient.siteHistoryApi
     private val siteHistoryDao = AppDatabase.getInstance(context).siteHistoryDao()
     private val tokenManager: AuthTokenManager = AuthTokenManager.getInstance(context)
 
@@ -118,7 +118,6 @@ class SiteHistoryRepository(context: Context) {
     }
 
 
-
     fun toEntity(siteHistoryItemResponse: SiteHistoryItemResponse): SiteHistory {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
         val date = dateFormat.parse(siteHistoryItemResponse.createdAt)
@@ -134,4 +133,6 @@ class SiteHistoryRepository(context: Context) {
             createdAt = timestamp  // Store the timestamp as a Long
         )
     }
+
+
 }

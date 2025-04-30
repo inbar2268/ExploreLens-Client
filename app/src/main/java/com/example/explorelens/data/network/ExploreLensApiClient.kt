@@ -1,51 +1,88 @@
 package com.example.explorelens.data.network
 
+import android.content.Context
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.example.explorelens.BuildConfig
+import com.example.explorelens.data.network.auth.AuthApi
+import com.example.explorelens.data.network.auth.AuthInterceptor
 import com.example.explorelens.data.network.detectionResult.AnalyzedResultApi
-import com.example.explorelens.data.network.detectionResult.AnalyzedResultInterceptor
+import com.example.explorelens.data.network.site.SiteHistoryApi
 import com.example.explorelens.data.network.siteDetails.SiteDetailsApi
+import com.example.explorelens.data.network.user.UserApi
+import java.util.concurrent.TimeUnit
 
-val BASE_URL = BuildConfig.BASE_URL
 
-object AnalyzedResultsClient {
-    private val okHttpClient: OkHttpClient by lazy {
-        val loggingInterceptor = HttpLoggingInterceptor()
-        loggingInterceptor.level = HttpLoggingInterceptor.Level.BODY // Log body content
+object ExploreLensApiClient {
 
-        OkHttpClient.Builder()
-            .addInterceptor(loggingInterceptor) // Add the logging interceptor
-            .addInterceptor(AnalyzedResultInterceptor())
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS) // Set connection timeout
-            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS) // Set read timeout
-            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS) // Set write timeout
+    private val BASE_URL = BuildConfig.BASE_URL
+    private lateinit var authInterceptor: AuthInterceptor
+    private val commonHeadersInterceptor = CommonHeadersInterceptor()
+
+    fun init(context: Context) {
+        authInterceptor = AuthInterceptor(context)
+    }
+
+    private val loggingInterceptor by lazy {
+        HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+            else HttpLoggingInterceptor.Level.NONE
+        }
+    }
+
+    private val publicOkHttpClient: OkHttpClient by lazy {
+        createBaseOkHttpClientBuilder()
             .build()
     }
 
-    val analyzedResultApiClient: AnalyzedResultApi by lazy {
-        val retrofitClient = Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+    private val authenticatedOkHttpClient: OkHttpClient by lazy {
+        createBaseOkHttpClientBuilder()
+            .addInterceptor(authInterceptor)
             .build()
-        retrofitClient.create(AnalyzedResultApi::class.java)
     }
 
-    val siteDetailsApiClient: SiteDetailsApi by lazy {
-        createRetrofitClient().create(SiteDetailsApi::class.java)
-    }
-    val siteCommentsApiClient: CommentsApi by lazy {
-        createRetrofitClient().create(CommentsApi::class.java)
+    private fun createBaseOkHttpClientBuilder(): OkHttpClient.Builder {
+        return OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .addInterceptor(commonHeadersInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
     }
 
-    private fun createRetrofitClient(): Retrofit {
+    private fun createRetrofitClient(client: OkHttpClient): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(okHttpClient)
+            .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
+
+    val authApi: AuthApi by lazy {
+        createRetrofitClient(publicOkHttpClient).create(AuthApi::class.java)
+    }
+
+    val userApi: UserApi by lazy {
+        createRetrofitClient(authenticatedOkHttpClient).create(UserApi::class.java)
+    }
+
+    val siteHistoryApi: SiteHistoryApi by lazy {
+        createRetrofitClient(authenticatedOkHttpClient).create(SiteHistoryApi::class.java)
+    }
+
+    val analyzedResultApi: AnalyzedResultApi by lazy {
+        createRetrofitClient(authenticatedOkHttpClient).create(AnalyzedResultApi::class.java)
+    }
+
+    val siteDetailsApi: SiteDetailsApi by lazy {
+        createRetrofitClient(authenticatedOkHttpClient).create(SiteDetailsApi::class.java)
+    }
+
+    val commentsApi: CommentsApi by lazy {
+        createRetrofitClient(authenticatedOkHttpClient).create(CommentsApi::class.java)
+    }
+
+
 }

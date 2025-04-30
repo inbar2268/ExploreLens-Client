@@ -9,7 +9,6 @@ object FragmentNavigationManager {
         R.id.registerFragment
     )
 
-    // Default fragment to navigate to if last was login/register
     private val DEFAULT_FRAGMENT_ID = R.id.profileFragment
 
     fun setCurrentFragmentId(fragmentId: Int) {

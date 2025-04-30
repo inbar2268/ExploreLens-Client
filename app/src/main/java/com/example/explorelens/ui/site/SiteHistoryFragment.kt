@@ -9,8 +9,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.explorelens.adapters.siteHistory.SiteHistoryAdapter
 import com.example.explorelens.data.db.AppDatabase
-import com.example.explorelens.data.network.auth.AuthClient
-import com.example.explorelens.data.network.site.SiteHistoryApi
 import com.example.explorelens.data.repository.SiteHistoryRepository
 import com.example.explorelens.databinding.FragmentSiteHistoryBinding
 import com.example.explorelens.utils.GeoLocationUtils

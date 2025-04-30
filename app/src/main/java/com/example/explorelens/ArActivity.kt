@@ -37,7 +37,7 @@ import com.example.explorelens.utils.GeoLocationUtils
 
 class ArActivity : AppCompatActivity() {
 
-  val TAG = "MainActivity"
+  val TAG = "ArActivity111"
   lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
   lateinit var renderer: AppRenderer
   lateinit var view: ArActivityView
@@ -120,10 +120,7 @@ class ArActivity : AppCompatActivity() {
     renderer.bindView(view)
     lifecycle.addObserver(view)
 
-    val closeButton = findViewById<ImageButton>(R.id.closeButton)
-    closeButton?.setOnClickListener {
-      finish()
-    }
+    setupCloseButton()
   }
 
   private fun hasLocationPermissions(): Boolean {
@@ -208,6 +205,42 @@ class ArActivity : AppCompatActivity() {
       renderer.handleTouch(x, y)
     }
     return super.onTouchEvent(event)
+  }
+
+  private fun setupCloseButton() {
+    val closeButton = findViewById<ImageButton>(R.id.closeButton)
+    closeButton?.setOnClickListener {
+      val intent = Intent(this, MainActivity::class.java)
+      intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+      intent.putExtra("RETURNED_FROM_AR", true)
+      startActivity(intent)
+
+    }
+  }
+
+  override fun onStart() {
+    super.onStart()
+    Log.d(TAG, "onStart called - Activity becoming visible")
+  }
+
+  override fun onResume() {
+    super.onResume()
+    Log.d(TAG, "onResume called - Activity resumed and interactive")
+  }
+
+  override fun onPause() {
+    super.onPause()
+    Log.d(TAG, "onPause called - Activity paused but still visible")
+  }
+
+  override fun onStop() {
+    super.onStop()
+    Log.d(TAG, "onStop called - Activity no longer visible")
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    Log.d(TAG, "onDestroy called - Activity being destroyed")
   }
 
 }
