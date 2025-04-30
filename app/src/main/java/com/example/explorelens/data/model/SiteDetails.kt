@@ -1,4 +1,4 @@
-package com.example.explorelens.data.network
+package com.example.explorelens.data.model
 
 import com.google.gson.annotations.SerializedName
 
@@ -8,11 +8,5 @@ data class SiteDetails(
     @SerializedName("description") val description: String,
     @SerializedName("averageRating") val averageRating: Float = 0f,
     @SerializedName("ratingCount") val ratingCount: Int = 0,
-    @SerializedName("comments") val comments: List<Comment> = emptyList()
 )
 
-data class Comment(
-    @SerializedName("user") val user: String,
-    @SerializedName("content") val content: String,
-    @SerializedName("date") val date: String?
-)

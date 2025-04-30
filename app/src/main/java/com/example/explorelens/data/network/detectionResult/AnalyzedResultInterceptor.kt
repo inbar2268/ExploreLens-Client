@@ -1,4 +1,4 @@
-package com.example.explorelens.data.network
+package com.example.explorelens.data.network.detectionResult
 import okhttp3.Interceptor
 import okhttp3.Response
 

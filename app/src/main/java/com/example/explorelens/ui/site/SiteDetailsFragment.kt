@@ -11,7 +11,6 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
-import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.RatingBar
 import android.widget.TextView
@@ -23,15 +22,13 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.ArActivity
 import com.example.explorelens.R
 import com.example.explorelens.data.network.AnalyzedResultsClient
-import com.example.explorelens.data.network.Comment
-import com.example.explorelens.data.network.SiteDetails
-import com.example.explorelens.ui.site.RatingView
-import com.example.explorelens.ui.site.CommentsAdapter
-import com.example.explorelens.ui.site.SiteRating
-import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.example.explorelens.data.model.Comment
+import com.example.explorelens.data.model.SiteDetails
+import com.example.explorelens.data.model.comments.SiteComments
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+
 
 class SiteDetailsFragment : Fragment() {
 
@@ -43,6 +40,7 @@ class SiteDetailsFragment : Fragment() {
     private lateinit var ratingView: RatingView
     private var siteRating: SiteRating? = null
     private var SiteDetails: SiteDetails? = null
+    private var fetchedComments: List<Comment> = emptyList()
 
 
     override fun onCreateView(
@@ -129,12 +127,23 @@ class SiteDetailsFragment : Fragment() {
                         this@SiteDetailsFragment.SiteDetails = siteDetailsResponse
 
                         // Only update description if we don't already have one
-                        val hasPassedDescription = arguments?.getString("DESCRIPTION_KEY")?.isNotEmpty() == true
+                        val hasPassedDescription =
+                            arguments?.getString("DESCRIPTION_KEY")?.isNotEmpty() == true
                         if (!hasPassedDescription) {
                             descriptionTextView.text = siteDetailsResponse.description
                         }
 
-                        Log.d("SiteDetailsFragment", "Rating from server: ${siteDetailsResponse.averageRating}, count: ${siteDetailsResponse.ratingCount}")
+                        Log.d(
+                            "SiteDetailsFragment",
+                            "Rating from server: ${siteDetailsResponse.averageRating}, count: ${siteDetailsResponse.ratingCount}"
+                        )
+
+                        val siteId = siteDetailsResponse.id
+                        if (!siteId.isNullOrBlank()) {
+                            fetchSiteComments(siteId)
+                        } else {
+                            Log.e("SiteDetailsFragment", "siteId is null or blank")
+                        }
 
                         // Update rating if available
                         if (siteDetailsResponse.ratingCount > 0) {
@@ -144,10 +153,14 @@ class SiteDetailsFragment : Fragment() {
                                 siteDetailsResponse.ratingCount
                             )
                             ratingView.setRating(siteDetailsResponse.averageRating)
-                            Log.d("SiteDetailsFragment", "Updated rating view to: ${siteDetailsResponse.averageRating}")
+                            Log.d(
+                                "SiteDetailsFragment",
+                                "Updated rating view to: ${siteDetailsResponse.averageRating}"
+                            )
                         } else {
                             Log.d("SiteDetailsFragment", "No ratings available, using default")
                         }
+
 
                         // Log comment details for debugging
                         //Log.d("SiteDetailsFragment", "Received ${siteDetailsResponse.comments.size} comments from server")
@@ -167,6 +180,53 @@ class SiteDetailsFragment : Fragment() {
                 loadingIndicator.visibility = View.GONE
                 Log.e("SiteDetailsFragment", "Network error: ${t.message}", t)
                 showError("Network error: ${t.message}")
+            }
+        })
+    }
+
+    private fun fetchSiteComments(siteId: String) {
+        Log.d(
+            "SiteDetailsFragment",
+            "Sending request for comments with siteId: $siteId"
+        )
+
+        // Use the client from our networking package
+        val call = AnalyzedResultsClient.siteCommentsApiClient.getSiteComments(siteId)
+
+        call.enqueue(object : Callback<List<Comment>> {
+            override fun onResponse(call: Call<List<Comment>>, response: Response<List<Comment>>) {
+                if (!isAdded) return  // Check if fragment is still attached
+
+                if (response.isSuccessful) {
+                    val commentsList = response.body()
+                    Log.d(
+                        "SiteDetailsFragment",
+                        "Comments response received: ${commentsList?.size} comments"
+                    )
+
+                    if (commentsList != null) {
+                        // Store the fetched comments
+                        fetchedComments = commentsList
+
+                        // Log received comments for debugging
+                        Log.d(
+                            "SiteDetailsFragment",
+                            "Received ${commentsList.size} comments from server"
+                        )
+                    } else {
+                        Log.e("SiteDetailsFragment", "Comments response body is null")
+                    }
+                } else {
+                    Log.e("SiteDetailsFragment", "Comments fetch error: ${response.code()}")
+                    showError("Failed to load comments: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<List<Comment>>, t: Throwable) {
+                if (!isAdded) return  // Check if fragment is still attached
+
+                Log.e("SiteDetailsFragment", "Comments network error: ${t.message}", t)
+                showError("Network error loading comments: ${t.message}")
             }
         })
     }
@@ -206,45 +266,56 @@ class SiteDetailsFragment : Fragment() {
                 if (SiteDetails == null) {
                     Log.d("SiteDetailsFragment", "SiteDetails is null")
                 } else {
-                    Log.d("SiteDetailsFragment", "SiteDetails has ${SiteDetails?.comments?.size ?: 0} comments")
+                    Log.d(
+                        "SiteDetailsFragment",
+                        "SiteDetails has ${fetchedComments?.size ?: 0} comments"
+                    )
                 }
 
                 // Check if we have server comments stored in the fragment's SiteDetails property
-                val displayComments = if (SiteDetails != null && SiteDetails?.comments?.isNotEmpty() == true) {
-                    // Use server comments directly
-                    Log.d("SiteDetailsFragment", "Using ${SiteDetails?.comments?.size} server comments")
-                    SiteDetails?.comments ?: emptyList()
-                } else {
-                    // Use mock comments as fallback
-                    Log.d("SiteDetailsFragment", "Using mock comments")
-                    listOf(
-                        Comment(
-                            user = "John Doe",
-                            content = "This place is amazing! I visited last summer and the architecture is stunning.",
-                            date = null
-                        ),
-                        Comment(
-                            user = "Jane Smith",
-                            content = "The historical significance of this site cannot be overstated. A must-visit!",
-                            date = null
-                        ),
-                        Comment(
-                            user = "Mark Johnson",
-                            content = "Great place to take photos. The lighting in the evening is perfect.",
-                            date = null
-                        ),
-                        Comment(
-                            user = "Sarah Williams",
-                            content = "I was disappointed by how crowded it was. Maybe visit during off-season if you can.",
-                            date = null
-                        ),
-                        Comment(
-                            user = "David Brown",
-                            content = "The tour guides are very knowledgeable and friendly. Definitely take a guided tour if available.",
-                            date = null
+                val displayComments =
+                    if (SiteDetails != null && fetchedComments?.isNotEmpty() == true) {
+                        // Use server comments directly
+                        Log.d(
+                            "SiteDetailsFragment",
+                            "Using ${fetchedComments?.size} server comments"
                         )
-                    )
-                }
+                        fetchedComments ?: emptyList()
+                    } else {
+                        // Use mock comments as fallback
+                        Log.d("SiteDetailsFragment", "Using mock comments")
+                        listOf(
+                            Comment(
+                                user = "John Doe",
+                                content = "This place is amazing! I visited last summer and the architecture is stunning.",
+                                date = null,
+                                _id = "1"
+                            ),
+                            Comment(
+                                user = "Jane Smith",
+                                content = "The historical significance of this site cannot be overstated. A must-visit!",
+                                date = null,
+                                _id = "2"
+                            ),
+                            Comment(
+                                user = "Mark Johnson",
+                                content = "Great place to take photos. The lighting in the evening is perfect.",
+                                date = null,
+                                _id = "3"
+                            ),
+                            Comment(
+                                user = "Sarah Williams",
+                                content = "I was disappointed by how crowded it was. Maybe visit during off-season if you can.",
+                                date = null, _id = "4"
+                            ),
+                            Comment(
+                                user = "David Brown",
+                                content = "The tour guides are very knowledgeable and friendly. Definitely take a guided tour if available.",
+                                date = null,
+                                _id = "5"
+                            )
+                        )
+                    }
 
                 // Set adapter
                 recyclerView.adapter = CommentsAdapter(displayComments)
@@ -282,6 +353,7 @@ class SiteDetailsFragment : Fragment() {
             }
         }
     }
+
     private fun showRatingDialog() {
         context?.let { ctx ->
             // Create and show dialog
@@ -347,6 +419,7 @@ class SiteDetailsFragment : Fragment() {
             ratingView.setRating(newRating)
         }
     }
+
     private fun dismissSiteDetails() {
         // If using an overlay in AR activity
         val activity = activity as? ArActivity

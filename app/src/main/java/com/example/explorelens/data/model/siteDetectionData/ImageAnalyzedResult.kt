@@ -1,4 +1,4 @@
-package com.example.explorelens.data.network
+package com.example.explorelens.data.model.siteDetectionData
 
 import com.google.gson.annotations.SerializedName
 

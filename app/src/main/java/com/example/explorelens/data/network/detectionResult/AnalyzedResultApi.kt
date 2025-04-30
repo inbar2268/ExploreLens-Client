@@ -1,5 +1,6 @@
-package com.example.explorelens.data.network
+package com.example.explorelens.data.network.detectionResult
 
+import com.example.explorelens.data.model.siteDetectionData.allImageAnalyzedResults
 import okhttp3.MultipartBody
 import retrofit2.http.POST
 import retrofit2.Call

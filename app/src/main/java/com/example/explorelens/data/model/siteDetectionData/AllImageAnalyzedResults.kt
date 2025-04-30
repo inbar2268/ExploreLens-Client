@@ -1,4 +1,4 @@
-package com.example.explorelens.data.network
+package com.example.explorelens.data.model.siteDetectionData
 
 data class allImageAnalyzedResults(
     val result: List<ImageAnalyzedResult>? = null,
