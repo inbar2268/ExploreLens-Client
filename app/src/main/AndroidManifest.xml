@@ -20,14 +20,15 @@
             android:value="AIzaSyB-1DEY6SglyANF6MN7h3Bw3NtGm3s60ZQ"/>
         <activity
             android:name="com.example.explorelens.ArActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode"            android:exported="true"
+            android:launchMode="standard"
             android:screenOrientation="fullSensor">
         </activity>
         <activity
             android:name="com.example.explorelens.MainActivity"
             android:exported="true"
             android:label="Main Activity"
+            android:launchMode="standard"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -105,27 +105,34 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
     override fun onResume() {
         super.onResume()
 
-        // Check if we're returning from AR activity
-        if (returnedFromAr) {
-            returnedFromAr = false
+        if (intent.getBooleanExtra("RETURNED_FROM_AR", false)) {
+            intent.removeExtra("RETURNED_FROM_AR")
 
-            // Navigate to the last fragment
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
             val navController = navHostFragment.navController
             val fragmentId = FragmentNavigationManager.getLastFragmentId()
 
-            // Navigate only if we're not already on that destination
             if (navController.currentDestination?.id != fragmentId) {
                 navController.navigate(fragmentId)
             }
         }
     }
 
-    // Add this to the end of your launchArActivity() method:
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+
+        val destinationId = FragmentNavigationManager.getLastFragmentId()
+
+        if (navController.currentDestination?.id != destinationId) {
+            navController.navigate(destinationId)
+        }
+    }
+
+
     fun launchArActivity() {
         val intent = Intent(this, ArActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         startActivity(intent)
-        returnedFromAr = true
     }
 
 }
