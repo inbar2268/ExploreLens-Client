@@ -9,7 +9,7 @@ import androidx.navigation.NavDestination
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.onNavDestinationSelected
 import androidx.navigation.ui.setupWithNavController
-import com.example.explorelens.data.network.auth.AuthClient
+import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.utils.LoadingManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.example.explorelens.ui.site.SiteDetailsFragment
@@ -25,7 +25,7 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main2)
-        AuthClient.init(applicationContext)
+        ExploreLensApiClient.init(applicationContext)
 
         bottomNavigationView = findViewById(R.id.bottom_navigation)
 

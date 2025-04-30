@@ -21,7 +21,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.ArActivity
 import com.example.explorelens.R
-import com.example.explorelens.data.network.AnalyzedResultsClient
+import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.model.Comment
 import com.example.explorelens.data.model.SiteDetails
 import com.example.explorelens.data.model.comments.SiteComments
@@ -110,7 +110,7 @@ class SiteDetailsFragment : Fragment() {
         Log.d("SiteDetailsFragment", "Sending request with label: $labelWithoutSpaces")
 
         // Use the client from our networking package
-        val call = AnalyzedResultsClient.siteDetailsApiClient.getSiteDetails(labelWithoutSpaces)
+        val call = ExploreLensApiClient.siteDetailsApi.getSiteDetails(labelWithoutSpaces)
 
         call.enqueue(object : Callback<SiteDetails> {
             override fun onResponse(call: Call<SiteDetails>, response: Response<SiteDetails>) {
@@ -191,7 +191,7 @@ class SiteDetailsFragment : Fragment() {
         )
 
         // Use the client from our networking package
-        val call = AnalyzedResultsClient.siteCommentsApiClient.getSiteComments(siteId)
+        val call = ExploreLensApiClient.commentsApi.getSiteComments(siteId)
 
         call.enqueue(object : Callback<List<Comment>> {
             override fun onResponse(call: Call<List<Comment>>, response: Response<List<Comment>>) {

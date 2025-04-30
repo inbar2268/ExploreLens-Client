@@ -37,7 +37,6 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import com.example.explorelens.data.network.AnalyzedResultsClient
 import com.example.explorelens.data.model.siteDetectionData.SiteInformation
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -49,11 +48,12 @@ import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
 import com.example.explorelens.Model
 import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
-import com.example.explorelens.data.network.SiteDetails
+import com.example.explorelens.data.model.SiteDetails
 import com.example.explorelens.model.ARLabeledAnchor
 import com.example.explorelens.utils.GeoLocationUtils
 import androidx.lifecycle.ViewModelProvider
 import ch.hsr.geohash.GeoHash
+import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.repository.SiteHistoryRepository
 
 class AppRenderer(val activity: ArActivity,
@@ -568,7 +568,7 @@ class AppRenderer(val activity: ArActivity,
                 val multipartBody =
                     MultipartBody.Part.createFormData("image", file.name, requestBody)
                 val request =
-                    AnalyzedResultsClient.analyzedResultApiClient.getAnalyzedResult(multipartBody)
+                    ExploreLensApiClient.analyzedResultApi.getAnalyzedResult(multipartBody)
                 val response = request.execute()
 
                 Log.d("AnalyzeImage", "Server response: ${response}")
@@ -818,7 +818,7 @@ class AppRenderer(val activity: ArActivity,
         val siteNameForRequest = siteName.replace(" ", "")
         Log.d(TAG, "Fetching site details for: $siteNameForRequest")
 
-        AnalyzedResultsClient.siteDetailsApiClient.getSiteDetails(siteNameForRequest)
+        ExploreLensApiClient.siteDetailsApi.getSiteDetails(siteNameForRequest)
             .enqueue(object : Callback<SiteDetails> {
                 override fun onResponse(call: Call<SiteDetails>, response: Response<SiteDetails>) {
                     if (response.isSuccessful) {

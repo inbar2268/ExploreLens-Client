@@ -3,6 +3,7 @@ package com.example.explorelens.data.network.auth
 import android.content.Context
 import android.util.Log
 import com.example.explorelens.data.model.RefreshTokenRequest
+import com.example.explorelens.data.network.ExploreLensApiClient
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Request
@@ -71,7 +72,7 @@ class AuthInterceptor(private val context: Context) : Interceptor {
 
         return try {
             val refreshTokenRequest = RefreshTokenRequest(refreshToken)
-            val response = AuthClient.authApi.refreshToken(refreshTokenRequest)
+            val response = ExploreLensApiClient.authApi.refreshToken(refreshTokenRequest)
 
             if (response.isSuccessful && response.body() != null) {
                 val tokenResponse = response.body()!!
