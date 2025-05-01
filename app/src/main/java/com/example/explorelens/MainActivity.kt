@@ -2,6 +2,7 @@ package com.example.explorelens
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
@@ -20,7 +21,6 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
 
     private lateinit var navController: NavController
     private lateinit var bottomNavigationView: BottomNavigationView
-    private var returnedFromAr = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
             FragmentNavigationManager.setCurrentFragmentId(destination.id)
+            updateBottomNavigationVisibility(destination.id)
         }
 
         bottomNavigationView.setupWithNavController(navController)
@@ -53,7 +54,6 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
                 }
             }
         }
-       // handleNavigationIntents(intent)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 val currentFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
@@ -71,6 +71,25 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
                 }
             }
         })
+
+        val currentFragmentId = navController.currentDestination?.id
+        currentFragmentId?.let {
+            updateBottomNavigationVisibility(it)
+        }
+    }
+
+    private fun updateBottomNavigationVisibility(fragmentId: Int) {
+        val fragmentsWithoutBottomNav = listOf(
+            R.id.loginFragment,
+            R.id.registerFragment,
+            R.id.forgotPasswordFragment
+        )
+
+        if (fragmentId in fragmentsWithoutBottomNav) {
+            bottomNavigationView.visibility = View.GONE
+        } else {
+            bottomNavigationView.visibility = View.VISIBLE
+        }
     }
 
 
@@ -85,6 +104,9 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
             R.id.registerFragment,
             R.id.forgotPasswordFragment
         )
+
+        Log.d("MainActivity111", "Destination changed to: ${destination.id}")
+
 
         if (destination.id in fragmentsWithoutBottomNav) {
             bottomNavigationView.visibility = View.GONE

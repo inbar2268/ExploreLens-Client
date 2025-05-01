@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.Manifest
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -23,6 +24,7 @@ import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationExceptio
 import android.view.MotionEvent
 import android.widget.ImageButton
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
@@ -33,7 +35,6 @@ import com.example.explorelens.ar.AppRenderer
 import com.example.explorelens.ar.ArActivityView
 import com.example.explorelens.data.repository.SiteHistoryRepository
 import com.example.explorelens.utils.GeoLocationUtils
-
 
 class ArActivity : AppCompatActivity() {
 
@@ -48,6 +49,7 @@ class ArActivity : AppCompatActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    Log.d(TAG, "onCreate called")
 
     geoLocationUtils = GeoLocationUtils(applicationContext)
     val siteRepository = SiteHistoryRepository(applicationContext)
@@ -56,24 +58,40 @@ class ArActivity : AppCompatActivity() {
       SiteHistoryViewModel.Factory(siteRepository, geoLocationUtils)
     )[SiteHistoryViewModel::class.java]
 
+    Log.d(TAG, "ViewModel initialized")
+  }
+
+  override fun onStart() {
+    super.onStart()
+    Log.d(TAG, "onStart called - Activity becoming visible")
+    checkAndRequestPermissions()
+  }
+
+  private fun checkAndRequestPermissions() {
+    Log.d(TAG, "checkAndRequestPermissions called")
     when {
       !hasLocationPermissions() -> {
+        Log.d(TAG, "Location permissions not granted. Requesting...")
         requestLocationPermissions()
       }
       !hasCameraPermission() -> {
+        Log.d(TAG, "Camera permissions not granted. Requesting...")
         requestCameraPermission()
       }
       else -> {
+        Log.d(TAG, "Permissions granted. Setting up AR...")
         setupAr()
       }
     }
-
   }
 
-  private fun setupAr(){
+  private fun setupAr() {
+    Log.d(TAG, "setupAr called")
+
     // Setup ARCore session lifecycle helper and configuration.
     arCoreSessionHelper = ARCoreSessionLifecycleHelper(this)
-    // When session creation or session.resume fails, we display a message and log detailed information.
+    Log.d(TAG, "ARCoreSessionLifecycleHelper initialized")
+
     arCoreSessionHelper.exceptionCallback = { exception ->
       val message = when (exception) {
         is UnavailableArcoreNotInstalledException,
@@ -88,9 +106,12 @@ class ArActivity : AppCompatActivity() {
       Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
+    Log.d(TAG, "ARCore session helper setup complete")
 
     // Configure session features, including: Lighting Estimation, Depth mode, Instant Placement.
     arCoreSessionHelper.beforeSessionResume = { session ->
+      Log.d(TAG, "beforeSessionResume called")
+
       session.configure(
         session.config.apply {
           // To get the best image of the object in question, enable autofocus.
@@ -108,11 +129,13 @@ class ArActivity : AppCompatActivity() {
         .thenByDescending { it.imageSize.height }
       session.cameraConfig = configs.sortedWith(sort)[0]
     }
+
     lifecycle.addObserver(arCoreSessionHelper)
 
     // Set up AR renderer
     renderer = AppRenderer(this, geoLocationUtils, siteHistoryViewModel)
     lifecycle.addObserver(renderer)
+    Log.d(TAG, "AR renderer setup complete")
 
     // Set up AR UI
     view = ArActivityView(this, renderer)
@@ -121,33 +144,50 @@ class ArActivity : AppCompatActivity() {
     lifecycle.addObserver(view)
 
     setupCloseButton()
+    Log.d(TAG, "AR UI setup complete")
+  }
+
+  private fun showPermissionDeniedDialog() {
+    Log.d(TAG, "showPermissionDeniedDialog called")
+    AlertDialog.Builder(this)
+      .setTitle("Permissions Required")
+      .setMessage("Please enable location and camera permissions in settings to use this feature.")
+      .setPositiveButton("Go to Settings") { _, _ ->
+        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        intent.data = Uri.fromParts("package", packageName, null)
+        startActivity(intent)
+      }
+      .setNegativeButton("Cancel") { _, _ ->
+        Log.d(TAG, "Cancel button clicked")
+        navigateToProfile()  // Call the function to navigate to the profile
+      }
+      .show()
   }
 
   private fun hasLocationPermissions(): Boolean {
-    return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
+    val granted = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    Log.d(TAG, "hasLocationPermissions: $granted")
+    return granted
   }
 
   private fun hasCameraPermission(): Boolean {
-    return ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
-            PackageManager.PERMISSION_GRANTED
+    val granted = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    Log.d(TAG, "hasCameraPermission: $granted")
+    return granted
   }
 
-
   private fun requestLocationPermissions() {
+    Log.d(TAG, "requestLocationPermissions called")
     ActivityCompat.requestPermissions(
       this,
-      arrayOf(
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_COARSE_LOCATION
-      ),
+      arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
       LOCATION_PERMISSION_REQUEST
     )
   }
 
   private fun requestCameraPermission() {
+    Log.d(TAG, "requestCameraPermission called")
     ActivityCompat.requestPermissions(
       this,
       arrayOf(Manifest.permission.CAMERA),
@@ -162,29 +202,33 @@ class ArActivity : AppCompatActivity() {
   ) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
+    Log.d(TAG, "onRequestPermissionsResult called with requestCode: $requestCode")
+
     when (requestCode) {
       LOCATION_PERMISSION_REQUEST -> {
         if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+          Log.d(TAG, "Location permissions granted")
           if (!hasCameraPermission()) {
             requestCameraPermission()
           } else {
             setupAr()
           }
         } else {
-          Toast.makeText(this, "Location permissions are required for this feature.", Toast.LENGTH_LONG).show()
-          finish()
+          Log.d(TAG, "Location permissions denied")
+          showPermissionDeniedDialog()
         }
       }
+
       CAMERA_PERMISSION_REQUEST -> {
-        if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-          // Camera permission granted, we can proceed
+        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+          Log.d(TAG, "Camera permission granted")
           setupAr()
         } else {
-          // Camera permission denied
-          Toast.makeText(this, "Camera permission is required for AR features.", Toast.LENGTH_LONG).show()
-          finish()
+          Log.d(TAG, "Camera permission denied")
+          showPermissionDeniedDialog()
         }
       }
+
       else -> {
         if (::arCoreSessionHelper.isInitialized) {
           arCoreSessionHelper.onRequestPermissionsResult(requestCode, permissions, grantResults)
@@ -193,8 +237,17 @@ class ArActivity : AppCompatActivity() {
     }
   }
 
+  private fun navigateToProfile() {
+    Log.d(TAG, "navigateToProfile called")
+    val intent = Intent(this, MainActivity::class.java)
+    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+    intent.putExtra("RETURNED_FROM_AR", true)
+    startActivity(intent)
+  }
+
   override fun onWindowFocusChanged(hasFocus: Boolean) {
     super.onWindowFocusChanged(hasFocus)
+    Log.d(TAG, "onWindowFocusChanged called - hasFocus: $hasFocus")
     FullScreenHelper.setFullScreenOnWindowFocusChanged(this, hasFocus)
   }
 
@@ -202,6 +255,7 @@ class ArActivity : AppCompatActivity() {
     if (event.action == MotionEvent.ACTION_DOWN) {
       val x = event.x
       val y = event.y
+      Log.d(TAG, "onTouchEvent called - x: $x, y: $y")
       renderer.handleTouch(x, y)
     }
     return super.onTouchEvent(event)
@@ -210,17 +264,12 @@ class ArActivity : AppCompatActivity() {
   private fun setupCloseButton() {
     val closeButton = findViewById<ImageButton>(R.id.closeButton)
     closeButton?.setOnClickListener {
+      Log.d(TAG, "Close button clicked")
       val intent = Intent(this, MainActivity::class.java)
       intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
       intent.putExtra("RETURNED_FROM_AR", true)
       startActivity(intent)
-
     }
-  }
-
-  override fun onStart() {
-    super.onStart()
-    Log.d(TAG, "onStart called - Activity becoming visible")
   }
 
   override fun onResume() {
@@ -242,5 +291,4 @@ class ArActivity : AppCompatActivity() {
     super.onDestroy()
     Log.d(TAG, "onDestroy called - Activity being destroyed")
   }
-
 }
