@@ -2,8 +2,16 @@
 package com.example.explorelens.common.helpers;
 
 import android.app.Activity;
+import android.graphics.Color;
+import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.TextView;
+
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
+
 import com.google.android.material.snackbar.BaseTransientBottomBar;
 import com.google.android.material.snackbar.Snackbar;
 
@@ -12,7 +20,7 @@ import com.google.android.material.snackbar.Snackbar;
  * methods.
  */
 public final class SnackbarHelper {
-  private static final int BACKGROUND_COLOR = 0xbf323232;
+  private static final int BACKGROUND_COLOR = 0xCCEEEEEE;
   private Snackbar messageSnackbar;
   private enum DismissBehavior { HIDE, SHOW, FINISH };
   private int maxLines = 2;
@@ -62,16 +70,7 @@ public final class SnackbarHelper {
     maxLines = lines;
   }
 
-  /**
-   * Sets the view that will be used to find a suitable parent view to hold the Snackbar view.
-   *
-   * <p>To use the root layout ({@link android.R.id.content}), pass in {@code null}.
-   *
-   * @param snackbarView the view to pass to {@link
-   *     com.google.android.material.snackbar.Snackbar#make(…)} which will be used to find a
-   *     suitable parent, which is a {@link androidx.coordinatorlayout.widget.CoordinatorLayout}, or
-   *     the window decor's content view, whichever comes first.
-   */
+
   public void setParentView(View snackbarView) {
     this.snackbarView = snackbarView;
   }
@@ -88,12 +87,18 @@ public final class SnackbarHelper {
                         ? activity.findViewById(android.R.id.content)
                         : snackbarView,
                     message,
-                    Snackbar.LENGTH_INDEFINITE);
+                    Snackbar.LENGTH_LONG);
+
+
             messageSnackbar.getView().setBackgroundColor(BACKGROUND_COLOR);
+            TextView textView = messageSnackbar.getView().findViewById(com.google.android.material.R.id.snackbar_text);
+            textView.setMaxLines(maxLines);
+            textView.setTextColor(Color.BLACK);
             if (dismissBehavior != DismissBehavior.HIDE) {
               messageSnackbar.setAction(
                   "Dismiss",
                   v -> messageSnackbar.dismiss());
+              messageSnackbar.setActionTextColor(Color.parseColor("#1976D2"));
               if (dismissBehavior == DismissBehavior.FINISH) {
                 messageSnackbar.addCallback(
                     new BaseTransientBottomBar.BaseCallback<Snackbar>() {
@@ -104,13 +109,20 @@ public final class SnackbarHelper {
                     });
               }
             }
-            ((TextView)
-                    messageSnackbar
-                        .getView()
-                        .findViewById(com.google.android.material.R.id.snackbar_text))
-                .setMaxLines(maxLines);
             messageSnackbar.show();
-          }
+
+            View snackbarViewObj = messageSnackbar.getView();
+            ViewGroup.LayoutParams layoutParams = snackbarViewObj.getLayoutParams();
+
+            if (layoutParams instanceof CoordinatorLayout.LayoutParams) {
+              CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) layoutParams;
+              params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+              params.topMargin = 50;
+              snackbarViewObj.setLayoutParams(params);
+            }
+            }
+
+
         });
   }
 }
