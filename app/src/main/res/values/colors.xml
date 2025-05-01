@@ -28,8 +28,8 @@
   <color name="white">#FFFFFFFF</color>
   <color name="gray">#757575</color>
   <color name="light_gray">#E0E0E0</color>
-  <color name="bottom_nav_background">#005861</color>
-  <color name="bottom_nav_selected">#FFFFFF</color>
-  <color name="bottom_nav_unselected">#CAE9DF</color>
+  <color name="bottom_nav_background">#FFFFFFFF</color>
+  <color name="bottom_nav_selected">#3373F2</color>
+  <color name="bottom_nav_unselected">#8E8E93</color>
   <color name="semi_transparent_background">#80000000</color>
 </resources>
