@@ -4,13 +4,13 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.explorelens.R
+import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.databinding.FragmentProfileBinding
 
 class ProfileFragment : Fragment() {
@@ -80,7 +80,7 @@ class ProfileFragment : Fragment() {
                     binding.errorMessage.visibility = View.VISIBLE
                     binding.errorMessage.text = state.message
 
-                    Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                    ToastHelper.showShortToast(context, state.message);
                 }
                 is UserState.Logout -> {
                     findNavController().navigate(R.id.action_profileFragment_to_loginFragment)

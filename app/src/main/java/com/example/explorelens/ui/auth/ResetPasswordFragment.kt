@@ -4,11 +4,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.R
+import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.databinding.FragmentResetPasswordBinding
 import com.example.explorelens.data.repository.AuthRepository
 import com.example.explorelens.utils.LoadingManager
@@ -76,12 +76,12 @@ class ResetPasswordFragment : Fragment() {
 
             result.fold(
                 onSuccess = {
-                    Toast.makeText(context, "Password has been reset successfully!", Toast.LENGTH_LONG).show()
+                    ToastHelper.showShortToast(context, "Password has been reset successfully!")
                     findNavController().navigate(R.id.action_resetPasswordFragment_to_loginFragment)
                 },
                 onFailure = { exception ->
                     val errorMessage = exception.message ?: "Failed to reset password"
-                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                    ToastHelper.showShortToast(context, errorMessage)
                 }
             )
         }

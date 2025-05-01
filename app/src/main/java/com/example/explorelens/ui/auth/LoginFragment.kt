@@ -10,12 +10,12 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.MainActivity
 import com.example.explorelens.R
+import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.databinding.FragmentLoginBinding
 import com.example.explorelens.data.network.auth.GoogleSignInHelper
 import com.example.explorelens.data.network.auth.GoogleSignInHelper.Companion.isUserAuthenticatedWithGoogle
@@ -52,7 +52,7 @@ class LoginFragment : Fragment() {
             )
         } else {
             Log.w(TAG, "Google sign in failed or canceled, code: ${result.resultCode}")
-            Toast.makeText(context, "Google Sign-In canceled", Toast.LENGTH_SHORT).show()
+            ToastHelper.showShortToast(context, "Google Sign-In canceled");
             hideLoading()
         }
     }
@@ -82,7 +82,7 @@ class LoginFragment : Fragment() {
 
     private fun checkExistingLogin() {
         if (isUserAuthenticatedWithGoogle(requireContext()) || authRepository.isLoggedIn()) {
-            Toast.makeText(context, "Welcome back!", Toast.LENGTH_SHORT).show()
+            ToastHelper.showShortToast(context,"Welcome back!")
             findNavController().navigate(R.id.action_loginFragment_to_profileFragment)
         }
     }
@@ -158,11 +158,11 @@ class LoginFragment : Fragment() {
                 hideLoading()
 
                 if (result.isSuccess) {
-                    Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+                    ToastHelper.showShortToast(context, "Login successful")
                     (requireActivity() as MainActivity).launchArActivity()
                 } else {
                     Log.d(TAG, "Login failed: ${result.exceptionOrNull()?.message}")
-                    Toast.makeText(context, "Login failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                    ToastHelper.showShortToast(context, "Login failed: ${result.exceptionOrNull()?.message}")
                 }
             }
         } else{
