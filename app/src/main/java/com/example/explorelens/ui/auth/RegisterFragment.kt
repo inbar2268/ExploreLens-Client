@@ -10,12 +10,12 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.MainActivity
 import com.example.explorelens.R
+import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.databinding.FragmentRegisterBinding
 import com.example.explorelens.data.network.auth.GoogleSignInHelper
 import com.example.explorelens.data.repository.AuthRepository
@@ -49,7 +49,7 @@ class RegisterFragment : Fragment() {
             )
         } else {
             Log.w(TAG, "Google sign in failed or canceled, code: ${result.resultCode}")
-            Toast.makeText(context, "Google Sign-In canceled", Toast.LENGTH_SHORT).show()
+            ToastHelper.showShortToast(context, "Google Sign-In canceled")
             hideLoading()
         }
     }
@@ -90,6 +90,7 @@ class RegisterFragment : Fragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 binding.ivPasswordToggle.visibility = View.VISIBLE
             }
+
             override fun afterTextChanged(s: Editable?) {}
         })
     }
@@ -135,15 +136,13 @@ class RegisterFragment : Fragment() {
             hideLoading()
 
             if (result.isSuccess) {
-                Toast.makeText(context, "Registration successful", Toast.LENGTH_SHORT).show()
+                ToastHelper.showShortToast(context, "Registration successful")
                 (requireActivity() as MainActivity).launchArActivity()
             } else {
                 Log.d(TAG, "Registration failed: ${result.exceptionOrNull()?.message}")
-                Toast.makeText(
-                    context,
-                    "Registration failed: ${result.exceptionOrNull()?.message}",
-                    Toast.LENGTH_LONG
-                ).show()
+                ToastHelper.showShortToast(
+                    context, "Registration failed: ${result.exceptionOrNull()?.message}"
+                )
             }
         }
     }

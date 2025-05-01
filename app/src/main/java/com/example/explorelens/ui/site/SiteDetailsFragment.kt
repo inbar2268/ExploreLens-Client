@@ -14,13 +14,13 @@ import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.RatingBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.ArActivity
 import com.example.explorelens.R
+import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.model.Comment
 import com.example.explorelens.data.model.SiteDetails
@@ -233,7 +233,7 @@ class SiteDetailsFragment : Fragment() {
 
     private fun showError(message: String) {
         context?.let {
-            Toast.makeText(it, message, Toast.LENGTH_SHORT).show()
+            ToastHelper.showShortToast(it, message)
         }
     }
 
@@ -328,7 +328,7 @@ class SiteDetailsFragment : Fragment() {
                 submitButton.setOnClickListener {
                     val commentText = commentInput.text.toString().trim()
                     if (commentText.isNotEmpty()) {
-                        Toast.makeText(ctx, "Comment submitted", Toast.LENGTH_SHORT).show()
+                        ToastHelper.showShortToast(ctx, "Comment submitted")
                         commentInput.text.clear()
                     }
                 }
@@ -387,10 +387,10 @@ class SiteDetailsFragment : Fragment() {
                     // Here you would normally send this to your backend
                     // For now, just update the UI and dismiss
                     updateRatingView(rating)
-                    Toast.makeText(context, "Rating submitted: $rating", Toast.LENGTH_SHORT).show()
+                    ToastHelper.showShortToast(context, "Rating submitted: $rating")
                     dialog.dismiss()
                 } else {
-                    Toast.makeText(context, "Please select a rating", Toast.LENGTH_SHORT).show()
+                    ToastHelper.showShortToast(context, "Please select a rating")
                 }
             }
         }
