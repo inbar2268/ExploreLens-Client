@@ -8,5 +8,6 @@ data class SiteDetails(
     @SerializedName("description") val description: String,
     @SerializedName("averageRating") val averageRating: Float = 0f,
     @SerializedName("ratingCount") val ratingCount: Int = 0,
+    @SerializedName("imageUrl") val imageUrl: String? = null
 )
 
