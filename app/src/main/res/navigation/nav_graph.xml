@@ -88,7 +88,11 @@
         android:id="@+id/mapFragment"
         android:name="com.example.explorelens.ui.map.MapFragment"
         android:label="Map"
-        tools:layout="@layout/fragment_map" />
+        tools:layout="@layout/fragment_map">
+    <action
+        android:id="@+id/action_mapFragment_to_siteDetailsFragment"
+        app:destination="@id/siteDetailsFragment"/>
+    </fragment>
 
     <fragment
         android:id="@+id/siteHistoryFragment"
