@@ -7,9 +7,8 @@ import androidx.recyclerview.widget.ListAdapter
 import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.databinding.ItemSiteHistoryBinding
 
-class SiteHistoryAdapter(
-    private val onItemClick: (SiteHistory) -> Unit
-) : ListAdapter<SiteHistory, SiteHistoryViewHolder>(SiteHistoryDiffCallback()) {
+class SiteHistoryAdapter(private val onItemClick: (SiteHistory) -> Unit) :
+    ListAdapter<SiteHistory, SiteHistoryViewHolder>(SiteHistoryDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SiteHistoryViewHolder {
         val binding = ItemSiteHistoryBinding.inflate(
@@ -26,7 +25,7 @@ class SiteHistoryAdapter(
 
     class SiteHistoryDiffCallback : DiffUtil.ItemCallback<SiteHistory>() {
         override fun areItemsTheSame(oldItem: SiteHistory, newItem: SiteHistory): Boolean {
-            return oldItem.siteInfoId == newItem.siteInfoId && oldItem.userId == newItem.userId
+            return oldItem.id == newItem.id
         }
 
         override fun areContentsTheSame(oldItem: SiteHistory, newItem: SiteHistory): Boolean {
