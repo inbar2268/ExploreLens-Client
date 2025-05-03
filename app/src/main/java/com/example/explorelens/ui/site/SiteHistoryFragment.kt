@@ -18,6 +18,10 @@ import com.example.explorelens.data.repository.SiteHistoryRepository
 import com.example.explorelens.databinding.FragmentSiteHistoryBinding
 import com.example.explorelens.utils.GeoLocationUtils
 import java.util.UUID
+import com.bumptech.glide.Glide
+import com.example.explorelens.data.repository.UserRepository
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class SiteHistoryFragment : Fragment() {
     private val TAG = "SiteHistoryFragment"
@@ -28,6 +32,7 @@ class SiteHistoryFragment : Fragment() {
     private lateinit var viewModel: SiteHistoryViewModel
     private lateinit var adapter: SiteHistoryAdapter
     private lateinit var authTokenManager: AuthTokenManager
+    private lateinit var userRepository: UserRepository
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -40,10 +45,12 @@ class SiteHistoryFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        userRepository = UserRepository(requireContext())
 
         authTokenManager = AuthTokenManager.getInstance(requireContext())
         setupViewModel()
         setupRecyclerView()
+        loadUserProfile()
         observeData()
     }
 
@@ -72,7 +79,14 @@ class SiteHistoryFragment : Fragment() {
 
     private fun observeData() {
         // Get the current user ID
-        val userId = getCurrentUserId() ?: return
+        val userId = getCurrentUserId()
+        if (userId == null) {
+            Log.e(TAG, "No user ID available, showing mock data")
+            showMockData()
+            return
+        }
+
+        Log.d(TAG, "Loading history for user ID: $userId")
 
         // First, trigger sync with the server to ensure we have the latest data
         viewModel.syncSiteHistory(userId)
@@ -86,14 +100,33 @@ class SiteHistoryFragment : Fragment() {
         viewModel.getSiteHistoryByUserId(userId).observe(viewLifecycleOwner) { historyList ->
             Log.d(TAG, "Received ${historyList.size} history items")
 
-            if (historyList.isEmpty()) {
-                // No data from Room or server, show mock data
-                Log.d(TAG, "No history data, showing mock data")
+            // Additional filter to ensure we only show the current user's history
+            val filteredList = historyList.filter { it.userId == userId }
+            Log.d(TAG, "After filtering for current user: ${filteredList.size} items")
+
+            // Group by siteInfoId to avoid duplicates
+            val uniqueSites = filteredList.groupBy { it.siteInfoId }
+                .map { entry -> entry.value.maxByOrNull { it.createdAt }!! }
+                .sortedByDescending { it.createdAt }
+
+            Log.d(TAG, "Unique sites after grouping: ${uniqueSites.size}")
+
+            // Debug log each unique site
+            uniqueSites.forEachIndexed { index, site ->
+                Log.d(TAG, "Site $index: ID=${site.siteInfoId}, Created=${site.createdAt}")
+            }
+
+            // Update history count
+            binding.historyCountTextView.text = "${uniqueSites.size} unique sites visited"
+
+            if (uniqueSites.isEmpty()) {
+                // No data for current user, show mock data
+                Log.d(TAG, "No history data for current user, showing mock data")
                 showMockData()
             } else {
                 // Real data available, display it
-                Log.d(TAG, "Displaying real history data")
-                showHistoryData(historyList)
+                Log.d(TAG, "Displaying real history data for current user (${uniqueSites.size} sites)")
+                showHistoryData(uniqueSites)
             }
         }
     }
@@ -124,12 +157,11 @@ class SiteHistoryFragment : Fragment() {
         val currentTime = System.currentTimeMillis()
         val userId = getCurrentUserId() ?: "mock_user"
 
-        // Use this mock data instead of the ImageAnalyzedResult data
         return listOf(
             SiteHistory(
                 id = UUID.randomUUID().toString(),
                 siteInfoId = "EiffelTower",
-                userId = userId,
+                userId = userId, // Use current user ID for mock data
                 geohash = "u09tvw",
                 latitude = 48.8584,
                 longitude = 2.2945,
@@ -138,7 +170,7 @@ class SiteHistoryFragment : Fragment() {
             SiteHistory(
                 id = UUID.randomUUID().toString(),
                 siteInfoId = "SagradaFamilia",
-                userId = userId,
+                userId = userId, // Use current user ID for mock data
                 geohash = "sp3e3k",
                 latitude = 41.4036,
                 longitude = 2.1744,
@@ -147,7 +179,7 @@ class SiteHistoryFragment : Fragment() {
             SiteHistory(
                 id = UUID.randomUUID().toString(),
                 siteInfoId = "BigBen",
-                userId = userId,
+                userId = userId, // Use current user ID for mock data
                 geohash = "gcpvj0",
                 latitude = 51.5007,
                 longitude = -0.1246,
@@ -156,7 +188,7 @@ class SiteHistoryFragment : Fragment() {
             SiteHistory(
                 id = UUID.randomUUID().toString(),
                 siteInfoId = "Colosseum",
-                userId = userId,
+                userId = userId, // Use current user ID for mock data
                 geohash = "sr2yd0",
                 latitude = 41.8902,
                 longitude = 12.4922,
@@ -205,4 +237,35 @@ class SiteHistoryFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+    private fun loadUserProfile() {
+        val userId = getCurrentUserId() ?: return
+
+        // Set default values while loading
+        binding.usernameTextView.text = "Explorer"
+        binding.historyCountTextView.text = "Loading sites..."
+
+        // Load user profile data
+        lifecycleScope.launch {
+            val user = userRepository.getUserFromDb()
+            if (user != null) {
+                // Set username
+                binding.usernameTextView.text = user.username ?: "Explorer"
+
+                // Load profile image
+                if (!user.profilePictureUrl.isNullOrEmpty()) {
+                    Glide.with(requireContext())
+                        .load(user.profilePictureUrl)
+                        .placeholder(R.drawable.avatar_placeholder)
+                        .error(R.drawable.avatar_placeholder)
+                        .into(binding.profileImageView)
+                }
+            }
+        } ?: run {
+            // If user not found in database, try to fetch from server
+            lifecycleScope.launch {
+                userRepository.fetchAndSaveUser()
+            }
+        }
+    }
+
 }
