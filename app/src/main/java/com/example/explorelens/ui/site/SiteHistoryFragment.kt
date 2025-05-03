@@ -242,7 +242,6 @@ class SiteHistoryFragment : Fragment() {
 
         // Set default values while loading
         binding.usernameTextView.text = "Explorer"
-        binding.historyCountTextView.text = "Loading sites..."
 
         // Load user profile data
         lifecycleScope.launch {

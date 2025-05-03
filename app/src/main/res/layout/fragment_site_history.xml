@@ -6,84 +6,99 @@
     android:layout_height="match_parent"
     android:background="#F5F5F5">
 
-    <!-- User Profile Section -->
-    <androidx.cardview.widget.CardView
-        android:id="@+id/profileCardView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+    <!-- Profile Picture -->
+    <ImageView
+        android:id="@+id/profileImageView"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:background="@drawable/circle_background"
+        android:padding="2dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_profile_filled"
+        android:contentDescription="Profile picture"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent" />
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+    <!-- Username -->
+    <TextView
+        android:id="@+id/usernameTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#333333"
+        android:textSize="12sp"
+        app:layout_constraintStart_toStartOf="@+id/profileImageView"
+        app:layout_constraintEnd_toEndOf="@+id/profileImageView"
+        app:layout_constraintTop_toBottomOf="@+id/profileImageView"
+        tools:text="Username" />
+
+    <!-- Pretty Search Bar -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/searchBarCard"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/profileImageView"
+        app:layout_constraintTop_toTopOf="@+id/profileImageView"
+        app:layout_constraintBottom_toBottomOf="@+id/profileImageView">
+
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="16dp">
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
 
             <ImageView
-                android:id="@+id/profileImageView"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@drawable/rounded_background"
-                android:padding="2dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_profile_filled"
-                android:contentDescription="Profile picture"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_search"
+                android:contentDescription="Search icon"
+                app:tint="#757575" />
 
             <TextView
-                android:id="@+id/usernameTextView"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="8dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="#333333"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                app:layout_constraintBottom_toTopOf="@+id/historyCountTextView"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/profileImageView"
-                app:layout_constraintTop_toTopOf="@+id/profileImageView"
-                app:layout_constraintVertical_chainStyle="packed"
-                tools:text="Username" />
-
-            <TextView
-                android:id="@+id/historyCountTextView"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="Search sites..."
                 android:textColor="#757575"
-                android:textSize="14sp"
-                app:layout_constraintBottom_toBottomOf="@+id/profileImageView"
-                app:layout_constraintEnd_toEndOf="@+id/usernameTextView"
-                app:layout_constraintStart_toStartOf="@+id/usernameTextView"
-                app:layout_constraintTop_toBottomOf="@+id/usernameTextView"
-                tools:text="8 visited sites" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
+                android:textSize="14sp" />
+        </LinearLayout>
     </androidx.cardview.widget.CardView>
 
     <TextView
         android:id="@+id/titleTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="24dp"
         android:text="Your Visited Sites"
         android:textColor="#333333"
         android:textSize="24sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/profileCardView" />
+        app:layout_constraintTop_toBottomOf="@+id/usernameTextView" />
+
+    <!-- History Count Text -->
+    <TextView
+        android:id="@+id/historyCountTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#757575"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/titleTextView"
+        tools:text="8 visited sites" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewHistory"
@@ -98,7 +113,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/titleTextView"
+        app:layout_constraintTop_toBottomOf="@+id/historyCountTextView"
         tools:listitem="@layout/item_site_history" />
 
     <LinearLayout
@@ -113,7 +128,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/titleTextView">
+        app:layout_constraintTop_toBottomOf="@+id/historyCountTextView">
 
         <ImageView
             android:layout_width="120dp"
