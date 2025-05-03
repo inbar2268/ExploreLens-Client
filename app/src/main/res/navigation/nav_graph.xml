@@ -94,8 +94,11 @@
         android:id="@+id/siteHistoryFragment"
         android:name="com.example.explorelens.ui.site.SiteHistoryFragment"
         android:label="history"
-        tools:layout="@layout/fragment_site_history" />
-
+        tools:layout="@layout/fragment_site_history">
+    <action
+        android:id="@+id/action_siteHistoryFragment_to_siteDetailsFragment"
+        app:destination="@id/siteDetailsFragment" />
+    </fragment>
     <activity
         android:id="@+id/arActivity"
         android:name="com.example.explorelens.ArActivity"

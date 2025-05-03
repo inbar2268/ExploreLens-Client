@@ -1,10 +1,7 @@
 package com.example.explorelens.adapters.siteHistory
 
 import android.location.Location
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.repository.SiteHistoryRepository
 import com.example.explorelens.utils.GeoLocationUtils
@@ -15,9 +12,29 @@ class SiteHistoryViewModel(
     private val geoLocationUtils: GeoLocationUtils
 ) : ViewModel() {
 
-    // Get site history for a user
+    // Loading state LiveData
+    private val _loading = MutableLiveData<Boolean>()
+    val loading: LiveData<Boolean> = _loading
+
+    // Site history data with loading state tracking
+    private val _siteHistoryData = MediatorLiveData<List<SiteHistory>>()
+
+    // Get site history for a user with loading state
     fun getSiteHistoryByUserId(userId: String): LiveData<List<SiteHistory>> {
-        return repository.getSiteHistoryByUserId(userId)
+        _loading.value = true
+
+        // Get data from repository
+        val repositoryData = repository.getSiteHistoryByUserId(userId)
+
+        // Create a mediator to handle loading state
+        val result = MediatorLiveData<List<SiteHistory>>()
+
+        result.addSource(repositoryData) { historyList ->
+            _loading.postValue(false)
+            result.postValue(historyList)
+        }
+
+        return result
     }
 
     // Create site history entry
@@ -27,7 +44,6 @@ class SiteHistoryViewModel(
             val geoHash = geoLocationUtils.getGeoHash() ?: ""
             val latitude = location?.latitude ?: 0.0
             val longitude = location?.longitude ?: 0.0
-
             repository.createSiteHistory(siteInfoId, geoHash, latitude, longitude)
         }
     }
