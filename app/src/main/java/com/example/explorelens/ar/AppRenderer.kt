@@ -509,7 +509,7 @@ class AppRenderer(val activity: ArActivity,
                         label = "Building",
                         x = 0.4430117717f,
                         y = 0.419694645f,
-                        siteName = "Independence Hall In Shalom Tower"
+                        siteName = "sagrada familia"
                     )
                 ),
                 ImageAnalyzedResult(
@@ -519,7 +519,7 @@ class AppRenderer(val activity: ArActivity,
                         label = "full-image",
                         x = 0.5f,
                         y = 0.5f,
-                        siteName = "Holocaust Monument Rabin Square"
+                        siteName = "Big Ben"
                     )
                 )
             )

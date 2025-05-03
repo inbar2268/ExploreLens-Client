@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.RatingBar
 import android.widget.TextView
@@ -28,7 +29,12 @@ import com.example.explorelens.data.model.comments.SiteComments
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
+import android.graphics.drawable.Drawable
+import com.bumptech.glide.Glide
 
 class SiteDetailsFragment : Fragment() {
 
@@ -41,6 +47,7 @@ class SiteDetailsFragment : Fragment() {
     private var siteRating: SiteRating? = null
     private var SiteDetails: SiteDetails? = null
     private var fetchedComments: List<Comment> = emptyList()
+    private lateinit var headerBackground: ImageView
 
 
     override fun onCreateView(
@@ -61,6 +68,7 @@ class SiteDetailsFragment : Fragment() {
         commentsButton = view.findViewById(R.id.commentsButton)
         ratingContainer = view.findViewById(R.id.ratingContainer)
         ratingView = view.findViewById(R.id.ratingView)
+        headerBackground = view.findViewById(R.id.headerBackground)
 
         val closeButton = view.findViewById<ImageButton>(R.id.closeButton)
         closeButton.setOnClickListener {
@@ -120,7 +128,9 @@ class SiteDetailsFragment : Fragment() {
 
                 if (response.isSuccessful) {
                     val siteDetailsResponse = response.body()
+                    Log.d("SiteDetailsFragment", "Raw response: ${response.raw()}")
                     Log.d("SiteDetailsFragment", "Response received: $siteDetailsResponse")
+                    Log.d("SiteDetailsFragment", "Image URL: ${siteDetailsResponse?.imageUrl}")
 
                     if (siteDetailsResponse != null) {
                         // Store the complete SiteDetails object
@@ -131,6 +141,22 @@ class SiteDetailsFragment : Fragment() {
                             arguments?.getString("DESCRIPTION_KEY")?.isNotEmpty() == true
                         if (!hasPassedDescription) {
                             descriptionTextView.text = siteDetailsResponse.description
+                        }
+
+                        // Load image if available
+                        if (!siteDetailsResponse.imageUrl.isNullOrEmpty()) {
+                            Log.d("SiteDetailsFragment", "Loading image from URL: ${siteDetailsResponse.imageUrl}")
+                            try {
+                                Glide.with(requireContext())
+                                    .load(siteDetailsResponse.imageUrl)
+                                    .placeholder(R.drawable.eiffel) // This shows temporarily while loading
+                                    .error(R.drawable.eiffel) // This shows only if loading fails
+                                    .into(headerBackground)
+                            } catch (e: Exception) {
+                                Log.e("SiteDetailsFragment", "Error loading image: ${e.message}", e)
+                            }
+                        } else {
+                            Log.d("SiteDetailsFragment", "No image URL provided")
                         }
 
                         Log.d(
@@ -148,7 +174,7 @@ class SiteDetailsFragment : Fragment() {
                         // Update rating if available
                         if (siteDetailsResponse.ratingCount > 0) {
                             this@SiteDetailsFragment.siteRating = SiteRating(
-                                label,
+                                labelTextView.text.toString(),
                                 siteDetailsResponse.averageRating,
                                 siteDetailsResponse.ratingCount
                             )
@@ -160,10 +186,6 @@ class SiteDetailsFragment : Fragment() {
                         } else {
                             Log.d("SiteDetailsFragment", "No ratings available, using default")
                         }
-
-
-                        // Log comment details for debugging
-                        //Log.d("SiteDetailsFragment", "Received ${siteDetailsResponse.comments.size} comments from server")
                     } else {
                         Log.e("SiteDetailsFragment", "Response body is null")
                         showError("No data returned from server")
