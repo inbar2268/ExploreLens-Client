@@ -1,4 +1,4 @@
-package com.example.explorelens.data.model
+package com.example.explorelens.data.model.comments
 
 import com.google.gson.annotations.SerializedName
 

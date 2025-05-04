@@ -171,6 +171,10 @@ dependencies {
 
     //geohash
     implementation 'ch.hsr:geohash:1.4.0'
+
+    //PICASSO
+    implementation 'com.squareup.picasso:picasso:2.8'
+
 }
 configurations.all {
     resolutionStrategy {

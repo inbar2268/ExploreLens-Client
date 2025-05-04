@@ -1,4 +1,4 @@
-package com.example.explorelens.data.model
+package com.example.explorelens.data.model.SiteDetails
 
 import com.google.gson.annotations.SerializedName
 
