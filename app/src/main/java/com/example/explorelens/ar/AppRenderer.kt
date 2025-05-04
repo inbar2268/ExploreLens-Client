@@ -48,13 +48,10 @@ import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
 import com.example.explorelens.Model
 import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
-import com.example.explorelens.data.model.SiteDetails
+import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import com.example.explorelens.model.ARLabeledAnchor
 import com.example.explorelens.utils.GeoLocationUtils
-import androidx.lifecycle.ViewModelProvider
-import ch.hsr.geohash.GeoHash
 import com.example.explorelens.data.network.ExploreLensApiClient
-import com.example.explorelens.data.repository.SiteHistoryRepository
 
 class AppRenderer(val activity: ArActivity,
                   private val geoLocationUtils: GeoLocationUtils,

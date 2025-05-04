@@ -1,11 +1,25 @@
 package com.example.explorelens.data.network.siteDetails
 
-import com.example.explorelens.data.model.SiteDetails
+import com.example.explorelens.data.model.SiteDetails.SiteDetails
+import com.example.explorelens.data.model.SiteDetails.SiteDetailsRatingRequest
+import com.example.explorelens.data.model.comments.Comment
+import com.example.explorelens.data.model.comments.CommentRequest
 import retrofit2.Call
+import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Path
 
 interface SiteDetailsApi {
     @GET("/site-info/sitename/{siteName}")
     fun getSiteDetails(@Path("siteName") siteName: String): Call<SiteDetails>
+
+
+    @POST("/site-info/rating/{siteId}")
+    suspend fun addRating(
+        @Path("siteId") siteId: String,
+        @Body siteDetailsRatingRequest: SiteDetailsRatingRequest
+    ): Response<SiteDetails>
+
 }

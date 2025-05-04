@@ -25,12 +25,13 @@ import com.example.explorelens.R
 import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.model.comments.Comment
-import com.example.explorelens.data.model.SiteDetails
+import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import com.bumptech.glide.Glide
 import com.example.explorelens.data.repository.CommentsRepository
+import com.example.explorelens.data.repository.SiteDetailsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,6 +49,7 @@ class SiteDetailsFragment : Fragment() {
     private var fetchedComments: List<Comment> = emptyList()
     private lateinit var headerBackground: ImageView
     private lateinit var commentsRepository: CommentsRepository
+    private lateinit var siteDetailsRepository: SiteDetailsRepository
 
 
     override fun onCreateView(
@@ -77,6 +79,7 @@ class SiteDetailsFragment : Fragment() {
         }
         // Set up comments button click listener
         commentsRepository = CommentsRepository(requireContext())
+        siteDetailsRepository = SiteDetailsRepository(requireContext())
         commentsButton.setOnClickListener {
             showCommentsDialog()
         }
@@ -109,7 +112,7 @@ class SiteDetailsFragment : Fragment() {
             }
             // Set initial mock rating
             // In a real app, you would fetch this from the server
-            siteRating = SiteRating(label, 4.2f, 128)
+            siteRating = SiteRating(label, 0f, 0)
             ratingView.setRating(siteRating?.averageRating ?: 0f)
         }
     }
@@ -136,6 +139,7 @@ class SiteDetailsFragment : Fragment() {
                     if (siteDetailsResponse != null) {
                         // Store the complete SiteDetails object
                         this@SiteDetailsFragment.SiteDetails = siteDetailsResponse
+                        ratingView.setRating(siteDetailsResponse.averageRating ?: 0f)
 
                         // Only update description if we don't already have one
                         val hasPassedDescription =
@@ -168,6 +172,7 @@ class SiteDetailsFragment : Fragment() {
                             "Rating from server: ${siteDetailsResponse.averageRating}, count: ${siteDetailsResponse.ratingCount}"
                         )
 
+
                         val siteId = siteDetailsResponse.id
                         if (!siteId.isNullOrBlank()) {
                             fetchSiteComments(siteId)
@@ -177,11 +182,6 @@ class SiteDetailsFragment : Fragment() {
 
                         // Update rating if available
                         if (siteDetailsResponse.ratingCount > 0) {
-                            this@SiteDetailsFragment.siteRating = SiteRating(
-                                labelTextView.text.toString(),
-                                siteDetailsResponse.averageRating,
-                                siteDetailsResponse.ratingCount
-                            )
                             ratingView.setRating(siteDetailsResponse.averageRating)
                             Log.d(
                                 "SiteDetailsFragment",
@@ -347,15 +347,34 @@ class SiteDetailsFragment : Fragment() {
             submitButton?.setOnClickListener {
                 val rating = ratingBar?.rating ?: 0f
                 if (rating > 0) {
-                    // Here you would normally send this to your backend
-                    // For now, just update the UI and dismiss
-                    updateRatingView(rating)
-                    ToastHelper.showShortToast(context, "Rating submitted: $rating")
-                    dialog.dismiss()
+                    CoroutineScope(Dispatchers.Main).launch {
+                        val result = siteDetailsRepository.addRating(
+                            siteId = SiteDetails?.id ?: "",
+                            rating = rating
+                        )
+
+                        if (result.isSuccess) {
+
+                            ToastHelper.showShortToast(ctx, "Rating submitted: $rating")
+                            val newSite = result.getOrNull()
+                            if (newSite != null) {
+                                Log.e("SiteDetailsFragment", " rating: ${newSite.averageRating}")
+                                ratingView.setRating(newSite.averageRating ?: 0f)
+
+//                                updateRatingView(new)
+                            }
+
+                                dialog.dismiss()
+                        } else {
+                            Log.e("SiteDetailsFragment", "Failed to submit rating: ${result.exceptionOrNull()?.message}")
+                            ToastHelper.showShortToast(ctx, "Failed to submit rating")
+                        }
+                    }
                 } else {
-                    ToastHelper.showShortToast(context, "Please select a rating")
+                    ToastHelper.showShortToast(ctx, "Please select a rating")
                 }
             }
+
         }
     }
 
