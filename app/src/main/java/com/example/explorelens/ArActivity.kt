@@ -119,6 +119,12 @@ class ArActivity : AppCompatActivity() {
           if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             depthMode = Config.DepthMode.AUTOMATIC
           }
+          if (session.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
+            geospatialMode = Config.GeospatialMode.ENABLED
+          } else {
+            Log.w(TAG, "GeospatialMode is not supported on this device.")
+          }
+
         }
       )
 

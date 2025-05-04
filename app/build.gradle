@@ -31,7 +31,7 @@ android {
         versionCode 1
         versionName "1.0"
 
-        buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty('BASE_URL', 'http://localhost:3000')}\"")
+        buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty('BASE_URL', 'http://192.168.1.141:3000')}\"")
         buildConfigField("String", "WEB_CLIENT_ID", "\"${localProperties.getProperty('WEB_CLIENT_ID', 'NONE')}\"")
         buildConfigField("Boolean", "USE_MOCK_DATA", "${project.properties["USE_MOCK_DATA"] ?: "false"}")
     }
@@ -52,7 +52,7 @@ android {
                     if (localPropsFile.exists()) {
                         localProps.load(new FileInputStream(localPropsFile))
                     }
-                    def baseUrl = localProps['BASE_URL'] ?: 'http://localhost:3000'
+                    def baseUrl = localProps['BASE_URL'] ?: 'http://192.168.1.141:3000'
 
                     def templateContent = templateFile.text
                     def outputContent = templateContent.replace('$BASE_URL', baseUrl)
@@ -123,7 +123,7 @@ dependencies {
     implementation 'com.google.mlkit:object-detection-custom:16.3.1'
 
     // ARCore
-    implementation 'com.google.ar:core:1.24.0'
+    implementation 'com.google.ar:core:1.31.0'
 
     //retrofit
     implementation 'com.squareup.retrofit2:retrofit:2.11.0'
