@@ -30,11 +30,14 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import com.bumptech.glide.Glide
+import com.example.explorelens.data.model.comments.CommentWithUser
 import com.example.explorelens.data.repository.CommentsRepository
 import com.example.explorelens.data.repository.SiteDetailsRepository
+import com.example.explorelens.data.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SiteDetailsFragment : Fragment() {
 
@@ -47,9 +50,11 @@ class SiteDetailsFragment : Fragment() {
     private var siteRating: SiteRating? = null
     private var SiteDetails: SiteDetails? = null
     private var fetchedComments: List<Comment> = emptyList()
+    private var fetchedCommentsWithUsers: List<CommentWithUser> = emptyList()
     private lateinit var headerBackground: ImageView
     private lateinit var commentsRepository: CommentsRepository
     private lateinit var siteDetailsRepository: SiteDetailsRepository
+    private lateinit var userRepository: UserRepository
 
 
     override fun onCreateView(
@@ -80,6 +85,7 @@ class SiteDetailsFragment : Fragment() {
         // Set up comments button click listener
         commentsRepository = CommentsRepository(requireContext())
         siteDetailsRepository = SiteDetailsRepository(requireContext())
+        userRepository = UserRepository(requireContext())
         commentsButton.setOnClickListener {
             showCommentsDialog()
         }
@@ -217,6 +223,18 @@ class SiteDetailsFragment : Fragment() {
                 val comments = result.getOrNull()
                 if (!isAdded) return@launch
                 fetchedComments = comments ?: emptyList()
+
+                val enrichedComments = withContext(Dispatchers.IO) {
+                    comments?.map { comment ->
+                        val userResult = userRepository.getUserById(comment.user)
+                        val user = userResult.getOrNull()
+                        CommentWithUser(comment, user)
+                    }
+                }
+
+                if (enrichedComments != null) {
+                    fetchedCommentsWithUsers = enrichedComments
+                }
                 Log.d("SiteDetailsFragment", "Loaded ${fetchedComments.size} comments")
             } else {
                 val error = result.exceptionOrNull()?.message ?: "Unknown error"
@@ -234,7 +252,7 @@ class SiteDetailsFragment : Fragment() {
     }
 
     @SuppressLint("MissingInflatedId")
-    private fun showCommentsDialog() {
+    private  fun showCommentsDialog() {
         Log.d("SiteDetailsFragment", "showCommentsDialog called")
         context?.let { ctx ->
             try {
@@ -263,7 +281,7 @@ class SiteDetailsFragment : Fragment() {
                     emptyView?.visibility = View.VISIBLE
                     emptyView?.text = " No comments yet"
                 } else {
-                    recyclerView.adapter = CommentsAdapter(comments)
+                    recyclerView.adapter = CommentsAdapter(fetchedCommentsWithUsers)
                     recyclerView.visibility = View.VISIBLE
                     emptyView?.visibility = View.GONE
                 }
@@ -282,10 +300,13 @@ class SiteDetailsFragment : Fragment() {
                                 commentInput.text.clear()
 
                                 val newComment = result.getOrNull()
-                                if (newComment != null) {
-                                    fetchedComments = (fetchedComments ?: emptyList()) + newComment
-                                    recyclerView.adapter = CommentsAdapter(fetchedComments!!)
-                                    recyclerView.scrollToPosition(fetchedComments!!.lastIndex)
+                                val user = userRepository.getUserFromDb()
+                                 val newCommentWithUser=
+                                     newComment?.let { it1 -> CommentWithUser(it1,user) }
+                                if (newCommentWithUser != null) {
+                                    fetchedCommentsWithUsers = (fetchedCommentsWithUsers ?: emptyList()) + newCommentWithUser
+                                    recyclerView.adapter = CommentsAdapter(fetchedCommentsWithUsers)
+                                    recyclerView.scrollToPosition(fetchedCommentsWithUsers.lastIndex)
 
                                     recyclerView.visibility = View.VISIBLE
                                     emptyView?.visibility = View.GONE

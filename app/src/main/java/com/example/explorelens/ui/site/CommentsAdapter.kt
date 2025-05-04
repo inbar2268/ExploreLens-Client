@@ -8,11 +8,13 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.R
 import com.example.explorelens.data.model.comments.Comment
+import com.example.explorelens.data.model.comments.CommentWithUser
+import com.squareup.picasso.Picasso
 
 /**
  * Adapter for displaying comments in a RecyclerView
  */
-class CommentsAdapter(private val comments: List<Comment>) :
+class CommentsAdapter(private val commentsWithUser: List<CommentWithUser>) :
     RecyclerView.Adapter<CommentsAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -28,10 +30,20 @@ class CommentsAdapter(private val comments: List<Comment>) :
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val comment = comments[position]
-        holder.username.text = comment.user
-        holder.commentText.text = comment.content
-        holder.profilePic.setImageResource(R.drawable.avatar_placeholder)
+        val commentWithUser = commentsWithUser[position]
+        holder.username.text = commentWithUser.user?.username ?: commentWithUser.comment.user
+        holder.commentText.text = commentWithUser.comment.content
+
+        val profilePicUrl = commentWithUser.user?.profilePictureUrl
+                if (!profilePicUrl.isNullOrEmpty()) {
+                    Picasso.get()
+                        .load(profilePicUrl)
+                        .placeholder(R.drawable.avatar_placeholder)
+                        .error(R.drawable.avatar_placeholder)
+                        .into(holder.profilePic)
+                } else {
+                    holder.profilePic.setImageResource(R.drawable.avatar_placeholder)
+                }
 
         // Add date display if needed
         // If you have a date TextView in your item_comment layout:
@@ -39,5 +51,5 @@ class CommentsAdapter(private val comments: List<Comment>) :
         // dateView?.text = comment.date ?: ""
     }
 
-    override fun getItemCount() = comments.size
+    override fun getItemCount() = commentsWithUser.size
 }

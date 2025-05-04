@@ -68,4 +68,32 @@ class UserRepository(context: Context) {
     suspend fun clearUserData() {
         userDao.deleteUser()
     }
+
+    suspend fun getUserById(userId: String): Result<User> {
+        return try {
+            val response = userApiService.getUserById(userId)
+            if (response.isSuccessful) {
+                val userResponse = response.body()
+                if (userResponse != null) {
+                    val user = User(
+                        id = userResponse._id,
+                        username = userResponse.username,
+                        email = userResponse.email,
+                        profilePictureUrl = userResponse.profilePicture
+                    )
+                    Result.success(user)
+                } else {
+                    Result.failure(NullPointerException("Response body is null"))
+                }
+            } else {
+                val errorMsg = response.errorBody()?.string() ?: "Unknown error"
+                Log.e("UserRepository", "Error fetching user: $errorMsg")
+                Result.failure(Exception("Error fetching user: $errorMsg"))
+            }
+        } catch (e: Exception) {
+            Log.e("UserRepository", "Exception during getUserById", e)
+            Result.failure(e)
+        }
+    }
+
 }
