@@ -1,5 +1,6 @@
 package com.example.explorelens.ui.site
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -23,18 +24,16 @@ import com.example.explorelens.ArActivity
 import com.example.explorelens.R
 import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.data.network.ExploreLensApiClient
-import com.example.explorelens.data.model.Comment
+import com.example.explorelens.data.model.comments.Comment
 import com.example.explorelens.data.model.SiteDetails
-import com.example.explorelens.data.model.comments.SiteComments
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.Target
-import android.graphics.drawable.Drawable
 import com.bumptech.glide.Glide
+import com.example.explorelens.data.repository.CommentsRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class SiteDetailsFragment : Fragment() {
 
@@ -48,6 +47,7 @@ class SiteDetailsFragment : Fragment() {
     private var SiteDetails: SiteDetails? = null
     private var fetchedComments: List<Comment> = emptyList()
     private lateinit var headerBackground: ImageView
+    private lateinit var commentsRepository: CommentsRepository
 
 
     override fun onCreateView(
@@ -76,6 +76,7 @@ class SiteDetailsFragment : Fragment() {
             dismissSiteDetails()
         }
         // Set up comments button click listener
+        commentsRepository = CommentsRepository(requireContext())
         commentsButton.setOnClickListener {
             showCommentsDialog()
         }
@@ -145,7 +146,10 @@ class SiteDetailsFragment : Fragment() {
 
                         // Load image if available
                         if (!siteDetailsResponse.imageUrl.isNullOrEmpty()) {
-                            Log.d("SiteDetailsFragment", "Loading image from URL: ${siteDetailsResponse.imageUrl}")
+                            Log.d(
+                                "SiteDetailsFragment",
+                                "Loading image from URL: ${siteDetailsResponse.imageUrl}"
+                            )
                             try {
                                 Glide.with(requireContext())
                                     .load(siteDetailsResponse.imageUrl)
@@ -207,50 +211,20 @@ class SiteDetailsFragment : Fragment() {
     }
 
     private fun fetchSiteComments(siteId: String) {
-        Log.d(
-            "SiteDetailsFragment",
-            "Sending request for comments with siteId: $siteId"
-        )
-
-        // Use the client from our networking package
-        val call = ExploreLensApiClient.commentsApi.getSiteComments(siteId)
-
-        call.enqueue(object : Callback<List<Comment>> {
-            override fun onResponse(call: Call<List<Comment>>, response: Response<List<Comment>>) {
-                if (!isAdded) return  // Check if fragment is still attached
-
-                if (response.isSuccessful) {
-                    val commentsList = response.body()
-                    Log.d(
-                        "SiteDetailsFragment",
-                        "Comments response received: ${commentsList?.size} comments"
-                    )
-
-                    if (commentsList != null) {
-                        // Store the fetched comments
-                        fetchedComments = commentsList
-
-                        // Log received comments for debugging
-                        Log.d(
-                            "SiteDetailsFragment",
-                            "Received ${commentsList.size} comments from server"
-                        )
-                    } else {
-                        Log.e("SiteDetailsFragment", "Comments response body is null")
-                    }
-                } else {
-                    Log.e("SiteDetailsFragment", "Comments fetch error: ${response.code()}")
-                    showError("Failed to load comments: ${response.code()}")
-                }
+        CoroutineScope(Dispatchers.Main).launch {
+            val result = commentsRepository.fetchSiteComments(siteId)
+            if (result.isSuccess) {
+                val comments = result.getOrNull()
+                if (!isAdded) return@launch
+                fetchedComments = comments ?: emptyList()
+                Log.d("SiteDetailsFragment", "Loaded ${fetchedComments.size} comments")
+            } else {
+                val error = result.exceptionOrNull()?.message ?: "Unknown error"
+                Log.e("SiteDetailsFragment", "Failed to load comments: $error")
+                if (!isAdded) return@launch
+                showError("Failed to load comments: $error")
             }
-
-            override fun onFailure(call: Call<List<Comment>>, t: Throwable) {
-                if (!isAdded) return  // Check if fragment is still attached
-
-                Log.e("SiteDetailsFragment", "Comments network error: ${t.message}", t)
-                showError("Network error loading comments: ${t.message}")
-            }
-        })
+        }
     }
 
     private fun showError(message: String) {
@@ -259,122 +233,89 @@ class SiteDetailsFragment : Fragment() {
         }
     }
 
+    @SuppressLint("MissingInflatedId")
     private fun showCommentsDialog() {
         Log.d("SiteDetailsFragment", "showCommentsDialog called")
         context?.let { ctx ->
             try {
-                // Replace BottomSheetDialog with AlertDialog
                 val builder = AlertDialog.Builder(ctx, R.style.RoundedDialog)
                 val dialogView = layoutInflater.inflate(R.layout.dialog_comments, null)
-                Log.d("SiteDetailsFragment", "Dialog view inflated")
-
                 val dialog = builder.setView(dialogView).create()
-                Log.d("SiteDetailsFragment", "Dialog created")
-
-                // Make dialog background transparent to show rounded corners
                 dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                Log.d("SiteDetailsFragment", "Dialog background set")
 
-                // Set up RecyclerView for comments
                 val recyclerView = dialogView.findViewById<RecyclerView>(R.id.commentsRecyclerView)
-                if (recyclerView == null) {
-                    Log.e("SiteDetailsFragment", "commentsRecyclerView not found in layout")
-                    return@let
-                }
-                recyclerView.layoutManager = LinearLayoutManager(ctx)
-                Log.d("SiteDetailsFragment", "RecyclerView set up")
-
-                // Debug SiteDetails status
-                if (SiteDetails == null) {
-                    Log.d("SiteDetailsFragment", "SiteDetails is null")
-                } else {
-                    Log.d(
-                        "SiteDetailsFragment",
-                        "SiteDetails has ${fetchedComments?.size ?: 0} comments"
-                    )
-                }
-
-                // Check if we have server comments stored in the fragment's SiteDetails property
-                val displayComments =
-                    if (SiteDetails != null && fetchedComments?.isNotEmpty() == true) {
-                        // Use server comments directly
-                        Log.d(
-                            "SiteDetailsFragment",
-                            "Using ${fetchedComments?.size} server comments"
-                        )
-                        fetchedComments ?: emptyList()
-                    } else {
-                        // Use mock comments as fallback
-                        Log.d("SiteDetailsFragment", "Using mock comments")
-                        listOf(
-                            Comment(
-                                user = "John Doe",
-                                content = "This place is amazing! I visited last summer and the architecture is stunning.",
-                                date = null,
-                                _id = "1"
-                            ),
-                            Comment(
-                                user = "Jane Smith",
-                                content = "The historical significance of this site cannot be overstated. A must-visit!",
-                                date = null,
-                                _id = "2"
-                            ),
-                            Comment(
-                                user = "Mark Johnson",
-                                content = "Great place to take photos. The lighting in the evening is perfect.",
-                                date = null,
-                                _id = "3"
-                            ),
-                            Comment(
-                                user = "Sarah Williams",
-                                content = "I was disappointed by how crowded it was. Maybe visit during off-season if you can.",
-                                date = null, _id = "4"
-                            ),
-                            Comment(
-                                user = "David Brown",
-                                content = "The tour guides are very knowledgeable and friendly. Definitely take a guided tour if available.",
-                                date = null,
-                                _id = "5"
-                            )
-                        )
-                    }
-
-                // Set adapter
-                recyclerView.adapter = CommentsAdapter(displayComments)
-                Log.d("SiteDetailsFragment", "Adapter set with ${displayComments.size} comments")
-
-                // Set up comment submission
+                val emptyView = dialogView.findViewById<TextView>(R.id.emptyCommentsText)
                 val commentInput = dialogView.findViewById<EditText>(R.id.commentInput)
                 val submitButton = dialogView.findViewById<Button>(R.id.submitCommentButton)
+                val cancelButton = dialogView.findViewById<Button>(R.id.cancelButton)
+
+                if (recyclerView == null || submitButton == null || commentInput == null || cancelButton == null) {
+                    Log.e("SiteDetailsFragment", "UI elements not found in dialog")
+                    return@let
+                }
+
+                recyclerView.layoutManager = LinearLayoutManager(ctx)
+
+                val comments = fetchedComments ?: emptyList()
+
+                if (comments.isEmpty()) {
+                    recyclerView.visibility = View.GONE
+                    emptyView?.visibility = View.VISIBLE
+                    emptyView?.text = " No comments yet"
+                } else {
+                    recyclerView.adapter = CommentsAdapter(comments)
+                    recyclerView.visibility = View.VISIBLE
+                    emptyView?.visibility = View.GONE
+                }
 
                 submitButton.setOnClickListener {
                     val commentText = commentInput.text.toString().trim()
                     if (commentText.isNotEmpty()) {
-                        ToastHelper.showShortToast(ctx, "Comment submitted")
-                        commentInput.text.clear()
+                        CoroutineScope(Dispatchers.Main).launch {
+                            val result = commentsRepository.createComment(
+                                siteId = SiteDetails?.id ?: "",
+                                content = commentText
+                            )
+
+                            if (result.isSuccess) {
+                                ToastHelper.showShortToast(ctx, "comment submit")
+                                commentInput.text.clear()
+
+                                val newComment = result.getOrNull()
+                                if (newComment != null) {
+                                    fetchedComments = (fetchedComments ?: emptyList()) + newComment
+                                    recyclerView.adapter = CommentsAdapter(fetchedComments!!)
+                                    recyclerView.scrollToPosition(fetchedComments!!.lastIndex)
+
+                                    recyclerView.visibility = View.VISIBLE
+                                    emptyView?.visibility = View.GONE
+                                }
+                            } else {
+                                Log.e(
+                                    "SiteDetailsFragment",
+                                    "Failed to submit comment: ${result.exceptionOrNull()?.message}"
+                                )
+                                ToastHelper.showShortToast(ctx, "error sending massage  ")
+                            }
+                        }
                     }
                 }
 
-                Log.d("SiteDetailsFragment", "About to show dialog")
-                dialog.show()
-                Log.d("SiteDetailsFragment", "Dialog shown")
-
-                // Set dialog size - make it taller
-                dialog.window?.setLayout(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    (resources.displayMetrics.heightPixels * 0.8).toInt() // 80% of screen height
-                )
-                Log.d("SiteDetailsFragment", "Dialog size set")
-                val cancelButton = dialog.findViewById<Button>(R.id.cancelButton)
-                cancelButton?.setOnClickListener {
+                cancelButton.setOnClickListener {
                     dialog.dismiss()
                 }
 
+                dialog.show()
+                dialog.window?.setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    (resources.displayMetrics.heightPixels * 0.8).toInt()
+                )
             } catch (e: Exception) {
                 Log.e("SiteDetailsFragment", "Error showing dialog", e)
             }
         }
     }
+
 
     private fun showRatingDialog() {
         context?.let { ctx ->

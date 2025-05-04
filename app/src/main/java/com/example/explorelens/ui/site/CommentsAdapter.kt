@@ -7,7 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.R
-import com.example.explorelens.data.model.Comment
+import com.example.explorelens.data.model.comments.Comment
 
 /**
  * Adapter for displaying comments in a RecyclerView
