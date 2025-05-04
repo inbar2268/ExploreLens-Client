@@ -58,6 +58,16 @@
             android:paddingBottom="12dp"
             tools:listitem="@layout/item_comment" />
 
+        <TextView
+            android:id="@+id/emptyCommentsText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=" No comments yet"
+            android:gravity="center"
+            android:textColor="#888888"
+            android:textSize="16sp"
+            android:visibility="gone"
+            android:layout_marginBottom="16dp" />
         <!-- Comment input container -->
         <LinearLayout
             android:layout_width="match_parent"
