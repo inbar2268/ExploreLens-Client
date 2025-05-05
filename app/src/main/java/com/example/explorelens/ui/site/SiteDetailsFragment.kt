@@ -96,9 +96,9 @@ class SiteDetailsFragment : Fragment() {
 
         arguments?.let { args ->
             val label = args.getString("LABEL_KEY", "Unknown")
-            Log.d("SiteDetailsFragment", "Received label: $label")
+            val siteName = args.getString("SITE_NAME_KEY")
 
-            labelTextView.text = label
+            labelTextView.text = siteName
 
             // Check if we already have the description from AR
             val passedDescription = args.getString("DESCRIPTION_KEY")
@@ -145,6 +145,9 @@ class SiteDetailsFragment : Fragment() {
                     if (siteDetailsResponse != null) {
                         // Store the complete SiteDetails object
                         this@SiteDetailsFragment.SiteDetails = siteDetailsResponse
+
+                        labelTextView.text = siteDetailsResponse.name
+
                         ratingView.setRating(siteDetailsResponse.averageRating ?: 0f)
 
                         // Only update description if we don't already have one

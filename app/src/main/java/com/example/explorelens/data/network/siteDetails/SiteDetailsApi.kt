@@ -10,8 +10,8 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 
 interface SiteDetailsApi {
-    @GET("/site-info/{siteId}")
-    fun getSiteDetails(@Path("siteId") siteId: String): Call<SiteDetails>
+    @GET("/site-info/{siteid}")
+    fun getSiteDetails(@Path("siteid") siteid: String): Call<SiteDetails>
 
 
     @POST("/site-info/rating/{siteId}")

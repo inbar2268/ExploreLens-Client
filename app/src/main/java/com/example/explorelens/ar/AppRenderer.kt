@@ -503,22 +503,22 @@ class AppRenderer(val activity: ArActivity,
                     status = "success",
                     description = "Famous site detected from cropped object.",
                     siteInformation = SiteInformation(
-                        id = "6806b09ed5720bcf07247ce9",
-                        label = "Building",
+                        id = "6818fcadb249f52360e546e9",
+                        label = "Tower",
                         x = 0.3430117717f,
                         y = 0.319694645f,
-                        siteName = "Independence Hall In Shalom Tower"
+                        siteName = "Big Ben"
                     )
                 ),
                 ImageAnalyzedResult(
                     status = "assume",
                     description = "Famous site detected in full image.",
                     siteInformation = SiteInformation(
-                        id = "6806b09fd5720bcf07247ceb",
+                        id = "6818fd47b249f52360e546ec",
                         label = "full-image",
                         x = 0.5f,
                         y = 0.5f,
-                        siteName = "Holocaust Monument Rabin Square"
+                        siteName = "Colosseum"
                     )
                 )
             )
@@ -899,6 +899,7 @@ class AppRenderer(val activity: ArActivity,
     private fun handleAnchorClick(clickedAnchor: ARLabeledAnchor) {
         // Use the siteName directly if available, otherwise extract from the label
         val siteId = clickedAnchor.siteId
+        val siteName = clickedAnchor.siteName
         Log.d(TAG, "Clicked on anchor: $siteId")
 
         // Pass the full description to DetailActivity if available
@@ -906,7 +907,7 @@ class AppRenderer(val activity: ArActivity,
             activity.findViewById<View>(R.id.cameraButton)?.visibility = View.GONE
             // Show site details as an overlay instead of starting a new activity
             if (siteId != null) {
-                view.showSiteDetails(siteId, clickedAnchor.fullDescription)
+                view.showSiteDetails(siteId, clickedAnchor.fullDescription, siteName)
             }
         }
     }

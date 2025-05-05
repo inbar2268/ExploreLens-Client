@@ -54,11 +54,12 @@ class ArActivityView(val activity: ArActivity, renderer: AppRenderer) : DefaultL
     surfaceView.onPause()
   }
 
-  fun showSiteDetails(siteName: String, description: String?) {
+  fun showSiteDetails(siteId: String, description: String?, siteName: String? = null ) {
     // Create and show the site details fragment
     val fragment = SiteDetailsFragment().apply {
       arguments = Bundle().apply {
-        putString("LABEL_KEY", siteName)
+        putString("LABEL_KEY", siteId)  // Site ID for API calls
+        putString("SITE_NAME_KEY", siteName)  // Site name for initial display
         description?.let { putString("DESCRIPTION_KEY", it) }
       }
     }
