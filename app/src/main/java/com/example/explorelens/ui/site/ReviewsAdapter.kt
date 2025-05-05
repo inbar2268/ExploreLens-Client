@@ -7,20 +7,19 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.R
-import com.example.explorelens.data.model.comments.Comment
-import com.example.explorelens.data.model.comments.CommentWithUser
+import com.example.explorelens.data.model.comments.ReviewWithUser
 import com.squareup.picasso.Picasso
 
 /**
- * Adapter for displaying comments in a RecyclerView
+ * Adapter for displaying reviews in a RecyclerView
  */
-class CommentsAdapter(private val commentsWithUser: List<CommentWithUser>) :
-    RecyclerView.Adapter<CommentsAdapter.ViewHolder>() {
+class ReviewsAdapter(private val reviewsWithUser: List<ReviewWithUser>) :
+    RecyclerView.Adapter<ReviewsAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val profilePic: ImageView = view.findViewById(R.id.profileImageView)
         val username: TextView = view.findViewById(R.id.usernameTextView)
-        val commentText: TextView = view.findViewById(R.id.commentTextView)
+        val reviewText: TextView = view.findViewById(R.id.commentTextView)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -30,11 +29,11 @@ class CommentsAdapter(private val commentsWithUser: List<CommentWithUser>) :
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val commentWithUser = commentsWithUser[position]
-        holder.username.text = commentWithUser.user?.username ?: commentWithUser.comment.user
-        holder.commentText.text = commentWithUser.comment.content
+        val reviewWithUser = reviewsWithUser[position]
+        holder.username.text = reviewWithUser.user?.username ?: reviewWithUser.review.user
+        holder.reviewText.text = reviewWithUser.review.content
 
-        val profilePicUrl = commentWithUser.user?.profilePictureUrl
+        val profilePicUrl = reviewWithUser.user?.profilePictureUrl
                 if (!profilePicUrl.isNullOrEmpty()) {
                     Picasso.get()
                         .load(profilePicUrl)
@@ -46,10 +45,10 @@ class CommentsAdapter(private val commentsWithUser: List<CommentWithUser>) :
                 }
 
         // Add date display if needed
-        // If you have a date TextView in your item_comment layout:
+        // If you have a date TextView in your item_review layout:
         // val dateView = holder.itemView.findViewById<TextView>(R.id.dateTextView)
-        // dateView?.text = comment.date ?: ""
+        // dateView?.text = review.date ?: ""
     }
 
-    override fun getItemCount() = commentsWithUser.size
+    override fun getItemCount() = reviewsWithUser.size
 }

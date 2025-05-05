@@ -24,14 +24,14 @@ import com.example.explorelens.ArActivity
 import com.example.explorelens.R
 import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.data.network.ExploreLensApiClient
-import com.example.explorelens.data.model.comments.Comment
+import com.example.explorelens.data.model.comments.Review
 import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import com.bumptech.glide.Glide
-import com.example.explorelens.data.model.comments.CommentWithUser
-import com.example.explorelens.data.repository.CommentsRepository
+import com.example.explorelens.data.model.comments.ReviewWithUser
+import com.example.explorelens.data.repository.ReviewsRepository
 import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.data.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
@@ -49,10 +49,10 @@ class SiteDetailsFragment : Fragment() {
     private lateinit var ratingView: RatingView
     private var siteRating: SiteRating? = null
     private var SiteDetails: SiteDetails? = null
-    private var fetchedComments: List<Comment> = emptyList()
-    private var fetchedCommentsWithUsers: List<CommentWithUser> = emptyList()
+    private var fetchedReviews: List<Review> = emptyList()
+    private var fetchedReviewsWithUsers: List<ReviewWithUser> = emptyList()
     private lateinit var headerBackground: ImageView
-    private lateinit var commentsRepository: CommentsRepository
+    private lateinit var reviewRepository: ReviewsRepository
     private lateinit var siteDetailsRepository: SiteDetailsRepository
     private lateinit var userRepository: UserRepository
 
@@ -83,11 +83,11 @@ class SiteDetailsFragment : Fragment() {
             dismissSiteDetails()
         }
         // Set up comments button click listener
-        commentsRepository = CommentsRepository(requireContext())
+        reviewRepository = ReviewsRepository(requireContext())
         siteDetailsRepository = SiteDetailsRepository(requireContext())
         userRepository = UserRepository(requireContext())
         commentsButton.setOnClickListener {
-            showCommentsDialog()
+            showReviewsDialog()
         }
 
         ratingContainer.setOnClickListener {
@@ -181,7 +181,7 @@ class SiteDetailsFragment : Fragment() {
 
                         val siteId = siteDetailsResponse.id
                         if (!siteId.isNullOrBlank()) {
-                            fetchSiteComments(siteId)
+                            fetchSiteReviews(siteId)
                         } else {
                             Log.e("SiteDetailsFragment", "siteId is null or blank")
                         }
@@ -216,26 +216,26 @@ class SiteDetailsFragment : Fragment() {
         })
     }
 
-    private fun fetchSiteComments(siteId: String) {
+    private fun fetchSiteReviews(siteId: String) {
         CoroutineScope(Dispatchers.Main).launch {
-            val result = commentsRepository.fetchSiteComments(siteId)
+            val result = reviewRepository.fetchSiteReviews(siteId)
             if (result.isSuccess) {
                 val comments = result.getOrNull()
                 if (!isAdded) return@launch
-                fetchedComments = comments ?: emptyList()
+                fetchedReviews = comments ?: emptyList()
 
-                val enrichedComments = withContext(Dispatchers.IO) {
+                val enrichedReviews = withContext(Dispatchers.IO) {
                     comments?.map { comment ->
                         val userResult = userRepository.getUserById(comment.user)
                         val user = userResult.getOrNull()
-                        CommentWithUser(comment, user)
+                        ReviewWithUser(comment, user)
                     }
                 }
 
-                if (enrichedComments != null) {
-                    fetchedCommentsWithUsers = enrichedComments
+                if (enrichedReviews != null) {
+                    fetchedReviewsWithUsers = enrichedReviews
                 }
-                Log.d("SiteDetailsFragment", "Loaded ${fetchedComments.size} comments")
+                Log.d("SiteDetailsFragment", "Loaded ${fetchedReviews.size} comments")
             } else {
                 val error = result.exceptionOrNull()?.message ?: "Unknown error"
                 Log.e("SiteDetailsFragment", "Failed to load comments: $error")
@@ -252,8 +252,8 @@ class SiteDetailsFragment : Fragment() {
     }
 
     @SuppressLint("MissingInflatedId")
-    private  fun showCommentsDialog() {
-        Log.d("SiteDetailsFragment", "showCommentsDialog called")
+    private  fun showReviewsDialog() {
+        Log.d("SiteDetailsFragment", "showReviewsDialog called")
         context?.let { ctx ->
             try {
                 val builder = AlertDialog.Builder(ctx, R.style.RoundedDialog)
@@ -274,14 +274,14 @@ class SiteDetailsFragment : Fragment() {
 
                 recyclerView.layoutManager = LinearLayoutManager(ctx)
 
-                val comments = fetchedComments ?: emptyList()
+                val comments = fetchedReviews ?: emptyList()
 
                 if (comments.isEmpty()) {
                     recyclerView.visibility = View.GONE
                     emptyView?.visibility = View.VISIBLE
                     emptyView?.text = " No comments yet"
                 } else {
-                    recyclerView.adapter = CommentsAdapter(fetchedCommentsWithUsers)
+                    recyclerView.adapter = ReviewsAdapter(fetchedReviewsWithUsers)
                     recyclerView.visibility = View.VISIBLE
                     emptyView?.visibility = View.GONE
                 }
@@ -290,7 +290,7 @@ class SiteDetailsFragment : Fragment() {
                     val commentText = commentInput.text.toString().trim()
                     if (commentText.isNotEmpty()) {
                         CoroutineScope(Dispatchers.Main).launch {
-                            val result = commentsRepository.createComment(
+                            val result = reviewRepository.createReview(
                                 siteId = SiteDetails?.id ?: "",
                                 content = commentText
                             )
@@ -299,14 +299,14 @@ class SiteDetailsFragment : Fragment() {
                                 ToastHelper.showShortToast(ctx, "comment submit")
                                 commentInput.text.clear()
 
-                                val newComment = result.getOrNull()
+                                val newReview = result.getOrNull()
                                 val user = userRepository.getUserFromDb()
-                                 val newCommentWithUser=
-                                     newComment?.let { it1 -> CommentWithUser(it1,user) }
-                                if (newCommentWithUser != null) {
-                                    fetchedCommentsWithUsers = (fetchedCommentsWithUsers ?: emptyList()) + newCommentWithUser
-                                    recyclerView.adapter = CommentsAdapter(fetchedCommentsWithUsers)
-                                    recyclerView.scrollToPosition(fetchedCommentsWithUsers.lastIndex)
+                                 val newReviewWithUser=
+                                     newReview?.let { it1 -> ReviewWithUser(it1,user) }
+                                if (newReviewWithUser != null) {
+                                    fetchedReviewsWithUsers = (fetchedReviewsWithUsers ?: emptyList()) + newReviewWithUser
+                                    recyclerView.adapter = ReviewsAdapter(fetchedReviewsWithUsers)
+                                    recyclerView.scrollToPosition(fetchedReviewsWithUsers.lastIndex)
 
                                     recyclerView.visibility = View.VISIBLE
                                     emptyView?.visibility = View.GONE
