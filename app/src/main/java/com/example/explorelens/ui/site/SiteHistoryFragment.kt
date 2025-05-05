@@ -52,6 +52,7 @@ class SiteHistoryFragment : Fragment() {
         setupRecyclerView()
         loadUserProfile()
         observeData()
+        setupSwipeToRefresh()
     }
 
     private fun setupViewModel() {
@@ -91,10 +92,7 @@ class SiteHistoryFragment : Fragment() {
         // First, trigger sync with the server to ensure we have the latest data
         viewModel.syncSiteHistory(userId)
 
-        // Observe loading state
-        viewModel.loading?.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-        }
+
 
         // Observe site history data
         viewModel.getSiteHistoryByUserId(userId).observe(viewLifecycleOwner) { historyList ->
@@ -139,6 +137,18 @@ class SiteHistoryFragment : Fragment() {
         val sortedList = historyList.sortedByDescending { it.createdAt }
         adapter.submitList(sortedList)
     }
+
+    private fun setupSwipeToRefresh() {
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            val userId = getCurrentUserId()
+            if (userId != null) {
+                Log.d(TAG, "User pulled to refresh, syncing site history")
+                viewModel.syncSiteHistory(userId)
+            }
+            binding.swipeRefreshLayout.isRefreshing = false // Stop the animation
+        }
+    }
+
 
     private fun showMockData() {
         val mockData = createMockHistoryData()
@@ -266,5 +276,7 @@ class SiteHistoryFragment : Fragment() {
             }
         }
     }
+
+
 
 }
