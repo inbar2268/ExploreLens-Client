@@ -1,5 +1,6 @@
 package com.example.explorelens.ar
 
+import android.content.Context
 import android.location.Location
 import retrofit2.Call
 import retrofit2.Callback
@@ -48,14 +49,18 @@ import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
 import com.example.explorelens.Model
 import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
+import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import com.example.explorelens.model.ARLabeledAnchor
 import com.example.explorelens.utils.GeoLocationUtils
 import com.example.explorelens.data.network.ExploreLensApiClient
+import com.google.ar.core.Config
+import com.google.ar.core.Earth
 
-class AppRenderer(val activity: ArActivity,
-                  private val geoLocationUtils: GeoLocationUtils,
-                  private val siteHistoryViewModel: SiteHistoryViewModel
+class AppRenderer(
+    val activity: ArActivity,
+    private val geoLocationUtils: GeoLocationUtils,
+    private val siteHistoryViewModel: SiteHistoryViewModel
 ) : DefaultLifecycleObserver, SampleRender.Renderer,
     CoroutineScope by MainScope() {
     companion object {
@@ -77,6 +82,7 @@ class AppRenderer(val activity: ArActivity,
 
     private var lastSnapshotData: Snapshot? = null
     var arLabeledAnchors = Collections.synchronizedList(mutableListOf<ARLabeledAnchor>())
+    var myGpsAnchor: Anchor? = null
     private var hasLoadedAnchors = false
     private val convertFloats = FloatArray(4)
     private val convertFloatsOut = FloatArray(4)
@@ -166,6 +172,35 @@ class AppRenderer(val activity: ArActivity,
             }
         }
         processObjectResults(frame, session)
+
+        val earth = session.earth
+
+        if (earth?.trackingState == TrackingState.TRACKING && myGpsAnchor == null) {
+
+            if (!session.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
+                Handler(Looper.getMainLooper()).post {
+                    showSnackbar("Geospatial API not supported")
+                }
+                return
+            }
+
+            val targetLat = 32.84419
+            val targetLng = 35.09622
+            val targetAltitude = earth.cameraGeospatialPose.altitude - 1.5
+            val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
+
+            myGpsAnchor =
+                earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
+            Log.d("GeoAR", "Created Anchor at $targetLat, $targetLng, $targetAltitude")
+
+            // add only one time
+            val labeledAnchor =
+                ARLabeledAnchor(myGpsAnchor!!, " my gps location", "my location ", "you see me? ")
+            synchronized(arLabeledAnchors) {
+                arLabeledAnchors.add(labeledAnchor)
+            }
+        }
+
         drawAnchors(render, frame)
     }
 
@@ -213,7 +248,8 @@ class AppRenderer(val activity: ArActivity,
             }
 
             launch {
-                val currentLocation = geoLocationUtils.getSingleCurrentLocation() // Await the result
+                val currentLocation =
+                    geoLocationUtils.getSingleCurrentLocation() // Await the result
                 addAnchorToDatabase(anchors)
                 createSiteHistoryForDetectedObjects(objects, currentLocation) // Pass the location
             }
@@ -536,7 +572,6 @@ class AppRenderer(val activity: ArActivity,
         }
 
 
-
         val snapshot = Snapshot(
             timestamp = frame.timestamp,
             cameraPose = camera.pose,
@@ -553,6 +588,7 @@ class AppRenderer(val activity: ArActivity,
     } catch (e: Throwable) {
         throw e
     }
+
     fun getAnalyzedResult(path: String) {
         Log.d("AnalyzeImage", "Starting image analysis")
         launch(Dispatchers.IO) {
@@ -782,6 +818,7 @@ class AppRenderer(val activity: ArActivity,
             Log.e(TAG, "Error processing touch", e)
         }
     }
+
     private fun fetchAndCreateAnchor(
         session: Session,
         snapshotData: Snapshot,
@@ -893,6 +930,7 @@ class AppRenderer(val activity: ArActivity,
         // Otherwise return the whole description
         return description.trim()
     }
+
     private fun handleAnchorClick(clickedAnchor: ARLabeledAnchor) {
         // Use the siteName directly if available, otherwise extract from the label
         val siteName = clickedAnchor.siteName ?: clickedAnchor.label.split("||")[0]
@@ -922,12 +960,16 @@ class AppRenderer(val activity: ArActivity,
         }
     }
 
-    private fun createSiteHistoryForDetectedObjects(objects: List<ImageAnalyzedResult>, location: Location?) {
+    private fun createSiteHistoryForDetectedObjects(
+        objects: List<ImageAnalyzedResult>,
+        location: Location?
+    ) {
         objects.forEach { result ->
             result.siteInformation?.let { siteInfo ->
                 launch { // Launch a coroutine to call suspend functions
                     // Use getSingleCurrentLocation to get the location once
-                    val currentLocation = geoLocationUtils.getSingleCurrentLocation() ?: return@launch // Await and handle null
+                    val currentLocation = geoLocationUtils.getSingleCurrentLocation()
+                        ?: return@launch // Await and handle null
 
                     // The GeoLocationUtils will update its internal geoHash
                     geoLocationUtils.updateLocation(currentLocation)
@@ -938,7 +980,10 @@ class AppRenderer(val activity: ArActivity,
                         "6123456789abcdef01234567",
                         currentLocation
                     )
-                    Log.d(TAG, "Saved site history with geoHash: $geoHash, lat: ${currentLocation.latitude}, long: ${currentLocation.longitude}")
+                    Log.d(
+                        TAG,
+                        "Saved site history with geoHash: $geoHash, lat: ${currentLocation.latitude}, long: ${currentLocation.longitude}"
+                    )
 
 
                 }
