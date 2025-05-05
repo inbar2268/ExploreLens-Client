@@ -25,7 +25,8 @@ class SiteHistoryViewHolder(
         binding.siteDateTextView.text = formatter.format(date)
 
         // Set default values
-        binding.siteNameTextView.text = siteHistory.siteInfoId
+        binding.siteNameTextView.text = ""
+
         Glide.with(binding.root.context)
             .load(R.drawable.noimage)
             .into(binding.siteImageView)
