@@ -503,20 +503,22 @@ class AppRenderer(val activity: ArActivity,
                     status = "success",
                     description = "Famous site detected from cropped object.",
                     siteInformation = SiteInformation(
-                        label = "Building",
-                        x = 0.4430117717f,
-                        y = 0.419694645f,
-                        siteName = "Independence Hall In Shalom Tower"
+                        id = "6818fcadb249f52360e546e9",
+                        label = "Tower",
+                        x = 0.3430117717f,
+                        y = 0.319694645f,
+                        siteName = "Big Ben"
                     )
                 ),
                 ImageAnalyzedResult(
                     status = "assume",
                     description = "Famous site detected in full image.",
                     siteInformation = SiteInformation(
+                        id = "6818fd47b249f52360e546ec",
                         label = "full-image",
                         x = 0.5f,
                         y = 0.5f,
-                        siteName = "Holocaust Monument Rabin Square"
+                        siteName = "Colosseum"
                     )
                 )
             )
@@ -791,9 +793,10 @@ class AppRenderer(val activity: ArActivity,
         val atX = obj.siteInformation?.x
         val atY = obj.siteInformation?.y
         val siteName = obj.siteInformation?.siteName
+        val siteId = obj.siteInformation?.id
 
-        if (atX == null || atY == null || siteName == null) {
-            Log.e(TAG, "Missing location data or site name")
+        if (atX == null || atY == null || siteName == null ||  siteId == null) {
+            Log.e(TAG, "Missing location data or site name/id")
             return null
         }
 
@@ -806,16 +809,15 @@ class AppRenderer(val activity: ArActivity,
             frame
         ) ?: return null
 
-        Log.d(TAG, "Anchor created for $siteName")
+        Log.d(TAG, "Anchor created for $siteName (ID: $siteId)")
 
         // Initially create with just the site name
         val arLabeledAnchor = ARLabeledAnchor(anchor, "$siteName||Loading...", siteName)
+        arLabeledAnchor.siteId = siteId
 
-        // Fetch description separately from the API (without blocking)
-        val siteNameForRequest = siteName.replace(" ", "")
-        Log.d(TAG, "Fetching site details for: $siteNameForRequest")
+        Log.d(TAG, "Fetching site details for ID: $siteId")
 
-        ExploreLensApiClient.siteDetailsApi.getSiteDetails(siteNameForRequest)
+        ExploreLensApiClient.siteDetailsApi.getSiteDetails(siteId)
             .enqueue(object : Callback<SiteDetails> {
                 override fun onResponse(call: Call<SiteDetails>, response: Response<SiteDetails>) {
                     if (response.isSuccessful) {
@@ -843,6 +845,7 @@ class AppRenderer(val activity: ArActivity,
                                     // Store full description for DetailActivity
                                     updatedAnchor.fullDescription = description
                                     arLabeledAnchors[index] = updatedAnchor
+                                    updatedAnchor.siteId = siteId
                                 }
                             }
                         }
@@ -895,14 +898,17 @@ class AppRenderer(val activity: ArActivity,
     }
     private fun handleAnchorClick(clickedAnchor: ARLabeledAnchor) {
         // Use the siteName directly if available, otherwise extract from the label
-        val siteName = clickedAnchor.siteName ?: clickedAnchor.label.split("||")[0]
-        Log.d(TAG, "Clicked on anchor: $siteName")
+        val siteId = clickedAnchor.siteId
+        val siteName = clickedAnchor.siteName
+        Log.d(TAG, "Clicked on anchor: $siteId")
 
         // Pass the full description to DetailActivity if available
         activity.runOnUiThread {
             activity.findViewById<View>(R.id.cameraButton)?.visibility = View.GONE
             // Show site details as an overlay instead of starting a new activity
-            view.showSiteDetails(siteName, clickedAnchor.fullDescription)
+            if (siteId != null) {
+                view.showSiteDetails(siteId, clickedAnchor.fullDescription, siteName)
+            }
         }
     }
 
@@ -934,8 +940,7 @@ class AppRenderer(val activity: ArActivity,
                     val geoHash = geoLocationUtils.getGeoHash() ?: ""
 
                     siteHistoryViewModel.createSiteHistory(
-
-                        "6123456789abcdef01234567",
+                        siteInfoId = siteInfo.id,
                         currentLocation
                     )
                     Log.d(TAG, "Saved site history with geoHash: $geoHash, lat: ${currentLocation.latitude}, long: ${currentLocation.longitude}")

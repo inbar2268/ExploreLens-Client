@@ -89,7 +89,7 @@ public final class SnackbarHelper {
                     message,
                     Snackbar.LENGTH_LONG);
 
-
+            messageSnackbar.setAnimationMode(BaseTransientBottomBar.ANIMATION_MODE_FADE);
             messageSnackbar.getView().setBackgroundColor(BACKGROUND_COLOR);
             TextView textView = messageSnackbar.getView().findViewById(com.google.android.material.R.id.snackbar_text);
             textView.setMaxLines(maxLines);

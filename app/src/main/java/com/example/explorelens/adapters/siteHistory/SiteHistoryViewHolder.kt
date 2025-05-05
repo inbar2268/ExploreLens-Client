@@ -1,10 +1,15 @@
 package com.example.explorelens.adapters.siteHistory
 
+import android.util.Log
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.explorelens.R
 import com.example.explorelens.data.db.siteHistory.SiteHistory
+import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.databinding.ItemSiteHistoryBinding
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -14,38 +19,63 @@ class SiteHistoryViewHolder(
 ) : RecyclerView.ViewHolder(binding.root) {
 
     fun bind(siteHistory: SiteHistory) {
-        binding.apply {
-            // Set site name (initially with site ID, to be updated later)
-            siteNameTextView.text = formatSiteId(siteHistory.siteInfoId)
+        // Format and set date
+        val date = Date(siteHistory.createdAt)
+        val formatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+        binding.siteDateTextView.text = formatter.format(date)
 
-            // Format and set date
-            val date = Date(siteHistory.createdAt)
-            val formatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
-            siteDateTextView.text = formatter.format(date)
+        // Set default values
+        binding.siteNameTextView.text = siteHistory.siteInfoId
+        Glide.with(binding.root.context)
+            .load(R.drawable.noimage)
+            .into(binding.siteImageView)
 
-            // Load a placeholder or generated image
-            val siteName = formatSiteId(siteHistory.siteInfoId)
-            val imageUrl = "https://source.unsplash.com/800x600/?landmark,${siteName.replace(" ", "+")}"
+        // Fetch site details to get correct name and image
+        val cleanSiteId = siteHistory.siteInfoId.replace(" ", "")
+        ExploreLensApiClient.siteDetailsApi.getSiteDetails(cleanSiteId)
+            .enqueue(object : Callback<com.example.explorelens.data.model.SiteDetails.SiteDetails> {
+                override fun onResponse(
+                    call: Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
+                    response: Response<com.example.explorelens.data.model.SiteDetails.SiteDetails>
+                ) {
+                    if (response.isSuccessful) {
+                        val siteDetails = response.body()
 
-            Glide.with(root.context)
-                .load(imageUrl)
-                .placeholder(R.drawable.eiffel)
-                .error(R.drawable.eiffel)
-                .centerCrop()
-                .into(siteImageView)
+                        // Update site name
+                        siteDetails?.name?.let {
+                            binding.siteNameTextView.text = it
+                        }
 
-            // Set click listener
-            root.setOnClickListener {
-                onItemClick(siteHistory)
-            }
-        }
-    }
+                        // Load image from site details
+                        siteDetails?.imageUrl?.let { imageUrl ->
+                            Glide.with(binding.root.context)
+                                .load(imageUrl)
+                                .placeholder(R.drawable.noimage)
+                                .error(R.drawable.noimage)
+                                .centerCrop()
+                                .into(binding.siteImageView)
+                        }
+                    } else {
+                        Log.e("SiteHistoryViewHolder", "Failed to fetch site details: ${response.code()}")
+                    }
 
-    private fun formatSiteId(siteInfoId: String): String {
-        // Format the site ID to be more readable
-        return siteInfoId.replace(Regex("[^A-Za-z]"), " ")
-            .split(" ")
-            .filter { it.isNotEmpty() }
-            .joinToString(" ") { it.capitalize(Locale.getDefault()) }
+                    // Set click listener
+                    binding.root.setOnClickListener {
+                        onItemClick(siteHistory)
+                    }
+                }
+
+                override fun onFailure(
+                    call: Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
+                    t: Throwable
+                ) {
+                    Log.e("SiteHistoryViewHolder", "Error fetching site details", t)
+
+                    // Set click listener even if API call fails
+                    binding.root.setOnClickListener {
+                        onItemClick(siteHistory)
+                    }
+                }
+            })
     }
 }

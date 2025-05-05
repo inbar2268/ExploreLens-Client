@@ -52,6 +52,7 @@ class SiteHistoryFragment : Fragment() {
         setupRecyclerView()
         loadUserProfile()
         observeData()
+        setupSwipeToRefresh()
     }
 
     private fun setupViewModel() {
@@ -88,49 +89,49 @@ class SiteHistoryFragment : Fragment() {
 
         Log.d(TAG, "Loading history for user ID: $userId")
 
-        // First, trigger sync with the server to ensure we have the latest data
-        viewModel.syncSiteHistory(userId)
+        // Sync site history first before observing
+        lifecycleScope.launch {
+            try {
+                // Synchronize site history with server before loading
+                // Observe site history data after sync
+                viewModel.getSiteHistoryByUserId(userId).observe(viewLifecycleOwner) { historyList ->
+                    Log.d(TAG, "Received ${historyList.size} history items")
 
-        // Observe loading state
-        viewModel.loading?.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-        }
+                    // Additional filter to ensure we only show the current user's history
+                    val filteredList = historyList.filter { it.userId == userId }
+                    Log.d(TAG, "After filtering for current user: ${filteredList.size} items")
 
-        // Observe site history data
-        viewModel.getSiteHistoryByUserId(userId).observe(viewLifecycleOwner) { historyList ->
-            Log.d(TAG, "Received ${historyList.size} history items")
+                    // Group by siteInfoId to avoid duplicates
+                    val uniqueSites = filteredList.groupBy { it.siteInfoId }
+                        .map { entry -> entry.value.maxByOrNull { it.createdAt }!! }
+                        .sortedByDescending { it.createdAt }
 
-            // Additional filter to ensure we only show the current user's history
-            val filteredList = historyList.filter { it.userId == userId }
-            Log.d(TAG, "After filtering for current user: ${filteredList.size} items")
+                    Log.d(TAG, "Unique sites after grouping: ${uniqueSites.size}")
 
-            // Group by siteInfoId to avoid duplicates
-            val uniqueSites = filteredList.groupBy { it.siteInfoId }
-                .map { entry -> entry.value.maxByOrNull { it.createdAt }!! }
-                .sortedByDescending { it.createdAt }
+                    // Debug log each unique site
+                    uniqueSites.forEachIndexed { index, site ->
+                        Log.d(TAG, "Site $index: ID=${site.siteInfoId}, Created=${site.createdAt}")
+                    }
 
-            Log.d(TAG, "Unique sites after grouping: ${uniqueSites.size}")
+                    // Update history count
+                    binding.historyCountTextView.text = "${uniqueSites.size} unique sites visited"
 
-            // Debug log each unique site
-            uniqueSites.forEachIndexed { index, site ->
-                Log.d(TAG, "Site $index: ID=${site.siteInfoId}, Created=${site.createdAt}")
-            }
-
-            // Update history count
-            binding.historyCountTextView.text = "${uniqueSites.size} unique sites visited"
-
-            if (uniqueSites.isEmpty()) {
-                // No data for current user, show mock data
-                Log.d(TAG, "No history data for current user, showing mock data")
+                    if (uniqueSites.isEmpty()) {
+                        // No data for current user, show mock data
+                        Log.d(TAG, "No history data for current user, showing mock data")
+                        showMockData()
+                    } else {
+                        // Real data available, display it
+                        Log.d(TAG, "Displaying real history data for current user (${uniqueSites.size} sites)")
+                        showHistoryData(uniqueSites)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error syncing and loading site history", e)
                 showMockData()
-            } else {
-                // Real data available, display it
-                Log.d(TAG, "Displaying real history data for current user (${uniqueSites.size} sites)")
-                showHistoryData(uniqueSites)
             }
         }
     }
-
     private fun showHistoryData(historyList: List<SiteHistory>) {
         binding.emptyStateView.visibility = View.GONE
         binding.recyclerViewHistory.visibility = View.VISIBLE
@@ -139,6 +140,18 @@ class SiteHistoryFragment : Fragment() {
         val sortedList = historyList.sortedByDescending { it.createdAt }
         adapter.submitList(sortedList)
     }
+
+    private fun setupSwipeToRefresh() {
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            val userId = getCurrentUserId()
+            if (userId != null) {
+                Log.d(TAG, "User pulled to refresh, syncing site history")
+                viewModel.syncSiteHistory(userId)
+            }
+            binding.swipeRefreshLayout.isRefreshing = false // Stop the animation
+        }
+    }
+
 
     private fun showMockData() {
         val mockData = createMockHistoryData()
@@ -266,5 +279,7 @@ class SiteHistoryFragment : Fragment() {
             }
         }
     }
+
+
 
 }

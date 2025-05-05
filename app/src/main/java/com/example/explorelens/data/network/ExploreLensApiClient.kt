@@ -80,8 +80,8 @@ object ExploreLensApiClient {
         createRetrofitClient(authenticatedOkHttpClient).create(SiteDetailsApi::class.java)
     }
 
-    val commentsApi: CommentsApi by lazy {
-        createRetrofitClient(authenticatedOkHttpClient).create(CommentsApi::class.java)
+    val reviewsApi: ReviewsApi by lazy {
+        createRetrofitClient(authenticatedOkHttpClient).create(ReviewsApi::class.java)
     }
 
 

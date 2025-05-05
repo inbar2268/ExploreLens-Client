@@ -1,6 +1,6 @@
 package com.example.explorelens.data.model.comments
 
-data class CommentRequest(
+data class ReviewRequest(
     val owner: String,
     val content: String
 )
