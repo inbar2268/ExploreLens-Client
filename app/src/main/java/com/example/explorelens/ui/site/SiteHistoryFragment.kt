@@ -89,46 +89,49 @@ class SiteHistoryFragment : Fragment() {
 
         Log.d(TAG, "Loading history for user ID: $userId")
 
-        // First, trigger sync with the server to ensure we have the latest data
-        viewModel.syncSiteHistory(userId)
+        // Sync site history first before observing
+        lifecycleScope.launch {
+            try {
+                // Synchronize site history with server before loading
+                // Observe site history data after sync
+                viewModel.getSiteHistoryByUserId(userId).observe(viewLifecycleOwner) { historyList ->
+                    Log.d(TAG, "Received ${historyList.size} history items")
 
+                    // Additional filter to ensure we only show the current user's history
+                    val filteredList = historyList.filter { it.userId == userId }
+                    Log.d(TAG, "After filtering for current user: ${filteredList.size} items")
 
+                    // Group by siteInfoId to avoid duplicates
+                    val uniqueSites = filteredList.groupBy { it.siteInfoId }
+                        .map { entry -> entry.value.maxByOrNull { it.createdAt }!! }
+                        .sortedByDescending { it.createdAt }
 
-        // Observe site history data
-        viewModel.getSiteHistoryByUserId(userId).observe(viewLifecycleOwner) { historyList ->
-            Log.d(TAG, "Received ${historyList.size} history items")
+                    Log.d(TAG, "Unique sites after grouping: ${uniqueSites.size}")
 
-            // Additional filter to ensure we only show the current user's history
-            val filteredList = historyList.filter { it.userId == userId }
-            Log.d(TAG, "After filtering for current user: ${filteredList.size} items")
+                    // Debug log each unique site
+                    uniqueSites.forEachIndexed { index, site ->
+                        Log.d(TAG, "Site $index: ID=${site.siteInfoId}, Created=${site.createdAt}")
+                    }
 
-            // Group by siteInfoId to avoid duplicates
-            val uniqueSites = filteredList.groupBy { it.siteInfoId }
-                .map { entry -> entry.value.maxByOrNull { it.createdAt }!! }
-                .sortedByDescending { it.createdAt }
+                    // Update history count
+                    binding.historyCountTextView.text = "${uniqueSites.size} unique sites visited"
 
-            Log.d(TAG, "Unique sites after grouping: ${uniqueSites.size}")
-
-            // Debug log each unique site
-            uniqueSites.forEachIndexed { index, site ->
-                Log.d(TAG, "Site $index: ID=${site.siteInfoId}, Created=${site.createdAt}")
-            }
-
-            // Update history count
-            binding.historyCountTextView.text = "${uniqueSites.size} unique sites visited"
-
-            if (uniqueSites.isEmpty()) {
-                // No data for current user, show mock data
-                Log.d(TAG, "No history data for current user, showing mock data")
+                    if (uniqueSites.isEmpty()) {
+                        // No data for current user, show mock data
+                        Log.d(TAG, "No history data for current user, showing mock data")
+                        showMockData()
+                    } else {
+                        // Real data available, display it
+                        Log.d(TAG, "Displaying real history data for current user (${uniqueSites.size} sites)")
+                        showHistoryData(uniqueSites)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error syncing and loading site history", e)
                 showMockData()
-            } else {
-                // Real data available, display it
-                Log.d(TAG, "Displaying real history data for current user (${uniqueSites.size} sites)")
-                showHistoryData(uniqueSites)
             }
         }
     }
-
     private fun showHistoryData(historyList: List<SiteHistory>) {
         binding.emptyStateView.visibility = View.GONE
         binding.recyclerViewHistory.visibility = View.VISIBLE

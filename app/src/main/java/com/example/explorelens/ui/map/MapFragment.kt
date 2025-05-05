@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.R
 import com.example.explorelens.data.db.siteHistory.SiteHistory
+import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager
 import com.example.explorelens.data.repository.SiteHistoryRepository
 import com.example.explorelens.ui.site.SiteDetailsFragment
@@ -19,6 +20,9 @@ import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -69,24 +73,29 @@ class MapFragment : Fragment() {
             return
         }
 
-        // Observe site history data
-        siteHistoryRepository.getSiteHistoryByUserId(userId).observe(viewLifecycleOwner) { historyList ->
-            // Filter for current user
-            val filteredList = historyList.filter { it.userId == userId }
-
-            // Group by siteInfoId to avoid duplicates
-            val uniqueSites = filteredList.groupBy { it.siteInfoId }
-                .map { entry -> entry.value.maxByOrNull { it.createdAt }!! }
-
-            Log.d(TAG, "Found ${uniqueSites.size} unique visited sites")
-
-            // Add markers for each location
-            addMarkersForVisitedSites(uniqueSites)
-        }
-
-        // Sync with server to ensure we have the latest data
+        // Sync site history first
         lifecycleScope.launch {
-            siteHistoryRepository.syncSiteHistory(userId)
+            try {
+                // Synchronize site history with server before loading
+                siteHistoryRepository.syncSiteHistory(userId)
+
+                // Observe site history data after sync
+                siteHistoryRepository.getSiteHistoryByUserId(userId).observe(viewLifecycleOwner) { historyList ->
+                    // Filter for current user
+                    val filteredList = historyList.filter { it.userId == userId }
+
+                    // Group by siteInfoId to avoid duplicates
+                    val uniqueSites = filteredList.groupBy { it.siteInfoId }
+                        .map { entry -> entry.value.maxByOrNull { it.createdAt }!! }
+
+                    Log.d(TAG, "Found ${uniqueSites.size} unique visited sites")
+
+                    // Add markers for each location
+                    addMarkersForVisitedSites(uniqueSites)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error syncing and loading site history", e)
+            }
         }
     }
 
@@ -112,23 +121,62 @@ class MapFragment : Fragment() {
                 firstLocation = location
             }
 
-            // Add marker with site info
-            googleMap.addMarker(
-                MarkerOptions()
-                    .position(location)
-                    .title(formatSiteId(site.siteInfoId))
-                    .snippet("Visited: ${formatDate(site.createdAt)}")
-            )?.tag = site.siteInfoId // Store siteInfoId as the marker's tag
-
-            Log.d(TAG, "Added marker for ${site.siteInfoId} at ${site.latitude}, ${site.longitude}")
+            // Fetch site details to get the correct name
+            fetchSiteDetailsAndAddMarker(site, location)
         }
 
         // Move camera to first location with reasonable zoom
         firstLocation?.let {
             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 10f))
         }
+    }
 
-        // Set up marker click listener
+    private fun fetchSiteDetailsAndAddMarker(site: SiteHistory, location: LatLng) {
+        // Remove spaces from site ID for API call
+        val cleanSiteId = site.siteInfoId.replace(" ", "")
+
+        ExploreLensApiClient.siteDetailsApi.getSiteDetails(cleanSiteId)
+            .enqueue(object : Callback<com.example.explorelens.data.model.SiteDetails.SiteDetails> {
+                override fun onResponse(
+                    call: Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
+                    response: Response<com.example.explorelens.data.model.SiteDetails.SiteDetails>
+                ) {
+                    // Use site name from response, fallback to original ID if not available
+                    val siteName = response.body()?.name ?: formatSiteId(site.siteInfoId)
+
+                    // Add marker with site info
+                    val marker = googleMap.addMarker(
+                        MarkerOptions()
+                            .position(location)
+                            .title(siteName)
+                            .snippet("Visited: ${formatDate(site.createdAt)}")
+                    )
+
+                    // Store siteInfoId as the marker's tag for navigation
+                    marker?.tag = site.siteInfoId
+
+                    Log.d(TAG, "Added marker for $siteName at ${site.latitude}, ${site.longitude}")
+                }
+
+                override fun onFailure(
+                    call: Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
+                    t: Throwable
+                ) {
+                    // Fallback marker if API call fails
+                    val marker = googleMap.addMarker(
+                        MarkerOptions()
+                            .position(location)
+                            .title(formatSiteId(site.siteInfoId))
+                            .snippet("Visited: ${formatDate(site.createdAt)}")
+                    )
+
+                    marker?.tag = site.siteInfoId
+
+                    Log.e(TAG, "Failed to fetch site details for ${site.siteInfoId}", t)
+                }
+            })
+
+        // Set up marker click listener (moved outside the API call to ensure it's always set)
         googleMap.setOnInfoWindowClickListener { marker ->
             val siteInfoId = marker.tag as? String
             if (siteInfoId != null) {
