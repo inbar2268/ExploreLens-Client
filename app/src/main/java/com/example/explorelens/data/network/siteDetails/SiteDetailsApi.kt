@@ -12,8 +12,8 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 
 interface SiteDetailsApi {
-    @GET("/site-info/sitename/{siteName}")
-    fun getSiteDetails(@Path("siteName") siteName: String): Call<SiteDetails>
+    @GET("/site-info/{siteId}")
+    fun getSiteDetails(@Path("siteId") siteId: String): Call<SiteDetails>
 
 
     @POST("/site-info/rating/{siteId}")

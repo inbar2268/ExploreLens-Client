@@ -41,11 +41,14 @@ class SiteHistoryViewHolder(
         }
     }
 
-    private fun formatSiteId(siteInfoId: String): String {
-        // Format the site ID to be more readable
-        return siteInfoId.replace(Regex("[^A-Za-z]"), " ")
-            .split(" ")
-            .filter { it.isNotEmpty() }
-            .joinToString(" ") { it.capitalize(Locale.getDefault()) }
+//    private fun formatSiteId(siteInfoId: String): String {
+//        // Format the site ID to be more readable
+//        return siteInfoId.replace(Regex("[^A-Za-z]"), " ")
+//            .split(" ")
+//            .filter { it.isNotEmpty() }
+//            .joinToString(" ") { it.capitalize(Locale.getDefault()) }
+//    }
+        private fun formatSiteId(siteInfoId: String): String {
+        return siteInfoId
     }
 }

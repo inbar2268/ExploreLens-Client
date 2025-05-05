@@ -3,6 +3,8 @@ package com.example.explorelens.data.model.siteDetectionData
 import com.google.gson.annotations.SerializedName
 
 data class SiteInformation(
+    @SerializedName("id")
+    var id: String = "",
     @SerializedName("label")
     var label: String = "",
     @SerializedName("x")
