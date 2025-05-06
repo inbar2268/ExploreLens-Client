@@ -503,24 +503,24 @@ class AppRenderer(val activity: ArActivity,
                     status = "success",
                     description = "Famous site detected from cropped object.",
                     siteInformation = SiteInformation(
-                        id = "6818fcadb249f52360e546e9",
                         label = "Tower",
                         x = 0.3430117717f,
                         y = 0.319694645f,
                         siteName = "Big Ben"
-                    )
-                ),
+                    ),
+                    id = "6818fcadb249f52360e546e9",
+                    ),
                 ImageAnalyzedResult(
                     status = "assume",
                     description = "Famous site detected in full image.",
                     siteInformation = SiteInformation(
-                        id = "6818fd47b249f52360e546ec",
                         label = "full-image",
                         x = 0.5f,
                         y = 0.5f,
                         siteName = "Colosseum"
+                    ),
+                    id = "6818fd47b249f52360e546ec",
                     )
-                )
             )
             launch(Dispatchers.Main) {
                 sleep(2000)
@@ -793,7 +793,7 @@ class AppRenderer(val activity: ArActivity,
         val atX = obj.siteInformation?.x
         val atY = obj.siteInformation?.y
         val siteName = obj.siteInformation?.siteName
-        val siteId = obj.siteInformation?.id
+        val siteId = obj.id
 
         if (atX == null || atY == null || siteName == null ||  siteId == null) {
             Log.e(TAG, "Missing location data or site name/id")
@@ -940,7 +940,7 @@ class AppRenderer(val activity: ArActivity,
                     val geoHash = geoLocationUtils.getGeoHash() ?: ""
 
                     siteHistoryViewModel.createSiteHistory(
-                        siteInfoId = siteInfo.id,
+                        siteInfoId = result.id,
                         currentLocation
                     )
                     Log.d(TAG, "Saved site history with geoHash: $geoHash, lat: ${currentLocation.latitude}, long: ${currentLocation.longitude}")
