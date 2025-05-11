@@ -1,17 +1,18 @@
+// SiteMarker.kt
 package com.example.explorelens.ui.map
 
 import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-/**
- * Class to hold complete site marker data
- */
 data class SiteMarker(
     val siteHistory: SiteHistory,
     val latLng: LatLng,
-    val siteDetails: com.example.explorelens.data.model.SiteDetails.SiteDetails? = null,
+    val siteDetails: SiteDetails? = null,
     var marker: Marker? = null
 ) {
     val siteId: String
@@ -26,15 +27,15 @@ data class SiteMarker(
     val visitDate: String
         get() = "Visited: ${formatDate(siteHistory.createdAt)}"
 
-    private fun formatSiteId(siteInfoId: String): String {
+    fun formatSiteId(siteInfoId: String): String {
         return siteInfoId.replace(Regex("(?<=[a-z])(?=[A-Z])"), " ")
             .split(" ")
             .joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
     }
 
     private fun formatDate(timestamp: Long): String {
-        val date = java.util.Date(timestamp)
-        val format = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+        val date = Date(timestamp)
+        val format = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
         return format.format(date)
     }
 }

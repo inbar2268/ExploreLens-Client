@@ -19,7 +19,6 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.example.explorelens.R
 import com.example.explorelens.data.db.siteHistory.SiteHistory
-import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager
 import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.data.repository.SiteHistoryRepository
@@ -143,9 +142,7 @@ class MapFragment : Fragment() {
             }
 
             // Format site ID to be more readable initially
-            val formattedSiteId = site.siteInfoId.replace(Regex("(?<=[a-z])(?=[A-Z])"), " ")
-                .split(" ")
-                .joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+            val formattedSiteId = siteDetailsRepository.formatSiteId(site.siteInfoId)
 
             // Create initial marker with formatted site ID
             val marker = googleMap.addMarker(
@@ -165,35 +162,32 @@ class MapFragment : Fragment() {
             // Store reference in marker tag
             marker?.tag = siteMarker
 
-            // Preload site details to update marker titles
-            val cleanSiteId = site.siteInfoId.replace(" ", "")
-            ExploreLensApiClient.siteDetailsApi.getSiteDetails(cleanSiteId)
-                .enqueue(object : retrofit2.Callback<com.example.explorelens.data.model.SiteDetails.SiteDetails> {
-                    override fun onResponse(
-                        call: retrofit2.Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
-                        response: retrofit2.Response<com.example.explorelens.data.model.SiteDetails.SiteDetails>
-                    ) {
-                        if (response.isSuccessful && response.body() != null) {
-                            val siteDetails = response.body()
-                            if (!siteDetails?.name.isNullOrEmpty()) {
-                                // Update marker title
-                                marker?.title = siteDetails?.name
-                            }
-                        }
-                    }
-
-                    override fun onFailure(
-                        call: retrofit2.Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
-                        t: Throwable
-                    ) {
-                        Log.e(TAG, "Error fetching site details for marker title", t)
-                    }
-                })
+            // Load site details from repository
+            loadSiteDetailsForMarker(siteMarker)
         }
 
         // Move camera to first location with reasonable zoom
         firstLocation?.let {
             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 10f))
+        }
+    }
+
+    private fun loadSiteDetailsForMarker(siteMarker: SiteMarker) {
+        // Use repository to fetch site details
+        siteDetailsRepository.getSiteDetailsLiveData(siteMarker.siteId).observe(viewLifecycleOwner) { siteDetails ->
+            if (siteDetails != null) {
+                // Update marker title
+                siteMarker.marker?.title = siteDetails.name ?: siteMarker.name
+
+                // If popup is showing for this marker, update it
+                val currentDialog = popupDialog
+                if (currentDialog != null && currentDialog.isShowing) {
+                    val dialogTag = currentDialog.findViewById<View>(R.id.root_layout)?.tag as? String
+                    if (dialogTag == siteMarker.siteId) {
+                        updateDialogContent(currentDialog, siteMarker.siteId, siteDetails)
+                    }
+                }
+            }
         }
     }
 
@@ -215,6 +209,9 @@ class MapFragment : Fragment() {
         // Create custom popup dialog
         val dialogView = layoutInflater.inflate(R.layout.marker_popup_dialog, null)
 
+        // Set tag to identify marker
+        dialogView.findViewById<View>(R.id.root_layout)?.tag = siteMarker.siteId
+
         // Set up the dialog views
         val siteNameTextView = dialogView.findViewById<TextView>(R.id.siteNameTextView)
         val visitDateTextView = dialogView.findViewById<TextView>(R.id.visitDateTextView)
@@ -225,9 +222,6 @@ class MapFragment : Fragment() {
         // Set initial values
         siteNameTextView.text = siteMarker.name
         visitDateTextView.text = siteMarker.visitDate
-
-        // Load the image
-        loadImageDirectly(siteMarker.siteId, siteImageView)
 
         // Create and show the dialog
         popupDialog = AlertDialog.Builder(requireContext(), R.style.TransparentDialog)
@@ -248,7 +242,7 @@ class MapFragment : Fragment() {
         // Show dialog
         popupDialog?.show()
 
-        // Optional: Set window properties for better appearance
+        // Set window properties for better appearance
         popupDialog?.window?.let { window ->
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
@@ -257,71 +251,40 @@ class MapFragment : Fragment() {
             params.gravity = Gravity.CENTER
             window.attributes = params
         }
+
+        // Load site details from repository
+        siteDetailsRepository.fetchSiteDetails(
+            siteMarker.siteId,
+            onSuccess = { siteDetails ->
+                updateDialogContent(popupDialog, siteMarker.siteId, siteDetails)
+            },
+            onError = {
+                // Dialog already shows initial data, so no need to do anything on error
+                Log.e(TAG, "Failed to load site details for popup")
+            }
+        )
     }
 
-    private fun loadImageDirectly(siteId: String, imageView: ShapeableImageView) {
-        val cleanSiteId = siteId.replace(" ", "")
-        Log.d(TAG, "Directly loading image for site: $cleanSiteId")
+    private fun updateDialogContent(dialog: AlertDialog?, siteId: String, siteDetails: com.example.explorelens.data.model.SiteDetails.SiteDetails) {
+        if (dialog == null || !dialog.isShowing) return
 
-        // Set a default placeholder while loading
-        imageView.setImageResource(R.drawable.noimage)
+        // Get views from dialog
+        val siteNameTextView = dialog.findViewById<TextView>(R.id.siteNameTextView)
+        val siteImageView = dialog.findViewById<ShapeableImageView>(R.id.siteImageView)
 
-        // Use the API directly like in your SiteHistoryViewHolder
-        ExploreLensApiClient.siteDetailsApi.getSiteDetails(cleanSiteId)
-            .enqueue(object : retrofit2.Callback<com.example.explorelens.data.model.SiteDetails.SiteDetails> {
-                override fun onResponse(
-                    call: retrofit2.Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
-                    response: retrofit2.Response<com.example.explorelens.data.model.SiteDetails.SiteDetails>
-                ) {
-                    if (response.isSuccessful) {
-                        val siteDetails = response.body()
+        // Update site name
+        siteNameTextView?.text = siteDetails.name
 
-                        // Check if we have a valid site details object
-                        if (siteDetails != null) {
-                            Log.d(TAG, "Received site details: ${siteDetails.name}")
-                            Log.d(TAG, "Image URL: ${siteDetails.imageUrl}")
-
-                            // Update the site name in the dialog
-                            val dialog = popupDialog
-                            if (dialog != null && dialog.isShowing) {
-                                dialog.findViewById<TextView>(R.id.siteNameTextView)?.text = siteDetails.name
-                            }
-
-                            // Load image if available
-                            if (!siteDetails.imageUrl.isNullOrEmpty()) {
-                                try {
-                                    if (isAdded) { // Check if fragment is still attached
-                                        Glide.with(requireContext())
-                                            .load(siteDetails.imageUrl)
-                                            .placeholder(R.drawable.noimage)
-                                            .error(R.drawable.noimage)
-                                            .centerCrop()
-                                            .transition(DrawableTransitionOptions.withCrossFade())
-                                            .into(imageView)
-
-                                        Log.d(TAG, "Successfully started loading image")
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Error loading image: ${e.message}", e)
-                                }
-                            } else {
-                                Log.d(TAG, "No image URL in response")
-                            }
-                        } else {
-                            Log.e(TAG, "Site details is null")
-                        }
-                    } else {
-                        Log.e(TAG, "Failed to fetch site details: ${response.code()}")
-                    }
-                }
-
-                override fun onFailure(
-                    call: retrofit2.Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
-                    t: Throwable
-                ) {
-                    Log.e(TAG, "Error fetching site details", t)
-                }
-            })
+        // Load image
+        if (!siteDetails.imageUrl.isNullOrEmpty() && siteImageView != null && isAdded) {
+            Glide.with(requireContext())
+                .load(siteDetails.imageUrl)
+                .placeholder(R.drawable.noimage)
+                .error(R.drawable.noimage)
+                .centerCrop()
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .into(siteImageView)
+        }
     }
 
     private fun navigateToSiteDetails(siteInfoId: String) {
@@ -392,5 +355,3 @@ class MapFragment : Fragment() {
         mapView.onLowMemory()
     }
 }
-
-// Data class for site markers
