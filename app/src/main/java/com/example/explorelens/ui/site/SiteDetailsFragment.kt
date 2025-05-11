@@ -13,6 +13,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.RatingBar
 import android.widget.TextView
@@ -45,7 +46,7 @@ class SiteDetailsFragment : Fragment() {
     private lateinit var descriptionTextView: TextView
     private lateinit var loadingIndicator: ProgressBar
     private lateinit var commentsButton: View
-    private lateinit var ratingContainer: CardView
+    private lateinit var ratingContainer: LinearLayout
     private lateinit var ratingView: RatingView
     private var siteRating: SiteRating? = null
     private var SiteDetails: SiteDetails? = null
