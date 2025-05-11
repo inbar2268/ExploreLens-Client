@@ -12,6 +12,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 
 class SiteHistoryViewHolder(
     private val binding: ItemSiteHistoryBinding,
@@ -29,6 +30,7 @@ class SiteHistoryViewHolder(
 
         Glide.with(binding.root.context)
             .load(R.drawable.noimage)
+            .transition(DrawableTransitionOptions.withCrossFade())
             .into(binding.siteImageView)
 
         // Fetch site details to get correct name and image

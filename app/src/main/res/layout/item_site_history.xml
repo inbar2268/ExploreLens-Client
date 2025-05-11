@@ -4,46 +4,77 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
+    android:layout_margin="8dp"
     app:cardCornerRadius="16dp"
-    app:cardElevation="4dp">
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="#FFFFFF">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <ImageView
+        <!-- Full width image with rounded corners -->
+        <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/siteImageView"
             android:layout_width="match_parent"
-            android:layout_height="150dp"
+            android:layout_height="160dp"
             android:scaleType="centerCrop"
+            android:adjustViewBounds="true"
             android:contentDescription="Site image"
+            app:shapeAppearanceOverlay="@style/RoundedImageStyle"
             tools:src="@drawable/eiffel" />
 
-        <TextView
-            android:id="@+id/siteNameTextView"
+        <!-- Site name and location icon in same row with proper alignment -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:padding="12dp"
-            android:textColor="#333333"
-            android:textSize="16sp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="4dp">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_location"
+                app:tint="#29B6F6"
+            android:contentDescription="Location icon" />
+
+            <TextView
+                android:id="@+id/siteNameTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:layout_marginStart="8dp"
+                android:textColor="#333333"
+            android:textSize="18sp"
             android:textStyle="bold"
-            tools:text="Eiffel Tower" />
+            tools:text="Himalaya Mountain" />
+        </LinearLayout>
 
-        <TextView
-            android:id="@+id/siteDateTextView"
+        <!-- Date section with original styling -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="12dp"
-            android:textColor="#757575"
-            android:textSize="12sp"
-            tools:text="May 3, 2025" />
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="16dp">
 
+
+            <TextView
+                android:id="@+id/siteDateTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:textColor="#757575"
+            android:textSize="14sp"
+            tools:text="13/05/2025" />
+        </LinearLayout>
     </LinearLayout>
-
 </androidx.cardview.widget.CardView>
