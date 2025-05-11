@@ -69,7 +69,14 @@ class UserRepository(context: Context) {
         userDao.deleteUser()
     }
 
+    // In your UserRepository.kt
     suspend fun getUserById(userId: String): Result<User> {
+        // Safety check for null or blank userId
+        if (userId.isNullOrBlank()) {
+            Log.e(TAG, "getUserById called with null or blank userId")
+            return Result.failure(IllegalArgumentException("User ID cannot be null or blank"))
+        }
+
         return try {
             val response = userApiService.getUserById(userId)
             if (response.isSuccessful) {
@@ -87,11 +94,11 @@ class UserRepository(context: Context) {
                 }
             } else {
                 val errorMsg = response.errorBody()?.string() ?: "Unknown error"
-                Log.e("UserRepository", "Error fetching user: $errorMsg")
+                Log.e(TAG, "Error fetching user: $errorMsg")
                 Result.failure(Exception("Error fetching user: $errorMsg"))
             }
         } catch (e: Exception) {
-            Log.e("UserRepository", "Exception during getUserById", e)
+            Log.e(TAG, "Exception during getUserById", e)
             Result.failure(e)
         }
     }

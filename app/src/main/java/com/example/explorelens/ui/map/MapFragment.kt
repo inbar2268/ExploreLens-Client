@@ -5,27 +5,31 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.example.explorelens.R
+import com.example.explorelens.adapters.siteHistory.SiteHistoryViewHolder
 import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager
+import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.data.repository.SiteHistoryRepository
+import com.example.explorelens.databinding.ItemSiteHistoryBinding
 import com.example.explorelens.ui.site.SiteDetailsFragment
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.imageview.ShapeableImageView
 import kotlinx.coroutines.launch
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class MapFragment : Fragment() {
 
@@ -34,6 +38,13 @@ class MapFragment : Fragment() {
     private lateinit var googleMap: GoogleMap
     private lateinit var authTokenManager: AuthTokenManager
     private lateinit var siteHistoryRepository: SiteHistoryRepository
+    private lateinit var siteDetailsRepository: SiteDetailsRepository
+
+    // Store all site markers
+    private val siteMarkers = mutableListOf<SiteMarker>()
+
+    // Current bottom sheet dialog
+    private var bottomSheetDialog: BottomSheetDialog? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -46,6 +57,7 @@ class MapFragment : Fragment() {
         // Initialize repositories
         authTokenManager = AuthTokenManager.getInstance(requireContext())
         siteHistoryRepository = SiteHistoryRepository(requireContext())
+        siteDetailsRepository = SiteDetailsRepository(requireContext())
 
         setupMap(savedInstanceState)
 
@@ -57,7 +69,13 @@ class MapFragment : Fragment() {
         mapView.getMapAsync { map ->
             googleMap = map
 
-            // Default initial location (can be anywhere)
+            // Set click listener for markers
+            googleMap.setOnMarkerClickListener { marker ->
+                showSiteBottomSheet(marker)
+                true // Return true to consume the event
+            }
+
+            // Default initial location
             val defaultLocation = LatLng(31.7683, 35.2137) // Jerusalem as fallback
             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 8f))
 
@@ -99,6 +117,7 @@ class MapFragment : Fragment() {
         }
     }
 
+    // In MapFragment.kt - update the addMarkersForVisitedSites method
     private fun addMarkersForVisitedSites(sites: List<SiteHistory>) {
         if (sites.isEmpty()) {
             Log.d(TAG, "No sites to display on map")
@@ -107,6 +126,7 @@ class MapFragment : Fragment() {
 
         // Clear existing markers
         googleMap.clear()
+        siteMarkers.clear()
 
         // Track bounds to fit all markers
         var firstLocation: LatLng? = null
@@ -121,8 +141,53 @@ class MapFragment : Fragment() {
                 firstLocation = location
             }
 
-            // Fetch site details to get the correct name
-            fetchSiteDetailsAndAddMarker(site, location)
+            // Format site ID to be more readable initially
+            val formattedSiteId = site.siteInfoId.replace(Regex("(?<=[a-z])(?=[A-Z])"), " ")
+                .split(" ")
+                .joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+
+            // Create initial marker with formatted site ID
+            val marker = googleMap.addMarker(
+                MarkerOptions()
+                    .position(location)
+                    .title(formattedSiteId) // Use formatted ID until we get the real name
+            )
+
+            // Create and store site marker
+            val siteMarker = SiteMarker(
+                siteHistory = site,
+                latLng = location,
+                marker = marker
+            )
+            siteMarkers.add(siteMarker)
+
+            // Store reference in marker tag
+            marker?.tag = siteMarker
+
+            // Preload site details to update marker titles
+            val cleanSiteId = site.siteInfoId.replace(" ", "")
+            ExploreLensApiClient.siteDetailsApi.getSiteDetails(cleanSiteId)
+                .enqueue(object : retrofit2.Callback<com.example.explorelens.data.model.SiteDetails.SiteDetails> {
+                    override fun onResponse(
+                        call: retrofit2.Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
+                        response: retrofit2.Response<com.example.explorelens.data.model.SiteDetails.SiteDetails>
+                    ) {
+                        if (response.isSuccessful && response.body() != null) {
+                            val siteDetails = response.body()
+                            if (!siteDetails?.name.isNullOrEmpty()) {
+                                // Update marker title
+                                marker?.title = siteDetails?.name
+                            }
+                        }
+                    }
+
+                    override fun onFailure(
+                        call: retrofit2.Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
+                        t: Throwable
+                    ) {
+                        Log.e(TAG, "Error fetching site details for marker title", t)
+                    }
+                })
         }
 
         // Move camera to first location with reasonable zoom
@@ -131,72 +196,167 @@ class MapFragment : Fragment() {
         }
     }
 
-    private fun fetchSiteDetailsAndAddMarker(site: SiteHistory, location: LatLng) {
-        // Remove spaces from site ID for API call
-        val cleanSiteId = site.siteInfoId.replace(" ", "")
+    private fun loadSiteDetails(siteMarker: SiteMarker) {
+        val siteId = siteMarker.siteId
 
-        ExploreLensApiClient.siteDetailsApi.getSiteDetails(cleanSiteId)
-            .enqueue(object : Callback<com.example.explorelens.data.model.SiteDetails.SiteDetails> {
-                override fun onResponse(
-                    call: Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
-                    response: Response<com.example.explorelens.data.model.SiteDetails.SiteDetails>
-                ) {
-                    // Use site name from response, fallback to original ID if not available
-                    val siteName = response.body()?.name ?: formatSiteId(site.siteInfoId)
-
-                    // Add marker with site info
-                    val marker = googleMap.addMarker(
-                        MarkerOptions()
-                            .position(location)
-                            .title(siteName)
-                            .snippet("Visited: ${formatDate(site.createdAt)}")
-                    )
-
-                    // Store siteInfoId as the marker's tag for navigation
-                    marker?.tag = site.siteInfoId
-
-                    Log.d(TAG, "Added marker for $siteName at ${site.latitude}, ${site.longitude}")
+        // Fetch site details
+        siteDetailsRepository.getSiteDetails(siteId).observe(viewLifecycleOwner) { siteDetails ->
+            if (siteDetails != null) {
+                // Update the site marker with details
+                val updatedMarker = siteMarker.copy(siteDetails = siteDetails)
+                val index = siteMarkers.indexOf(siteMarker)
+                if (index >= 0) {
+                    siteMarkers[index] = updatedMarker
                 }
 
-                override fun onFailure(
-                    call: Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
-                    t: Throwable
-                ) {
-                    // Fallback marker if API call fails
-                    val marker = googleMap.addMarker(
-                        MarkerOptions()
-                            .position(location)
-                            .title(formatSiteId(site.siteInfoId))
-                            .snippet("Visited: ${formatDate(site.createdAt)}")
-                    )
+                // Update marker title
+                siteMarker.marker?.title = siteDetails.name ?: siteMarker.name
 
-                    marker?.tag = site.siteInfoId
-
-                    Log.e(TAG, "Failed to fetch site details for ${site.siteInfoId}", t)
+                // If bottom sheet is showing this marker, update it
+                bottomSheetDialog?.let { dialog ->
+                    val sheetView = dialog.findViewById<View>(R.id.siteNameTextView)?.rootView
+                    if (sheetView != null) {
+                        val currentSiteId = sheetView.tag as? String
+                        if (currentSiteId == siteId) {
+                            updateBottomSheetContent(sheetView, updatedMarker)
+                        }
+                    }
                 }
-            })
-
-        // Set up marker click listener (moved outside the API call to ensure it's always set)
-        googleMap.setOnInfoWindowClickListener { marker ->
-            val siteInfoId = marker.tag as? String
-            if (siteInfoId != null) {
-                Log.d(TAG, "Marker clicked for site: $siteInfoId")
-                navigateToSiteDetails(siteInfoId)
             }
         }
     }
 
-    private fun formatSiteId(siteInfoId: String): String {
-        // Format the site ID to be more readable
-        return siteInfoId.replace(Regex("(?<=[a-z])(?=[A-Z])"), " ")
-            .split(" ")
-            .joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+    private fun showSiteBottomSheet(marker: Marker) {
+        // Find the site marker
+        val siteMarker = when (val tag = marker.tag) {
+            is SiteMarker -> tag
+            else -> {
+                Log.e(TAG, "Invalid marker tag: $tag")
+                return
+            }
+        }
+
+        Log.d(TAG, "Showing bottom sheet for site: ${siteMarker.siteId}")
+
+        // Close existing dialog if open
+        bottomSheetDialog?.dismiss()
+
+        // Create bottom sheet dialog
+        bottomSheetDialog = BottomSheetDialog(requireContext()).apply {
+            val view = layoutInflater.inflate(R.layout.marker_bottom_sheet, null)
+            view.tag = siteMarker.siteId
+
+            setContentView(view)
+
+            // Set the name and date
+            val siteNameTextView = view.findViewById<TextView>(R.id.siteNameTextView)
+            val visitDateTextView = view.findViewById<TextView>(R.id.visitDateTextView)
+            val siteImageView = view.findViewById<ShapeableImageView>(R.id.siteImageView)
+
+            // Set initial values
+            siteNameTextView.text = siteMarker.name
+            visitDateTextView.text = siteMarker.visitDate
+
+            // Load image directly using the method that matches your SiteHistoryViewHolder approach
+            loadImageDirectly(siteMarker.siteId, siteImageView)
+
+            // Set button click listener
+            view.findViewById<Button>(R.id.viewDetailsButton).setOnClickListener {
+                navigateToSiteDetails(siteMarker.siteId)
+                dismiss()
+            }
+
+            show()
+        }
+    }
+    private fun loadImageDirectly(siteId: String, imageView: ShapeableImageView) {
+        val cleanSiteId = siteId.replace(" ", "")
+        Log.d(TAG, "Directly loading image for site: $cleanSiteId")
+
+        // Set a default placeholder while loading
+        imageView.setImageResource(R.drawable.noimage)
+
+        // Use the API directly like in your SiteHistoryViewHolder
+        ExploreLensApiClient.siteDetailsApi.getSiteDetails(cleanSiteId)
+            .enqueue(object : retrofit2.Callback<com.example.explorelens.data.model.SiteDetails.SiteDetails> {
+                override fun onResponse(
+                    call: retrofit2.Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
+                    response: retrofit2.Response<com.example.explorelens.data.model.SiteDetails.SiteDetails>
+                ) {
+                    if (response.isSuccessful) {
+                        val siteDetails = response.body()
+
+                        // Check if we have a valid site details object
+                        if (siteDetails != null) {
+                            Log.d(TAG, "Received site details: ${siteDetails.name}")
+                            Log.d(TAG, "Image URL: ${siteDetails.imageUrl}")
+
+                            // Update the site name in the bottom sheet
+                            val bottomSheet = bottomSheetDialog?.findViewById<View>(R.id.siteNameTextView)?.rootView
+                            bottomSheet?.findViewById<TextView>(R.id.siteNameTextView)?.text = siteDetails.name
+
+                            // Load image if available
+                            if (!siteDetails.imageUrl.isNullOrEmpty()) {
+                                try {
+                                    if (isAdded) { // Check if fragment is still attached
+                                        Glide.with(requireContext())
+                                            .load(siteDetails.imageUrl)
+                                            .placeholder(R.drawable.noimage)
+                                            .error(R.drawable.noimage)
+                                            .centerCrop()
+                                            .transition(DrawableTransitionOptions.withCrossFade())
+                                            .into(imageView)
+
+                                        Log.d(TAG, "Successfully started loading image")
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Error loading image: ${e.message}", e)
+                                }
+                            } else {
+                                Log.d(TAG, "No image URL in response")
+                            }
+                        } else {
+                            Log.e(TAG, "Site details is null")
+                        }
+                    } else {
+                        Log.e(TAG, "Failed to fetch site details: ${response.code()}")
+                    }
+                }
+
+                override fun onFailure(
+                    call: retrofit2.Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
+                    t: Throwable
+                ) {
+                    Log.e(TAG, "Error fetching site details", t)
+                }
+            })
     }
 
-    private fun formatDate(timestamp: Long): String {
-        val date = Date(timestamp)
-        val format = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
-        return format.format(date)
+    private fun updateBottomSheetContent(view: View, siteMarker: SiteMarker) {
+        val siteImageView = view.findViewById<ShapeableImageView>(R.id.siteImageView)
+        val siteNameTextView = view.findViewById<TextView>(R.id.siteNameTextView)
+        val visitDateTextView = view.findViewById<TextView>(R.id.visitDateTextView)
+
+        // Set name and date
+        siteNameTextView.text = siteMarker.name
+        visitDateTextView.text = siteMarker.visitDate
+
+        // Load image
+        if (siteMarker.imageUrl != null) {
+            Log.d(TAG, "Loading image from URL: ${siteMarker.imageUrl}")
+            Glide.with(requireContext())
+                .load(siteMarker.imageUrl)
+                .placeholder(R.drawable.noimage)
+                .error(R.drawable.noimage)
+                .centerCrop()
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .into(siteImageView)
+        } else {
+            Glide.with(requireContext())
+                .load(R.drawable.noimage)
+                .centerCrop()
+                .into(siteImageView)
+        }
     }
 
     private fun navigateToSiteDetails(siteInfoId: String) {
@@ -219,7 +379,6 @@ class MapFragment : Fragment() {
                 arguments = bundle
             }
 
-            // Find the correct container ID in your layout
             val containerId = (view?.parent as? ViewGroup)?.id ?: R.id.nav_host_fragment
 
             parentFragmentManager.beginTransaction()
@@ -229,6 +388,7 @@ class MapFragment : Fragment() {
         }
     }
 
+    // Standard MapView lifecycle methods
     override fun onResume() {
         super.onResume()
         mapView.onResume()
@@ -252,6 +412,9 @@ class MapFragment : Fragment() {
     override fun onDestroy() {
         super.onDestroy()
         mapView.onDestroy()
+        // Dismiss bottom sheet if open
+        bottomSheetDialog?.dismiss()
+        bottomSheetDialog = null
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
