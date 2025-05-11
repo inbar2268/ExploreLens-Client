@@ -23,7 +23,6 @@ import com.example.explorelens.common.samplerender.arcore.BackgroundRenderer
 import com.example.explorelens.ar.classification.utils.ImageUtils
 import com.example.explorelens.ar.render.LabelRender
 import com.example.explorelens.ar.render.PointCloudRender
-import com.example.explorelens.data.model.siteDetectionData.allImageAnalyzedResults
 import com.example.explorelens.data.model.siteDetectionData.ImageAnalyzedResult
 import com.google.ar.core.Anchor
 import com.google.ar.core.Coordinates2d
@@ -35,12 +34,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
 import com.example.explorelens.data.model.siteDetectionData.SiteInformation
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import java.io.File
 import java.lang.Thread.sleep
 import java.util.Collections
 import kotlin.math.sqrt
@@ -52,10 +47,13 @@ import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import com.example.explorelens.model.ARLabeledAnchor
 import com.example.explorelens.utils.GeoLocationUtils
 import com.example.explorelens.data.network.ExploreLensApiClient
+import com.example.explorelens.data.network.detectionResult.AnalyzedResultApi
+import com.example.explorelens.data.repository.DetectionResultRepository
 
-class AppRenderer(val activity: ArActivity,
-                  private val geoLocationUtils: GeoLocationUtils,
-                  private val siteHistoryViewModel: SiteHistoryViewModel
+class AppRenderer(
+    val activity: ArActivity,
+    private val geoLocationUtils: GeoLocationUtils,
+    private val siteHistoryViewModel: SiteHistoryViewModel
 ) : DefaultLifecycleObserver, SampleRender.Renderer,
     CoroutineScope by MainScope() {
     companion object {
@@ -72,7 +70,7 @@ class AppRenderer(val activity: ArActivity,
     val projectionMatrix = FloatArray(16)
     val viewProjectionMatrix = FloatArray(16)
 
-    var serverResult: List<ImageAnalyzedResult>? = listOf()
+    var serverResult: ImageAnalyzedResult? = null
     var scanButtonWasPressed = false
 
     private var lastSnapshotData: Snapshot? = null
@@ -192,13 +190,11 @@ class AppRenderer(val activity: ArActivity,
     }
 
     private fun processObjectResults(frame: Frame, session: Session) {
-        val objects = serverResult
-        if (objects != null) {
+        val obj = serverResult
+        if (obj != null) {
             serverResult = null
             val snapshotData = lastSnapshotData
-
-            Log.i(TAG, "Analyzer got objects: $objects")
-
+            Log.i(TAG, "Analyzer got objects: $obj")
             if (snapshotData == null) {
                 Log.e(TAG, "No snapshot data available for anchor creation")
                 view.post {
@@ -207,33 +203,32 @@ class AppRenderer(val activity: ArActivity,
                 }
                 return
             }
-
-            val anchors = objects.mapNotNull { obj ->
-                fetchAndCreateAnchor(session, snapshotData, obj, frame)
-            }
-
+            val anchor = fetchAndCreateAnchor(session, snapshotData, obj, frame)
             launch {
-                val currentLocation = geoLocationUtils.getSingleCurrentLocation() // Await the result
-                addAnchorToDatabase(anchors)
-                createSiteHistoryForDetectedObjects(objects, currentLocation) // Pass the location
+                val currentLocation =
+                    geoLocationUtils.getSingleCurrentLocation() // Await the result
+                if (anchor != null) {
+                    addAnchorToDatabase(anchor)
+                }
+                createSiteHistoryForDetectedObject(obj, currentLocation) // Pass the location
             }
 
-            addAnchorToDatabase(anchors)
+            if (anchor != null) {
+                addAnchorToDatabase(anchor)
+            }
 
             view.post {
                 view.setScanningActive(false)
-                when {
-                    anchors.isEmpty() ->
-                        showSnackbar("No landmarks detected. Try scanning again.")
 
-                    anchors.size != objects.size ->
-                        showSnackbar(
-                            "Some landmarks could not be anchored in space. " +
-                                    "Try moving your device around to scan the environment better."
-                        )
+                when {
+                    anchor == null ->
+                        showSnackbar("No landmark detected. Try scanning again.")
+
+                    anchor.anchor.trackingState != TrackingState.TRACKING ->
+                        showSnackbar("Could not anchor the landmark. Try moving your device around.")
 
                     else ->
-                        showSnackbar("Tap on a label to see more details")
+                        showSnackbar("Tap on the label to see more details")
                 }
             }
         }
@@ -498,18 +493,7 @@ class AppRenderer(val activity: ArActivity,
             path?.let {
                 Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
             }
-            val mockResults = listOf(
-                ImageAnalyzedResult(
-                    status = "success",
-                    description = "Famous site detected from cropped object.",
-                    siteInformation = SiteInformation(
-                        label = "Tower",
-                        x = 0.3430117717f,
-                        y = 0.319694645f,
-                        siteName = "Big Ben"
-                    ),
-                    id = "6818fcadb249f52360e546e9",
-                    ),
+            val mockResults =
                 ImageAnalyzedResult(
                     status = "assume",
                     description = "Famous site detected in full image.",
@@ -519,9 +503,9 @@ class AppRenderer(val activity: ArActivity,
                         y = 0.5f,
                         siteName = "Colosseum"
                     ),
-                    id = "6818fd47b249f52360e546ec",
-                    )
-            )
+                    siteInfoId = "6818fd47b249f52360e546ec",
+                )
+
             launch(Dispatchers.Main) {
                 sleep(2000)
                 serverResult = mockResults
@@ -536,7 +520,6 @@ class AppRenderer(val activity: ArActivity,
                 view.setScanningActive(false)
             }
         }
-
 
 
         val snapshot = Snapshot(
@@ -554,100 +537,6 @@ class AppRenderer(val activity: ArActivity,
         null
     } catch (e: Throwable) {
         throw e
-    }
-    fun getAnalyzedResult(path: String) {
-        Log.d("AnalyzeImage", "Starting image analysis")
-        launch(Dispatchers.IO) {
-            try {
-                val file = File(path)
-                Log.d("AnalyzeImage", "Analyzing image: ${file.path}")
-
-                // Prepare multipart request with the image file
-                val requestBody = file.asRequestBody("application/octet-stream".toMediaType())
-                val multipartBody =
-                    MultipartBody.Part.createFormData("image", file.name, requestBody)
-                val request =
-                    ExploreLensApiClient.analyzedResultApi.getAnalyzedResult(multipartBody)
-                val response = request.execute()
-
-                Log.d("AnalyzeImage", "Server response: ${response}")
-
-                // Switch to Main thread for UI updates
-                withContext(Dispatchers.Main) {
-                    if (response.isSuccessful) {
-                        val result: allImageAnalyzedResults? = response.body()
-
-                        // Check for null response body
-                        if (result == null) {
-                            Log.e("AnalyzeImage", "Received empty response from server")
-                            showSnackbar("Server error: No data received")
-                            return@withContext
-                        }
-
-                        // Check if this is a direct response (without results array)
-                        if (result.result.isNullOrEmpty() && result.status != null) {
-                            // Create a single result object from the direct response
-                            val singleResult = ImageAnalyzedResult(
-                                status = result.status ?: "",
-                                description = result.description ?: "",
-                                siteInformation = result.siteInformation
-                            )
-
-                            serverResult = listOf(singleResult)
-
-                            // Handle failure status
-                            if (singleResult.status == "failure") {
-                                Log.d(
-                                    "AnalyzeImage",
-                                    "No objects detected: ${singleResult.description}"
-                                )
-                                showSnackbar("No objects detected in the image")
-                            } else {
-                                Log.d(
-                                    "AnalyzeImage",
-                                    "Site detected: ${singleResult.siteInformation?.siteName ?: "Unknown"}"
-                                )
-                            }
-                        }
-                        // Handle normal results array
-                        else if (!result.result.isNullOrEmpty()) {
-                            Log.d(
-                                "AnalyzeImage",
-                                "Found ${result.result.size} objects in the image"
-                            )
-                            serverResult = result.result
-
-                            val firstObject = serverResult?.firstOrNull()
-                            if (firstObject != null) {
-                                Log.d(
-                                    "AnalyzeImage",
-                                    "Image analyzed: ${firstObject.siteInformation?.siteName ?: "No label found"}"
-                                )
-                            }
-                        }
-                        // Handle case with no results at all
-                        else {
-                            Log.d("AnalyzeImage", "No objects detected in the image")
-                            showSnackbar("No objects detected in the image")
-                            serverResult = emptyList()
-                        }
-                    } else {
-                        // Handle unsuccessful HTTP response
-                        Log.e("AnalyzeImage", "Analysis failed! Response code: ${response.code()}")
-                        showSnackbar("Server error: ${response.code()}")
-                    }
-                }
-            } catch (e: Exception) {
-                // Handle exceptions during the request
-                Log.e("AnalyzeImage", "Analysis failed! Exception: ${e.message}")
-                e.printStackTrace()
-
-                // Switch to Main thread to show error message
-                withContext(Dispatchers.Main) {
-                    showSnackbar("Error analyzing the image")
-                }
-            }
-        }
     }
 
 
@@ -784,6 +673,7 @@ class AppRenderer(val activity: ArActivity,
             Log.e(TAG, "Error processing touch", e)
         }
     }
+
     private fun fetchAndCreateAnchor(
         session: Session,
         snapshotData: Snapshot,
@@ -793,9 +683,9 @@ class AppRenderer(val activity: ArActivity,
         val atX = obj.siteInformation?.x
         val atY = obj.siteInformation?.y
         val siteName = obj.siteInformation?.siteName
-        val siteId = obj.id
+        val siteId = obj.siteInfoId
 
-        if (atX == null || atY == null || siteName == null ||  siteId == null) {
+        if (atX == null || atY == null || siteName == null || siteId == null) {
             Log.e(TAG, "Missing location data or site name/id")
             return null
         }
@@ -896,6 +786,7 @@ class AppRenderer(val activity: ArActivity,
         // Otherwise return the whole description
         return description.trim()
     }
+
     private fun handleAnchorClick(clickedAnchor: ARLabeledAnchor) {
         // Use the siteName directly if available, otherwise extract from the label
         val siteId = clickedAnchor.siteId
@@ -922,32 +813,63 @@ class AppRenderer(val activity: ArActivity,
         }
     }
 
-    private fun addAnchorToDatabase(anchors: List<ARLabeledAnchor>) {
-        Model.shared.addArLabelAnchors(anchors) {
+    private fun addAnchorToDatabase(anchor: ARLabeledAnchor) {
+        Model.shared.addArLabelAnchor(anchor) {
             getAllAnchors()
         }
     }
 
-    private fun createSiteHistoryForDetectedObjects(objects: List<ImageAnalyzedResult>, location: Location?) {
-        objects.forEach { result ->
-            result.siteInformation?.let { siteInfo ->
-                launch { // Launch a coroutine to call suspend functions
-                    // Use getSingleCurrentLocation to get the location once
-                    val currentLocation = geoLocationUtils.getSingleCurrentLocation() ?: return@launch // Await and handle null
+    fun getAnalyzedResult(path: String) {
+        Log.d("AnalyzeImage", "Starting image analysis")
 
-                    // The GeoLocationUtils will update its internal geoHash
-                    geoLocationUtils.updateLocation(currentLocation)
-                    val geoHash = geoLocationUtils.getGeoHash() ?: ""
+        launch(Dispatchers.IO) {
+            val repository = DetectionResultRepository()
+            val result = repository.getAnalyzedResult(path)
 
-                    siteHistoryViewModel.createSiteHistory(
-                        siteInfoId = result.id,
-                        currentLocation
-                    )
-                    Log.d(TAG, "Saved site history with geoHash: $geoHash, lat: ${currentLocation.latitude}, long: ${currentLocation.longitude}")
+            withContext(Dispatchers.Main) {
+                result.onSuccess { analyzedResult ->
+                    if (analyzedResult.status == "failure") {
+                        Log.d("AnalyzeImage", "No objects detected: ${analyzedResult.description}")
+                        showSnackbar("No objects detected in the image")
+                        serverResult = null
+                    } else {
+                        Log.d(
+                            "AnalyzeImage",
+                            "Site detected: ${analyzedResult.siteInformation?.siteName ?: "Unknown"}"
+                        )
+                        serverResult = analyzedResult // אם זה משתנה מסוג ImageAnalyzedResult
+                        // אם serverResult עדיין מוגדר כ List - תעדכני ליחיד או תשני את השם שלו
+                    }
+                }
 
-
+                result.onFailure { error ->
+                    Log.e("AnalyzeImage", "Error analyzing image: ${error.localizedMessage}")
+                    showSnackbar("Error analyzing the image: ${error.message}")
                 }
             }
         }
     }
+
+    private fun createSiteHistoryForDetectedObject(
+        result: ImageAnalyzedResult,
+        location: Location?
+    ) {
+        launch {
+            val currentLocation = geoLocationUtils.getSingleCurrentLocation()
+                ?: return@launch
+
+            geoLocationUtils.updateLocation(currentLocation)
+            val geoHash = geoLocationUtils.getGeoHash() ?: ""
+
+            siteHistoryViewModel.createSiteHistory(
+                siteInfoId = result.siteInfoId,
+                currentLocation
+            )
+            Log.d(
+                TAG,
+                "Saved site history with geoHash: $geoHash, lat: ${currentLocation.latitude}, long: ${currentLocation.longitude}"
+            )
+        }
+    }
+
 }

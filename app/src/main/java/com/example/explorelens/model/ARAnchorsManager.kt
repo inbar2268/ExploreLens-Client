@@ -32,6 +32,16 @@ object ARAnchorsManager {
         _anchorsLiveData.postValue(anchors.toList())
     }
 
+    fun addAnchor(labeledAnchor: ARLabeledAnchor) {
+        val existingIndex = anchors.indexOfFirst { it.label == labeledAnchor.label }
+        if (existingIndex >= 0) {
+            anchors[existingIndex] = labeledAnchor
+        } else {
+            anchors.add(labeledAnchor)
+        }
+        _anchorsLiveData.postValue(anchors.toList())
+    }
+
     fun deleteAnchor(label: String) {
         val removed = anchors.removeIf { it.label == label }
         if (removed) {

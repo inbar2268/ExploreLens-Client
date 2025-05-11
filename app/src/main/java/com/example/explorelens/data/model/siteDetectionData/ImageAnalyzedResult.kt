@@ -9,7 +9,7 @@ data class ImageAnalyzedResult(
     var description: String = "",
     @SerializedName("siteInformation")
     var siteInformation: SiteInformation? = null,
-    @SerializedName("id")
-    var id: String = "",
+    @SerializedName("siteInfoId")
+    var siteInfoId: String = "",
 
-)
+    )
