@@ -36,6 +36,14 @@ class Model private constructor() {
             }
         }
     }
+    fun addArLabelAnchor(anchor: ARLabeledAnchor, callback: EmptyCallback) {
+        executor.execute {
+            ARAnchorsManager.addAnchor(anchor) // נניח שאת יוצרת פונקציה חדשה addAnchor בתוך ARAnchorsManager
+            mainHandler.post {
+                callback()
+            }
+        }
+    }
 
     fun deleteArLabeledAnchor(label: String, callback: EmptyCallback) {
         executor.execute {
