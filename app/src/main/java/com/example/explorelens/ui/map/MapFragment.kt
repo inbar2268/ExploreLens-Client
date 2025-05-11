@@ -1,25 +1,28 @@
 package com.example.explorelens.ui.map
 
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.example.explorelens.R
-import com.example.explorelens.adapters.siteHistory.SiteHistoryViewHolder
 import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager
 import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.data.repository.SiteHistoryRepository
-import com.example.explorelens.databinding.ItemSiteHistoryBinding
 import com.example.explorelens.ui.site.SiteDetailsFragment
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -27,7 +30,6 @@ import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.imageview.ShapeableImageView
 import kotlinx.coroutines.launch
 
@@ -43,8 +45,8 @@ class MapFragment : Fragment() {
     // Store all site markers
     private val siteMarkers = mutableListOf<SiteMarker>()
 
-    // Current bottom sheet dialog
-    private var bottomSheetDialog: BottomSheetDialog? = null
+    // Current popup dialog
+    private var popupDialog: AlertDialog? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -71,7 +73,7 @@ class MapFragment : Fragment() {
 
             // Set click listener for markers
             googleMap.setOnMarkerClickListener { marker ->
-                showSiteBottomSheet(marker)
+                showSitePopupDialog(marker)
                 true // Return true to consume the event
             }
 
@@ -117,7 +119,6 @@ class MapFragment : Fragment() {
         }
     }
 
-    // In MapFragment.kt - update the addMarkersForVisitedSites method
     private fun addMarkersForVisitedSites(sites: List<SiteHistory>) {
         if (sites.isEmpty()) {
             Log.d(TAG, "No sites to display on map")
@@ -196,37 +197,7 @@ class MapFragment : Fragment() {
         }
     }
 
-    private fun loadSiteDetails(siteMarker: SiteMarker) {
-        val siteId = siteMarker.siteId
-
-        // Fetch site details
-        siteDetailsRepository.getSiteDetails(siteId).observe(viewLifecycleOwner) { siteDetails ->
-            if (siteDetails != null) {
-                // Update the site marker with details
-                val updatedMarker = siteMarker.copy(siteDetails = siteDetails)
-                val index = siteMarkers.indexOf(siteMarker)
-                if (index >= 0) {
-                    siteMarkers[index] = updatedMarker
-                }
-
-                // Update marker title
-                siteMarker.marker?.title = siteDetails.name ?: siteMarker.name
-
-                // If bottom sheet is showing this marker, update it
-                bottomSheetDialog?.let { dialog ->
-                    val sheetView = dialog.findViewById<View>(R.id.siteNameTextView)?.rootView
-                    if (sheetView != null) {
-                        val currentSiteId = sheetView.tag as? String
-                        if (currentSiteId == siteId) {
-                            updateBottomSheetContent(sheetView, updatedMarker)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private fun showSiteBottomSheet(marker: Marker) {
+    private fun showSitePopupDialog(marker: Marker) {
         // Find the site marker
         val siteMarker = when (val tag = marker.tag) {
             is SiteMarker -> tag
@@ -236,39 +207,58 @@ class MapFragment : Fragment() {
             }
         }
 
-        Log.d(TAG, "Showing bottom sheet for site: ${siteMarker.siteId}")
+        Log.d(TAG, "Showing popup dialog for site: ${siteMarker.siteId}")
 
         // Close existing dialog if open
-        bottomSheetDialog?.dismiss()
+        popupDialog?.dismiss()
 
-        // Create bottom sheet dialog
-        bottomSheetDialog = BottomSheetDialog(requireContext()).apply {
-            val view = layoutInflater.inflate(R.layout.marker_bottom_sheet, null)
-            view.tag = siteMarker.siteId
+        // Create custom popup dialog
+        val dialogView = layoutInflater.inflate(R.layout.marker_popup_dialog, null)
 
-            setContentView(view)
+        // Set up the dialog views
+        val siteNameTextView = dialogView.findViewById<TextView>(R.id.siteNameTextView)
+        val visitDateTextView = dialogView.findViewById<TextView>(R.id.visitDateTextView)
+        val siteImageView = dialogView.findViewById<ShapeableImageView>(R.id.siteImageView)
+        val viewDetailsButton = dialogView.findViewById<Button>(R.id.viewDetailsButton)
+        val closeButton = dialogView.findViewById<ImageView>(R.id.closeButton)
 
-            // Set the name and date
-            val siteNameTextView = view.findViewById<TextView>(R.id.siteNameTextView)
-            val visitDateTextView = view.findViewById<TextView>(R.id.visitDateTextView)
-            val siteImageView = view.findViewById<ShapeableImageView>(R.id.siteImageView)
+        // Set initial values
+        siteNameTextView.text = siteMarker.name
+        visitDateTextView.text = siteMarker.visitDate
 
-            // Set initial values
-            siteNameTextView.text = siteMarker.name
-            visitDateTextView.text = siteMarker.visitDate
+        // Load the image
+        loadImageDirectly(siteMarker.siteId, siteImageView)
 
-            // Load image directly using the method that matches your SiteHistoryViewHolder approach
-            loadImageDirectly(siteMarker.siteId, siteImageView)
+        // Create and show the dialog
+        popupDialog = AlertDialog.Builder(requireContext(), R.style.TransparentDialog)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
 
-            // Set button click listener
-            view.findViewById<Button>(R.id.viewDetailsButton).setOnClickListener {
-                navigateToSiteDetails(siteMarker.siteId)
-                dismiss()
-            }
+        // Set click listeners
+        viewDetailsButton.setOnClickListener {
+            navigateToSiteDetails(siteMarker.siteId)
+            popupDialog?.dismiss()
+        }
 
-            show()
+        closeButton.setOnClickListener {
+            popupDialog?.dismiss()
+        }
+
+        // Show dialog
+        popupDialog?.show()
+
+        // Optional: Set window properties for better appearance
+        popupDialog?.window?.let { window ->
+            window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+            // Center the dialog
+            val params = window.attributes
+            params.gravity = Gravity.CENTER
+            window.attributes = params
         }
     }
+
     private fun loadImageDirectly(siteId: String, imageView: ShapeableImageView) {
         val cleanSiteId = siteId.replace(" ", "")
         Log.d(TAG, "Directly loading image for site: $cleanSiteId")
@@ -291,9 +281,11 @@ class MapFragment : Fragment() {
                             Log.d(TAG, "Received site details: ${siteDetails.name}")
                             Log.d(TAG, "Image URL: ${siteDetails.imageUrl}")
 
-                            // Update the site name in the bottom sheet
-                            val bottomSheet = bottomSheetDialog?.findViewById<View>(R.id.siteNameTextView)?.rootView
-                            bottomSheet?.findViewById<TextView>(R.id.siteNameTextView)?.text = siteDetails.name
+                            // Update the site name in the dialog
+                            val dialog = popupDialog
+                            if (dialog != null && dialog.isShowing) {
+                                dialog.findViewById<TextView>(R.id.siteNameTextView)?.text = siteDetails.name
+                            }
 
                             // Load image if available
                             if (!siteDetails.imageUrl.isNullOrEmpty()) {
@@ -330,33 +322,6 @@ class MapFragment : Fragment() {
                     Log.e(TAG, "Error fetching site details", t)
                 }
             })
-    }
-
-    private fun updateBottomSheetContent(view: View, siteMarker: SiteMarker) {
-        val siteImageView = view.findViewById<ShapeableImageView>(R.id.siteImageView)
-        val siteNameTextView = view.findViewById<TextView>(R.id.siteNameTextView)
-        val visitDateTextView = view.findViewById<TextView>(R.id.visitDateTextView)
-
-        // Set name and date
-        siteNameTextView.text = siteMarker.name
-        visitDateTextView.text = siteMarker.visitDate
-
-        // Load image
-        if (siteMarker.imageUrl != null) {
-            Log.d(TAG, "Loading image from URL: ${siteMarker.imageUrl}")
-            Glide.with(requireContext())
-                .load(siteMarker.imageUrl)
-                .placeholder(R.drawable.noimage)
-                .error(R.drawable.noimage)
-                .centerCrop()
-                .transition(DrawableTransitionOptions.withCrossFade())
-                .into(siteImageView)
-        } else {
-            Glide.with(requireContext())
-                .load(R.drawable.noimage)
-                .centerCrop()
-                .into(siteImageView)
-        }
     }
 
     private fun navigateToSiteDetails(siteInfoId: String) {
@@ -412,9 +377,9 @@ class MapFragment : Fragment() {
     override fun onDestroy() {
         super.onDestroy()
         mapView.onDestroy()
-        // Dismiss bottom sheet if open
-        bottomSheetDialog?.dismiss()
-        bottomSheetDialog = null
+        // Dismiss popup dialog if open
+        popupDialog?.dismiss()
+        popupDialog = null
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -427,3 +392,5 @@ class MapFragment : Fragment() {
         mapView.onLowMemory()
     }
 }
+
+// Data class for site markers

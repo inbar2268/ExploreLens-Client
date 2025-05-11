@@ -11,17 +11,17 @@ import com.google.android.gms.maps.model.Marker
 data class SiteMarker(
     val siteHistory: SiteHistory,
     val latLng: LatLng,
-    val siteDetails: SiteDetails? = null,
+    val siteDetails: com.example.explorelens.data.model.SiteDetails.SiteDetails? = null,
     var marker: Marker? = null
 ) {
     val siteId: String
         get() = siteHistory.siteInfoId
 
     val imageUrl: String?
-        get() = siteDetails?.imageUrl
+        get() = siteDetails?.imageUrl?.takeIf { it.isNotEmpty() }
 
     val name: String
-        get() = siteDetails?.name ?: formatSiteId(siteId)
+        get() = siteDetails?.name?.takeIf { it.isNotEmpty() } ?: formatSiteId(siteId)
 
     val visitDate: String
         get() = "Visited: ${formatDate(siteHistory.createdAt)}"
