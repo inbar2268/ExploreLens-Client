@@ -39,8 +39,7 @@
                 android:src="@drawable/ic_back"
                 android:contentDescription="Back button"
                 android:scaleType="centerInside"
-                android:layout_margin="8dp"
-
+                android:layout_margin="10dp"
                 android:focusableInTouchMode="true"
                 app:tint="@color/black"/>
 
