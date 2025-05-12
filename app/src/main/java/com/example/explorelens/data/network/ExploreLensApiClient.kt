@@ -84,5 +84,7 @@ object ExploreLensApiClient {
         createRetrofitClient(authenticatedOkHttpClient).create(ReviewsApi::class.java)
     }
 
-
+    val nearbyPlacesApi: NearbyPlacesApi by lazy {
+        createRetrofitClient(authenticatedOkHttpClient).create(NearbyPlacesApi::class.java)
+    }
 }
