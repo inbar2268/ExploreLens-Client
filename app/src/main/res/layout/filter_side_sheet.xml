@@ -11,7 +11,7 @@
         android:id="@+id/cardView"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        app:cardCornerRadius="8dp"
+        app:cardCornerRadius="16dp"
         app:cardElevation="4dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -26,44 +26,49 @@
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="12dp">
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="14dp">
 
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
+                    android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true">
 
                     <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:layout_marginEnd="8dp"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
                         android:src="@drawable/ic_filter"
-                        app:tint="@color/filter_blue" />
+                        app:tint="@color/filter"
+                        android:layout_marginEnd="8dp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="FILTER"
-                        android:textColor="@color/filter_blue"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textColor="@color/filter"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/harmonyos_sans_regular" />
+
                 </LinearLayout>
 
                 <ImageView
                     android:id="@+id/btn_close_side_sheet"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
+                    android:padding="5dp"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:contentDescription="Close"
                     android:focusable="true"
+                    android:stateListAnimator="@null"
                     android:src="@drawable/ic_close"
-                    app:tint="@color/filter_blue" />
+                    app:tint="@color/filter"/>
 
             </RelativeLayout>
 
@@ -78,45 +83,60 @@
                 android:layout_weight="1"
                 android:fillViewport="true">
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/filterOptionsRecyclerViewSideSheet"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:clipToPadding="false"
-                    android:paddingBottom="8dp"
-                    android:paddingTop="8dp" />
+                    android:orientation="vertical"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp">
 
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/filterOptionsRecyclerViewSideSheet"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clipToPadding="false" />
+
+                </LinearLayout>
             </androidx.core.widget.NestedScrollView>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="16dp">
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="12dp">
 
                 <Button
                     android:id="@+id/clearAllButtonSideSheet"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="48dp"
-                    android:layout_marginEnd="12dp"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
-                    android:background="@android:color/transparent"
                     android:text="CLEAR ALL"
-                    android:textColor="@color/filter_blue"
-                    android:textSize="14sp" />
+                    android:textColor="@color/filter"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/harmonyos_sans_regular"
+                    app:cornerRadius="8dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp" />
 
                 <Button
                     android:id="@+id/applyButtonSideSheet"
-                    android:layout_width="wrap_content"
-                    android:layout_height="48dp"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
                     android:layout_weight="1"
-                    android:backgroundTint="@color/filter_blue"
+                    android:background="@drawable/bg_button_primary"
+                    android:backgroundTint="@color/filter"
                     android:text="APPLY"
                     android:textColor="@android:color/white"
-                    android:textSize="14sp"
-                    app:cornerRadius="24dp" />
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/harmonyos_sans_regular"
+                    android:insetTop="0dp"
+                    android:stateListAnimator="@null"
+                    android:insetBottom="0dp" />
 
             </LinearLayout>
 

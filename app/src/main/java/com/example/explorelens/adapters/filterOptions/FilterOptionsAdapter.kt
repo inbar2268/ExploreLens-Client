@@ -4,20 +4,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.R
 import com.example.explorelens.data.model.FilterOption
 
 class FilterOptionAdapter(
-    private val options: List<FilterOption>,
+    private val options: MutableList<FilterOption>,
     private val onOptionChecked: (FilterOption, Boolean) -> Unit
 ) : RecyclerView.Adapter<FilterOptionAdapter.ViewHolder>() {
-
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val optionTextView: TextView = itemView.findViewById(R.id.optionTextView)
-        val optionCheckBox: CheckBox = itemView.findViewById(R.id.optionCheckBox)
-    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val itemView = LayoutInflater.from(parent.context)
@@ -26,18 +22,30 @@ class FilterOptionAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val currentOption = options[position]
-        holder.optionTextView.text = currentOption.name
-        holder.optionCheckBox.isChecked = currentOption.isChecked
+        val option = options[position]
+        holder.bind(option)
+    }
 
-        holder.optionCheckBox.setOnCheckedChangeListener { _, isChecked ->
-            onOptionChecked(currentOption, isChecked)
+    inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val iconImageView: ImageView = itemView.findViewById(R.id.optionIcon)
+        val textView: TextView = itemView.findViewById(R.id.optionTextView)
+        val checkBox: CheckBox = itemView.findViewById(R.id.optionCheckBox)
+
+        fun bind(option: FilterOption) {
+            textView.text = option.name
+            option.iconResId?.let { iconImageView.setImageResource(it) }
+            checkBox.isChecked = option.isChecked
+
+            checkBox.setOnCheckedChangeListener { _, isChecked ->
+                option.isChecked = isChecked // Update the adapter's internal state
+                onOptionChecked(option, isChecked) // Notify the Activity/Fragment (optional for UI updates)
+            }
         }
     }
 
     override fun getItemCount() = options.size
 
-    fun getSelectedFilters(): List<String> {
+    fun getCurrentChoices(): List<String> {
         return options.filter { it.isChecked }.map { it.name }
     }
 }

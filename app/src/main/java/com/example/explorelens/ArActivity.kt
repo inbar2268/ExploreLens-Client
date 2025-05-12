@@ -3,6 +3,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.Manifest
+import android.graphics.drawable.InsetDrawable
+import android.graphics.drawable.ShapeDrawable
+import android.graphics.drawable.shapes.RectShape
 import android.net.Uri
 import android.util.Log
 import android.view.Gravity
@@ -28,8 +31,11 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.adapters.filterOptions.FilterOptionAdapter
@@ -39,7 +45,6 @@ import com.example.explorelens.ar.AppRenderer
 import com.example.explorelens.ar.ArActivityView
 import com.example.explorelens.data.model.FilterOption
 import com.example.explorelens.data.repository.SiteHistoryRepository
-import com.example.explorelens.ui.layers.FilterFragment
 import com.example.explorelens.utils.GeoLocationUtils
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -59,13 +64,13 @@ class ArActivity : AppCompatActivity() {
   private val CAMERA_PERMISSION_REQUEST = 1002
   private lateinit var siteHistoryViewModel: SiteHistoryViewModel
   private val filterOptionsArray = arrayOf(
-    "restaurant",
-    "cafe",
-    "bar",
-    "bakery",
-    "hotel",
-    "pharmacy",
-    "gym"
+    FilterOption("restaurant", iconResId = R.drawable.ic_restaurant),
+    FilterOption("cafe", iconResId = R.drawable.ic_cafe),
+    FilterOption("bar", iconResId = R.drawable.ic_bar),
+    FilterOption("bakery", iconResId = R.drawable.ic_bakery),
+    FilterOption("hotel", iconResId = R.drawable.ic_hotel),
+    FilterOption("pharmacy", iconResId = R.drawable.ic_pharmacy),
+    FilterOption("gym", iconResId = R.drawable.ic_gym)
   )
   private val selectedFilters = mutableSetOf<String>()
 
@@ -304,155 +309,56 @@ class ArActivity : AppCompatActivity() {
       showFilterSideSheet() // Call the new function to show the side sheet
     }
   }
-//
-//  private fun showFilterSideSheet() {
-//    val sideSheetDialog = SideSheetDialog(this)
-//
-//// Standard side sheets have the following states:
-//// STATE_EXPANDED: The side sheet is visible at its maximum height
-//// and it is neither dragging nor settling (see below).
-//// STATE_HIDDEN: The side sheet is no longer visible and
-//// can only be re-shown programmatically.
-//// STATE_DRAGGING: The user is actively dragging the side sheet.
-//// STATE_SETTLING: The side sheet is settling to a specific height
-//// after a drag/swipe gesture. This will be the peek height, expanded height,
-//// or 0, in case the user action caused the side sheet to hide.
-//
-//    sideSheetDialog.behavior.addCallback(object : SideSheetCallback() {
-//      override fun onStateChanged(sheet: View, newState: Int) {
-//        if (newState == SideSheetBehavior.STATE_DRAGGING) {
-//          sideSheetDialog.behavior.state = SideSheetBehavior.STATE_EXPANDED
-//        }
-//      }
-//
-//      override fun onSlide(sheet: View, slideOffset: Float) {
-//      }
-//    })
-//
-//    val inflater = layoutInflater.inflate(R.layout.filter_side_sheet, null)
-//    val btnClose = inflater.findViewById<ImageButton>(R.id.btn_close)
-//
-//    btnClose.setOnClickListener {
-//      sideSheetDialog.dismiss()
-//    }
-//
-//    sideSheetDialog.setCancelable(false)
-//    sideSheetDialog.setCanceledOnTouchOutside(true)
-//    sideSheetDialog.setContentView(inflater)
-//    sideSheetDialog.show()
-//  }
-
-//  private fun showFilterSideSheet() {
-//    val filterSheet = FilterFragment()
-//    filterSheet.show(supportFragmentManager, filterSheet.tag)
-//  }
-
-//  private fun showMaterialFilterSideSheet() {
-//    // Create the side sheet using BottomSheetDialog (which we'll use as a side sheet)
-//    val bottomSheetDialog = BottomSheetDialog(this, R.style.MaterialSideSheetDialog)
-//
-//    // Inflate the side sheet layout
-//    val sideSheetView = layoutInflater.inflate(R.layout.material_filter_side_sheet, null)
-//    bottomSheetDialog.setContentView(sideSheetView)
-//
-//    // Set the dialog to open from the right side
-//    val window = bottomSheetDialog.window
-//    window?.let {
-//      it.setGravity(Gravity.END)
-//      val params = it.attributes
-//      params.width = resources.getDimensionPixelSize(R.dimen.filter_side_sheet_width)
-//      params.height = ViewGroup.LayoutParams.MATCH_PARENT
-//      it.attributes = params
-//      it.setWindowAnimations(R.style.MaterialSideSheetAnimation)
-//    }
-//
-//    // Get references to views
-//    val filterToolbar = sideSheetView.findViewById<MaterialToolbar>(R.id.filterToolbar)
-//    val filterOptionsRecyclerView = sideSheetView.findViewById<RecyclerView>(R.id.filterOptionsRecyclerView)
-//    val applyButton = sideSheetView.findViewById<MaterialButton>(R.id.applyButton)
-//    val clearAllButton = sideSheetView.findViewById<MaterialButton>(R.id.clearAllButton)
-//
-//    // Set up the toolbar and close button
-//    filterToolbar.setNavigationOnClickListener {
-//      bottomSheetDialog.dismiss()
-//    }
-//
-//    // Set up the filter options
-//    val allFilterOptions = mutableListOf(
-//      FilterOption("Restaurant"),
-//      FilterOption("Cafe"),
-//      FilterOption("Bar"),
-//      FilterOption("Bakery"),
-//      FilterOption("Hotel"),
-//      FilterOption("Pharmacy"),
-//      FilterOption("Gym")
-//    )
-//
-//    // Create and set the adapter
-//    val adapter = FilterOptionAdapter(allFilterOptions) { option, isChecked ->
-//      option.isChecked = isChecked
-//    }
-//
-//    filterOptionsRecyclerView.layoutManager = LinearLayoutManager(this)
-//    filterOptionsRecyclerView.adapter = adapter
-//
-//    // Set up the clear all button
-//    clearAllButton.setOnClickListener {
-//      allFilterOptions.forEach { it.isChecked = false }
-//      adapter.notifyDataSetChanged()
-//    }
-//
-//    // Set up the apply button
-//    applyButton.setOnClickListener {
-//      val selectedFilters = adapter.getSelectedFilters()
-//      Log.d(TAG, "Selected Filters: $selectedFilters")
-//      Toast.makeText(this, "Filters Applied: $selectedFilters", Toast.LENGTH_SHORT).show()
-//      bottomSheetDialog.dismiss()
-//    }
-//
-//    // Show the side sheet
-//    bottomSheetDialog.show()
-//  }
-//
-//// Update the setupLayersButton() method:
-//
-//  private fun setupLayersButton() {
-//    val layersButton = findViewById<ImageButton>(R.id.layersButton)
-//    layersButton?.setOnClickListener {
-//      Log.d(TAG, "Layers button clicked")
-//      showMaterialFilterSideSheet() // Use the Material side sheet
-//    }
-//  }
 
   private fun showFilterSideSheet() {
     val sideSheetDialog = SideSheetDialog(this)
     val inflater = layoutInflater.inflate(R.layout.filter_side_sheet, null)
     sideSheetDialog.setContentView(inflater)
 
-    val btnClose = inflater.findViewById<ImageView>(R.id.btn_close_side_sheet)
+    val closeButton = inflater.findViewById<ImageView>(R.id.btn_close_side_sheet)
     val filterOptionsRecyclerView = inflater.findViewById<RecyclerView>(R.id.filterOptionsRecyclerViewSideSheet)
     val applyButton = inflater.findViewById<Button>(R.id.applyButtonSideSheet)
     val clearAllButton = inflater.findViewById<Button>(R.id.clearAllButtonSideSheet)
 
-    val allFilterOptions = filterOptionsArray.map { optionName ->
-      FilterOption(optionName, selectedFilters.contains(optionName))
+    val allFilterOptions = filterOptionsArray.map { filterOptionName ->
+      FilterOption(
+        name = filterOptionName.name,
+        isChecked = selectedFilters.contains(filterOptionName.name),
+        iconResId = filterOptionName.iconResId
+      )
     }.toMutableList()
 
-    val adapter = FilterOptionAdapter(allFilterOptions) { option, isChecked ->
-      if (isChecked) {
-        selectedFilters.add(option.name)
-      } else {
-        selectedFilters.remove(option.name)
-      }
+    val adapter = FilterOptionAdapter(allFilterOptions) { _, _ ->
     }
     filterOptionsRecyclerView.layoutManager = LinearLayoutManager(this)
     filterOptionsRecyclerView.adapter = adapter
 
-    btnClose.setOnClickListener {
+    val dividerHeightPx = 3 // 1 pixel height
+    val dividerColor = ContextCompat.getColor(this, R.color.light_gray)
+    val dividerMarginPx = 50 // 20 pixel left and right margin
+
+    val divider = ShapeDrawable(RectShape())
+    divider.intrinsicHeight = dividerHeightPx
+
+    DrawableCompat.setTint(divider, dividerColor)
+
+    val insetDivider = InsetDrawable(divider, dividerMarginPx, 0, dividerMarginPx, 0)
+
+    val itemDecorator = DividerItemDecoration(
+      filterOptionsRecyclerView.context,
+      LinearLayoutManager.VERTICAL
+    ).apply {
+      setDrawable(insetDivider)
+    }
+    filterOptionsRecyclerView.addItemDecoration(itemDecorator)
+
+    closeButton.setOnClickListener {
       sideSheetDialog.dismiss()
     }
 
     applyButton.setOnClickListener {
+      selectedFilters.clear()
+      selectedFilters.addAll(adapter.getCurrentChoices()) // Update selectedFilters from adapter
       Log.d(TAG, "Selected Filters (on Apply): $selectedFilters")
       Toast.makeText(this, "Filters Applied: $selectedFilters", Toast.LENGTH_SHORT).show()
       sideSheetDialog.dismiss()
@@ -461,7 +367,6 @@ class ArActivity : AppCompatActivity() {
 
     clearAllButton.setOnClickListener {
       selectedFilters.clear()
-      // Update the UI to reflect the cleared filters
       allFilterOptions.forEach { it.isChecked = false }
       adapter.notifyDataSetChanged()
     }
@@ -469,7 +374,6 @@ class ArActivity : AppCompatActivity() {
     sideSheetDialog.setCanceledOnTouchOutside(true)
     sideSheetDialog.show()
   }
-
 
 
   override fun onResume() {

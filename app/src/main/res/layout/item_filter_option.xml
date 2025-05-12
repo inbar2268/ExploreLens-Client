@@ -1,26 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:paddingVertical="12dp"
-    android:paddingStart="16dp"
-    android:paddingEnd="16dp">
+    android:paddingHorizontal="20dp">
+
+    <ImageView
+        android:id="@+id/optionIcon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginEnd="12dp"
+        android:src="@drawable/ic_restaurant"
+        android:contentDescription="Filter Icon"
+        app:tint="#333333" />
 
     <TextView
         android:id="@+id/optionTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="Filter Option"
-        android:textSize="16sp"
-        android:textColor="@android:color/black" />
+        android:text="restaurant"
+        android:textSize="14sp"
+        android:textColor="#333333"
+        android:fontFamily="@font/harmonyos_sans_regular" />
 
     <CheckBox
         android:id="@+id/optionCheckBox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:buttonTint="@color/filter_blue" />
+        android:buttonTint="@color/filter" />
 
 </LinearLayout>
