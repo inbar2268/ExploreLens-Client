@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
+import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.data.network.auth.AuthTokenManager
 import com.example.explorelens.data.repository.AuthRepository
 import com.example.explorelens.utils.LoadingManager
@@ -22,7 +23,6 @@ import com.google.android.gms.tasks.Task
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class GoogleSignInHelper(private val fragment: Fragment, private val authRepository: AuthRepository) {
     private val TAG = "GoogleSignInHelper"
@@ -61,15 +61,11 @@ class GoogleSignInHelper(private val fragment: Fragment, private val authReposit
             if (idToken != null) {
                 onSuccessListener(idToken)
             } else {
-                Toast.makeText(fragment.context, "Google Sign-In failed: No ID token", Toast.LENGTH_SHORT).show()
+                ToastHelper.showShortToast(fragment.context, "Google Sign-In failed: No ID token");
             }
         } catch (e: ApiException) {
             Log.w(TAG, "Google sign in failed", e)
-            Toast.makeText(
-                fragment.context,
-                "Google Sign-In failed: ${e.statusCode}",
-                Toast.LENGTH_SHORT
-            ).show()
+            ToastHelper.showShortToast(fragment.context, "Google Sign-In failed: ${e.statusCode}");
         }
     }
 
@@ -99,7 +95,7 @@ class GoogleSignInHelper(private val fragment: Fragment, private val authReposit
         } catch (e: Exception) {
             hideLoading()
             Log.e(TAG, "Error launching Google Sign-In: ${e.message}")
-            Toast.makeText(fragment.context, "Failed to start Google Sign-In", Toast.LENGTH_SHORT).show()
+            ToastHelper.showShortToast(fragment.context, "Failed to start Google Sign-In");
         }
     }
 
@@ -122,16 +118,12 @@ class GoogleSignInHelper(private val fragment: Fragment, private val authReposit
 
                 if (result.isSuccess) {
                     val successMessage = if (isRegistration) "Registration successful!" else "Login successful!"
-                    Toast.makeText(fragment.context, successMessage, Toast.LENGTH_SHORT).show()
+                    ToastHelper.showShortToast(fragment.context, successMessage);
                     onSuccess()
                 } else {
                     val errorPrefix = if (isRegistration) "Google registration" else "Google login"
                     Log.e(TAG, "$errorPrefix failed: ${result.exceptionOrNull()?.message}")
-                    Toast.makeText(
-                        fragment.context,
-                        "$errorPrefix failed: ${result.exceptionOrNull()?.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    ToastHelper.showShortToast(fragment.context, "$errorPrefix failed: ${result.exceptionOrNull()?.message}");
                 }
             }
         }

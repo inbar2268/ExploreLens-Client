@@ -37,7 +37,9 @@
             android:text="Cancel"
             android:textAllCaps="false"
             android:textColor="#262626"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"/>
 
         <View
             android:layout_width="16dp"
@@ -52,7 +54,9 @@
             android:text="Logout"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"/>
     </LinearLayout>
 
 </LinearLayout>
