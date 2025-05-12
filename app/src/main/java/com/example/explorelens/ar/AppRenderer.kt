@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.example.explorelens.ArActivity
@@ -49,6 +50,7 @@ import com.example.explorelens.utils.GeoLocationUtils
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.detectionResult.AnalyzedResultApi
 import com.example.explorelens.data.repository.DetectionResultRepository
+import com.example.explorelens.data.repository.NearbyPlacesRepository
 
 class AppRenderer(
     val activity: ArActivity,
@@ -107,6 +109,7 @@ class AppRenderer(
         }
         pointCloudRender.onSurfaceCreated(render)
         labelRenderer.onSurfaceCreated(render)
+        getNearbyPlacesForAR(listOf("bar", "hotel"))
     }
 
     override fun onSurfaceChanged(render: SampleRender?, width: Int, height: Int) {
@@ -837,14 +840,44 @@ class AppRenderer(
                             "AnalyzeImage",
                             "Site detected: ${analyzedResult.siteInformation?.siteName ?: "Unknown"}"
                         )
-                        serverResult = analyzedResult // אם זה משתנה מסוג ImageAnalyzedResult
-                        // אם serverResult עדיין מוגדר כ List - תעדכני ליחיד או תשני את השם שלו
+                        serverResult = analyzedResult
                     }
                 }
 
                 result.onFailure { error ->
                     Log.e("AnalyzeImage", "Error analyzing image: ${error.localizedMessage}")
                     showSnackbar("Error analyzing the image: ${error.message}")
+                }
+            }
+        }
+    }
+
+    fun getNearbyPlacesForAR(categories: List<String>) {
+        Log.d("NearbyPlaces", "Fetching nearby places for AR...")
+
+        launch(Dispatchers.IO) {
+            val currentLocation = geoLocationUtils.getSingleCurrentLocation()
+                ?: return@launch
+            geoLocationUtils.updateLocation(currentLocation)
+            val repository = NearbyPlacesRepository()
+            val result = repository.fetchNearbyPlaces(
+                currentLocation.latitude,
+                currentLocation.longitude,
+                categories
+            )
+
+            withContext(Dispatchers.Main) {
+                result.onSuccess { places ->
+                    Log.d("NearbyPlaces", "Received ${places.size} places")
+                    showSnackbar("Received ${places.size} places")
+                    showSnackbar("Received ${places[0].name} , ${places[1].name} places")
+                    //updating AR nearbyPlaces anchors when creates
+                    // updateARViewWithPlaces(places)
+                }
+
+                result.onFailure { error ->
+                    Log.e("NearbyPlaces", "Error fetching places: ${error.localizedMessage}")
+                    showSnackbar("Couldn't load nearby places: ${error.message}")
                 }
             }
         }
