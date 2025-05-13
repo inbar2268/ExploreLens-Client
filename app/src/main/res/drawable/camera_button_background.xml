@@ -11,8 +11,8 @@
                 <shape android:shape="oval">
                     <solid android:color="#FFFFFF"/>
                     <size
-                        android:width="70dp"
-                        android:height="70dp"/>
+                        android:width="67dp"
+                        android:height="67dp"/>
                     <padding
                         android:left="10dp"
                         android:top="10dp"
@@ -33,8 +33,8 @@
                 <shape android:shape="oval">
                     <solid android:color="#FFFFFF"/>
                     <size
-                        android:width="70dp"
-                        android:height="70dp"/>
+                        android:width="67dp"
+                        android:height="67dp"/>
                     <padding
                         android:left="10dp"
                         android:top="10dp"

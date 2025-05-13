@@ -1,0 +1,21 @@
+<!-- res/drawable/camera_capture_button.xml -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Outer gray ring -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@android:color/transparent" />
+            <stroke
+                android:width="4dp"
+                android:color="#B0B0B0" />
+        </shape>
+    </item>
+
+    <!-- Inner white circle -->
+    <item android:inset="4dp">
+        <shape android:shape="oval">
+            <solid android:color="@android:color/white" />
+        </shape>
+    </item>
+
+</layer-list>

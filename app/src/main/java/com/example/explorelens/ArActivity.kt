@@ -315,6 +315,30 @@ class ArActivity : AppCompatActivity() {
     val inflater = layoutInflater.inflate(R.layout.filter_side_sheet, null)
     sideSheetDialog.setContentView(inflater)
 
+    // Set fullscreen flags for the dialog window to hide system bars
+    sideSheetDialog.window?.apply {
+      setFlags(
+        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+      )
+
+      // Apply edge-to-edge display
+      WindowCompat.setDecorFitsSystemWindows(this, false)
+
+      // Using the newer system UI controller approach
+      decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+              or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+              or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+              or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+              or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+              or View.SYSTEM_UI_FLAG_FULLSCREEN)
+    }
+
+    // Listen for dialog events to maintain fullscreen
+    sideSheetDialog.setOnShowListener {
+      FullScreenHelper.setFullScreenOnWindowFocusChanged(this@ArActivity, true)
+    }
+
     val closeButton = inflater.findViewById<ImageView>(R.id.btn_close_side_sheet)
     val filterOptionsRecyclerView = inflater.findViewById<RecyclerView>(R.id.filterOptionsRecyclerViewSideSheet)
     val applyButton = inflater.findViewById<Button>(R.id.applyButtonSideSheet)
@@ -333,9 +357,9 @@ class ArActivity : AppCompatActivity() {
     filterOptionsRecyclerView.layoutManager = LinearLayoutManager(this)
     filterOptionsRecyclerView.adapter = adapter
 
-    val dividerHeightPx = 3 // 1 pixel height
+    val dividerHeightPx = 3 // 3 pixel height
     val dividerColor = ContextCompat.getColor(this, R.color.light_gray)
-    val dividerMarginPx = 50 // 20 pixel left and right margin
+    val dividerMarginPx = 50 // 50 pixel left and right margin
 
     val divider = ShapeDrawable(RectShape())
     divider.intrinsicHeight = dividerHeightPx
@@ -371,9 +395,80 @@ class ArActivity : AppCompatActivity() {
       adapter.notifyDataSetChanged()
     }
 
+    // Handle dismissal to restore any UI state if needed
+    sideSheetDialog.setOnDismissListener {
+      // Make sure full screen mode is maintained after dialog dismisses
+      FullScreenHelper.setFullScreenOnWindowFocusChanged(this@ArActivity, true)
+    }
+
     sideSheetDialog.setCanceledOnTouchOutside(true)
     sideSheetDialog.show()
   }
+
+//  private fun showFilterSideSheet() {
+//    val sideSheetDialog = SideSheetDialog(this)
+//    val inflater = layoutInflater.inflate(R.layout.filter_side_sheet, null)
+//    sideSheetDialog.setContentView(inflater)
+//
+//    val closeButton = inflater.findViewById<ImageView>(R.id.btn_close_side_sheet)
+//    val filterOptionsRecyclerView = inflater.findViewById<RecyclerView>(R.id.filterOptionsRecyclerViewSideSheet)
+//    val applyButton = inflater.findViewById<Button>(R.id.applyButtonSideSheet)
+//    val clearAllButton = inflater.findViewById<Button>(R.id.clearAllButtonSideSheet)
+//
+//    val allFilterOptions = filterOptionsArray.map { filterOptionName ->
+//      FilterOption(
+//        name = filterOptionName.name,
+//        isChecked = selectedFilters.contains(filterOptionName.name),
+//        iconResId = filterOptionName.iconResId
+//      )
+//    }.toMutableList()
+//
+//    val adapter = FilterOptionAdapter(allFilterOptions) { _, _ ->
+//    }
+//    filterOptionsRecyclerView.layoutManager = LinearLayoutManager(this)
+//    filterOptionsRecyclerView.adapter = adapter
+//
+//    val dividerHeightPx = 3 // 1 pixel height
+//    val dividerColor = ContextCompat.getColor(this, R.color.light_gray)
+//    val dividerMarginPx = 50 // 20 pixel left and right margin
+//
+//    val divider = ShapeDrawable(RectShape())
+//    divider.intrinsicHeight = dividerHeightPx
+//
+//    DrawableCompat.setTint(divider, dividerColor)
+//
+//    val insetDivider = InsetDrawable(divider, dividerMarginPx, 0, dividerMarginPx, 0)
+//
+//    val itemDecorator = DividerItemDecoration(
+//      filterOptionsRecyclerView.context,
+//      LinearLayoutManager.VERTICAL
+//    ).apply {
+//      setDrawable(insetDivider)
+//    }
+//    filterOptionsRecyclerView.addItemDecoration(itemDecorator)
+//
+//    closeButton.setOnClickListener {
+//      sideSheetDialog.dismiss()
+//    }
+//
+//    applyButton.setOnClickListener {
+//      selectedFilters.clear()
+//      selectedFilters.addAll(adapter.getCurrentChoices()) // Update selectedFilters from adapter
+//      Log.d(TAG, "Selected Filters (on Apply): $selectedFilters")
+//      Toast.makeText(this, "Filters Applied: $selectedFilters", Toast.LENGTH_SHORT).show()
+//      sideSheetDialog.dismiss()
+//      // Implement your logic to apply these 'selectedFilters'
+//    }
+//
+//    clearAllButton.setOnClickListener {
+//      selectedFilters.clear()
+//      allFilterOptions.forEach { it.isChecked = false }
+//      adapter.notifyDataSetChanged()
+//    }
+//
+//    sideSheetDialog.setCanceledOnTouchOutside(true)
+//    sideSheetDialog.show()
+//  }
 
 
   override fun onResume() {
