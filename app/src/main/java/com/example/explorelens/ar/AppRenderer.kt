@@ -8,6 +8,7 @@ import android.opengl.Matrix
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.MotionEvent
 import android.view.View
 import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -96,12 +97,30 @@ class AppRenderer(
     fun bindView(view: ArActivityView) {
         this.view = view
 
-        view.snapshotButton.setOnClickListener {
+
+
+//        view.snapshotButton.setOnClickListener {
+//            scanButtonWasPressed = true
+//            view.setScanningActive(true)
+//            hideSnackbar()
+//        }
+        view.cameraButtonContainer.setOnTouchListener { _, event ->
             scanButtonWasPressed = true
             view.setScanningActive(true)
             hideSnackbar()
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    view.innerCircle.animate().scaleX(0.85f).scaleY(0.85f).setDuration(100).start()
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    view.innerCircle.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+                }
+            }
+            false
         }
     }
+
+
 
     override fun onSurfaceCreated(render: SampleRender) {
         backgroundRenderer = BackgroundRenderer(render).apply {
@@ -798,7 +817,7 @@ class AppRenderer(
 
         // Pass the full description to DetailActivity if available
         activity.runOnUiThread {
-            activity.findViewById<View>(R.id.cameraButton)?.visibility = View.GONE
+            activity.findViewById<View>(R.id.cameraButtonContainer)?.visibility = View.GONE
             // Show site details as an overlay instead of starting a new activity
             if (siteId != null) {
                 view.showSiteDetails(siteId, clickedAnchor.fullDescription, siteName)

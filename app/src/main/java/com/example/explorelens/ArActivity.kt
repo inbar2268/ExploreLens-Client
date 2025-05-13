@@ -1,19 +1,20 @@
 package com.example.explorelens
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Location
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.Manifest
+import android.graphics.drawable.InsetDrawable
+import android.graphics.drawable.ShapeDrawable
+import android.graphics.drawable.shapes.RectShape
 import android.net.Uri
 import android.util.Log
+import android.view.Gravity
+import android.view.LayoutInflater
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.ar.core.CameraConfig
 import com.google.ar.core.CameraConfigFilter
 import com.google.ar.core.Config
-import androidx.navigation.fragment.findNavController
 import com.example.explorelens.common.helpers.FullScreenHelper
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.UnavailableApkTooOldException
@@ -22,23 +23,39 @@ import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
 import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.Button
 import android.widget.ImageButton
-import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.ImageView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
-import androidx.navigation.findNavController
-import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.explorelens.adapters.filterOptions.FilterOptionAdapter
 import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
 import com.example.explorelens.ar.ARCoreSessionLifecycleHelper
 import com.example.explorelens.ar.AppRenderer
 import com.example.explorelens.ar.ArActivityView
+import com.example.explorelens.data.model.FilterOption
 import com.example.explorelens.data.repository.SiteHistoryRepository
 import com.example.explorelens.utils.GeoLocationUtils
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.sidesheet.SideSheetBehavior
+import com.google.android.material.sidesheet.SideSheetCallback
+import com.google.android.material.sidesheet.SideSheetDialog
 
 class ArActivity : AppCompatActivity() {
 
-  val TAG = "ArActivity111"
+  val TAG = "ArActivity"
   lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
   lateinit var renderer: AppRenderer
   lateinit var view: ArActivityView
@@ -46,6 +63,16 @@ class ArActivity : AppCompatActivity() {
   private val LOCATION_PERMISSION_REQUEST = 1001
   private val CAMERA_PERMISSION_REQUEST = 1002
   private lateinit var siteHistoryViewModel: SiteHistoryViewModel
+  private val filterOptionsArray = arrayOf(
+    FilterOption("restaurant", iconResId = R.drawable.ic_restaurant),
+    FilterOption("cafe", iconResId = R.drawable.ic_cafe),
+    FilterOption("bar", iconResId = R.drawable.ic_bar),
+    FilterOption("bakery", iconResId = R.drawable.ic_bakery),
+    FilterOption("hotel", iconResId = R.drawable.ic_hotel),
+    FilterOption("pharmacy", iconResId = R.drawable.ic_pharmacy),
+    FilterOption("gym", iconResId = R.drawable.ic_gym)
+  )
+  private val selectedFilters = mutableSetOf<String>()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -57,6 +84,7 @@ class ArActivity : AppCompatActivity() {
       this,
       SiteHistoryViewModel.Factory(siteRepository, geoLocationUtils)
     )[SiteHistoryViewModel::class.java]
+    WindowCompat.setDecorFitsSystemWindows(window, false)
 
     Log.d(TAG, "ViewModel initialized")
   }
@@ -144,6 +172,7 @@ class ArActivity : AppCompatActivity() {
     lifecycle.addObserver(view)
 
     setupCloseButton()
+    setupLayersButton()
     Log.d(TAG, "AR UI setup complete")
   }
 
@@ -271,6 +300,176 @@ class ArActivity : AppCompatActivity() {
       startActivity(intent)
     }
   }
+
+
+  private fun setupLayersButton() {
+    val layersButton = findViewById<ImageButton>(R.id.layersButton)
+    layersButton?.setOnClickListener {
+      Log.d(TAG, "Layers button clicked")
+      showFilterSideSheet() // Call the new function to show the side sheet
+    }
+  }
+
+  private fun showFilterSideSheet() {
+    val sideSheetDialog = SideSheetDialog(this)
+    val inflater = layoutInflater.inflate(R.layout.filter_side_sheet, null)
+    sideSheetDialog.setContentView(inflater)
+
+    // Set fullscreen flags for the dialog window to hide system bars
+    sideSheetDialog.window?.apply {
+      setFlags(
+        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+      )
+
+      // Apply edge-to-edge display
+      WindowCompat.setDecorFitsSystemWindows(this, false)
+
+      // Using the newer system UI controller approach
+      decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+              or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+              or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+              or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+              or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+              or View.SYSTEM_UI_FLAG_FULLSCREEN)
+    }
+
+    // Listen for dialog events to maintain fullscreen
+    sideSheetDialog.setOnShowListener {
+      FullScreenHelper.setFullScreenOnWindowFocusChanged(this@ArActivity, true)
+    }
+
+    val closeButton = inflater.findViewById<ImageView>(R.id.btn_close_side_sheet)
+    val filterOptionsRecyclerView = inflater.findViewById<RecyclerView>(R.id.filterOptionsRecyclerViewSideSheet)
+    val applyButton = inflater.findViewById<Button>(R.id.applyButtonSideSheet)
+    val clearAllButton = inflater.findViewById<Button>(R.id.clearAllButtonSideSheet)
+
+    val allFilterOptions = filterOptionsArray.map { filterOptionName ->
+      FilterOption(
+        name = filterOptionName.name,
+        isChecked = selectedFilters.contains(filterOptionName.name),
+        iconResId = filterOptionName.iconResId
+      )
+    }.toMutableList()
+
+    val adapter = FilterOptionAdapter(allFilterOptions) { _, _ ->
+    }
+    filterOptionsRecyclerView.layoutManager = LinearLayoutManager(this)
+    filterOptionsRecyclerView.adapter = adapter
+
+    val dividerHeightPx = 3 // 3 pixel height
+    val dividerColor = ContextCompat.getColor(this, R.color.light_gray)
+    val dividerMarginPx = 50 // 50 pixel left and right margin
+
+    val divider = ShapeDrawable(RectShape())
+    divider.intrinsicHeight = dividerHeightPx
+
+    DrawableCompat.setTint(divider, dividerColor)
+
+    val insetDivider = InsetDrawable(divider, dividerMarginPx, 0, dividerMarginPx, 0)
+
+    val itemDecorator = DividerItemDecoration(
+      filterOptionsRecyclerView.context,
+      LinearLayoutManager.VERTICAL
+    ).apply {
+      setDrawable(insetDivider)
+    }
+    filterOptionsRecyclerView.addItemDecoration(itemDecorator)
+
+    closeButton.setOnClickListener {
+      sideSheetDialog.dismiss()
+    }
+
+    applyButton.setOnClickListener {
+      selectedFilters.clear()
+      selectedFilters.addAll(adapter.getCurrentChoices()) // Update selectedFilters from adapter
+      Log.d(TAG, "Selected Filters (on Apply): $selectedFilters")
+      Toast.makeText(this, "Filters Applied: $selectedFilters", Toast.LENGTH_SHORT).show()
+      sideSheetDialog.dismiss()
+      // Implement your logic to apply these 'selectedFilters'
+    }
+
+    clearAllButton.setOnClickListener {
+      selectedFilters.clear()
+      allFilterOptions.forEach { it.isChecked = false }
+      adapter.notifyDataSetChanged()
+    }
+
+    // Handle dismissal to restore any UI state if needed
+    sideSheetDialog.setOnDismissListener {
+      // Make sure full screen mode is maintained after dialog dismisses
+      FullScreenHelper.setFullScreenOnWindowFocusChanged(this@ArActivity, true)
+    }
+
+    sideSheetDialog.setCanceledOnTouchOutside(true)
+    sideSheetDialog.show()
+  }
+
+//  private fun showFilterSideSheet() {
+//    val sideSheetDialog = SideSheetDialog(this)
+//    val inflater = layoutInflater.inflate(R.layout.filter_side_sheet, null)
+//    sideSheetDialog.setContentView(inflater)
+//
+//    val closeButton = inflater.findViewById<ImageView>(R.id.btn_close_side_sheet)
+//    val filterOptionsRecyclerView = inflater.findViewById<RecyclerView>(R.id.filterOptionsRecyclerViewSideSheet)
+//    val applyButton = inflater.findViewById<Button>(R.id.applyButtonSideSheet)
+//    val clearAllButton = inflater.findViewById<Button>(R.id.clearAllButtonSideSheet)
+//
+//    val allFilterOptions = filterOptionsArray.map { filterOptionName ->
+//      FilterOption(
+//        name = filterOptionName.name,
+//        isChecked = selectedFilters.contains(filterOptionName.name),
+//        iconResId = filterOptionName.iconResId
+//      )
+//    }.toMutableList()
+//
+//    val adapter = FilterOptionAdapter(allFilterOptions) { _, _ ->
+//    }
+//    filterOptionsRecyclerView.layoutManager = LinearLayoutManager(this)
+//    filterOptionsRecyclerView.adapter = adapter
+//
+//    val dividerHeightPx = 3 // 1 pixel height
+//    val dividerColor = ContextCompat.getColor(this, R.color.light_gray)
+//    val dividerMarginPx = 50 // 20 pixel left and right margin
+//
+//    val divider = ShapeDrawable(RectShape())
+//    divider.intrinsicHeight = dividerHeightPx
+//
+//    DrawableCompat.setTint(divider, dividerColor)
+//
+//    val insetDivider = InsetDrawable(divider, dividerMarginPx, 0, dividerMarginPx, 0)
+//
+//    val itemDecorator = DividerItemDecoration(
+//      filterOptionsRecyclerView.context,
+//      LinearLayoutManager.VERTICAL
+//    ).apply {
+//      setDrawable(insetDivider)
+//    }
+//    filterOptionsRecyclerView.addItemDecoration(itemDecorator)
+//
+//    closeButton.setOnClickListener {
+//      sideSheetDialog.dismiss()
+//    }
+//
+//    applyButton.setOnClickListener {
+//      selectedFilters.clear()
+//      selectedFilters.addAll(adapter.getCurrentChoices()) // Update selectedFilters from adapter
+//      Log.d(TAG, "Selected Filters (on Apply): $selectedFilters")
+//      Toast.makeText(this, "Filters Applied: $selectedFilters", Toast.LENGTH_SHORT).show()
+//      sideSheetDialog.dismiss()
+//      // Implement your logic to apply these 'selectedFilters'
+//    }
+//
+//    clearAllButton.setOnClickListener {
+//      selectedFilters.clear()
+//      allFilterOptions.forEach { it.isChecked = false }
+//      adapter.notifyDataSetChanged()
+//    }
+//
+//    sideSheetDialog.setCanceledOnTouchOutside(true)
+//    sideSheetDialog.show()
+//  }
+
 
   override fun onResume() {
     super.onResume()

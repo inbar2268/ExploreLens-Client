@@ -20,7 +20,10 @@ class ArActivityView(val activity: ArActivity, renderer: AppRenderer) : DefaultL
   val surfaceView = root.findViewById<GLSurfaceView>(R.id.surfaceview).apply {
     SampleRender(this, renderer, activity.assets)
   }
-  val snapshotButton = root.findViewById<AppCompatButton>(R.id.cameraButton)
+  //val snapshotButton = root.findViewById<AppCompatButton>(R.id.cameraButton)
+  val cameraButtonContainer = root.findViewById<FrameLayout>(R.id.cameraButtonContainer)
+  val innerCircle = root.findViewById<View>(R.id.cameraInnerCircle)
+
   val snackbarHelper = SnackbarHelper().apply {
     setParentView(root.findViewById(R.id.coordinatorLayout))
     setMaxLines(6)
@@ -82,20 +85,32 @@ class ArActivityView(val activity: ArActivity, renderer: AppRenderer) : DefaultL
     }
     currentSiteDetailsFragment = null
     siteDetailsContainer.visibility = View.GONE
-    activity.findViewById<View>(R.id.cameraButton)?.visibility = View.VISIBLE
+    activity.findViewById<View>(R.id.cameraButtonContainer)?.visibility = View.VISIBLE
   }
 
   fun post(action: Runnable) = root.post(action)
 
-  /**
-   * Toggles the scan button depending on if scanning is in progress.
-   */
-  fun setScanningActive(active: Boolean) = when(active) {
-    true -> {
-      snapshotButton.isEnabled = false
-    }
-    false -> {
-      snapshotButton.isEnabled = true
+
+  fun setScanningActive(active: Boolean) {
+    if (active) {
+      innerCircle.animate()
+        .scaleX(0.93f)
+        .scaleY(0.93f)
+        .alpha(0.5f)
+        .setDuration(250)
+        .start()
+
+      cameraButtonContainer.isEnabled = false
+    } else {
+      innerCircle.animate()
+        .scaleX(1f)
+        .scaleY(1f)
+        .alpha(1f)
+        .setDuration(200)
+        .start()
+
+      cameraButtonContainer.isEnabled = true
     }
   }
+
 }

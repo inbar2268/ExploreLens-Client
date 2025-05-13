@@ -435,7 +435,7 @@ class SiteDetailsFragment : Fragment() {
             activity.view.hideSiteDetails()
 
             // Make sure the camera button is visible again
-            activity.findViewById<View>(R.id.cameraButton)?.visibility = View.VISIBLE
+            activity.findViewById<View>(R.id.cameraButtonContainer)?.visibility = View.VISIBLE
         } else {
             // For regular fragment navigation
             parentFragmentManager.beginTransaction().remove(this).commit()

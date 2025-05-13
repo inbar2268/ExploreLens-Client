@@ -33,6 +33,14 @@
   <color name="bottom_nav_selected">#3373F2</color>
   <color name="bottom_nav_unselected">#8E8E93</color>
   <color name="semi_transparent_background">#80000000</color>
+  <color name="filter">#3373F2</color>
+  <color name="restaurant_color">#FFB74D</color> <!-- Tomato Red -->
+  <color name="cafe_color">#A1887F</color>       <!-- Mocha Brown -->
+  <color name="bar_color">#9575CD</color>        <!-- Deep Purple -->
+  <color name="bakery_color">#FFD54F</color>     <!-- Golden Honey -->
+  <color name="hotel_color">#64B5F6</color>      <!-- Royal Indigo -->
+  <color name="pharmacy_color">#81C784</color>   <!-- Emerald Green -->
+  <color name="gym_color">#FF6F61</color>
   <color name="dialog_cancel_text">#262626</color>
   <color name="dialog_logout_text">#FFFFFF</color>
 </resources>
