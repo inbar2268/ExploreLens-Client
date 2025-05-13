@@ -33,4 +33,6 @@
   <color name="bottom_nav_selected">#3373F2</color>
   <color name="bottom_nav_unselected">#8E8E93</color>
   <color name="semi_transparent_background">#80000000</color>
+  <color name="dialog_cancel_text">#262626</color>
+  <color name="dialog_logout_text">#FFFFFF</color>
 </resources>
