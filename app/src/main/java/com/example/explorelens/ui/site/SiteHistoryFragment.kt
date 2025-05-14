@@ -152,7 +152,7 @@ class SiteHistoryFragment : Fragment() {
             Log.d(TAG, "Unique sites after grouping: ${uniqueSites.size}")
 
             // Update history count
-            binding.historyCountTextView.text = "${uniqueSites.size} unique sites visited"
+            binding.historyCountTextView.text = "You've unlocked ${uniqueSites.size} unique sites!"
 
             if (uniqueSites.isEmpty()) {
                 // No data for current user, show mock data
@@ -324,7 +324,7 @@ class SiteHistoryFragment : Fragment() {
             val user = userRepository.getUserFromDb()
             if (user != null) {
                 // Set username
-                binding.usernameTextView.text = user.username ?: "Explorer"
+                binding.usernameTextView.text = "Hi, ${user.username}" ?: "Explorer"
 
                 // Load profile image
                 if (!user.profilePictureUrl.isNullOrEmpty()) {

@@ -6,7 +6,10 @@
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
     app:cardCornerRadius="16dp"
-    app:cardElevation="2dp"
+    android:layout_marginEnd="8dp"
+    android:layout_marginStart="8dp"
+    android:layout_marginTop="8dp"
+    app:cardElevation="4dp"
     app:cardBackgroundColor="#FFFFFF">
 
     <LinearLayout
@@ -23,6 +26,7 @@
             android:adjustViewBounds="true"
             android:contentDescription="Site image"
             app:shapeAppearanceOverlay="@style/RoundedImageStyle"
+            app:layout_constraintDimensionRatio="16:9"
             tools:src="@drawable/eiffel" />
 
         <!-- Site name and location icon in same row with proper alignment -->
@@ -48,12 +52,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+
                 android:maxLines="1"
                 android:layout_marginStart="8dp"
-                android:textColor="#333333"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            tools:text="Himalaya Mountain" />
+                android:textColor="#000000"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                tools:text="Himalaya Mountain" />
         </LinearLayout>
 
         <!-- Date section with original styling -->
@@ -66,6 +71,12 @@
             android:paddingTop="4dp"
             android:paddingBottom="16dp">
 
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_date"
+                app:tint="#29B6F6"
+                android:contentDescription="date icon" />
 
             <TextView
                 android:id="@+id/siteDateTextView"
