@@ -83,12 +83,12 @@ class RegisterFragment : Fragment() {
         binding.tvSignIn.setOnClickListener {
             findNavController().navigate(R.id.action_registerFragment_to_loginFragment)
         }
-        binding.ivPasswordToggle.setOnClickListener { togglePasswordVisibility() }
+        binding.tvShowPassword.setOnClickListener { togglePasswordVisibility() }
 
         binding.etPassword.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                binding.ivPasswordToggle.visibility = View.VISIBLE
+                binding.tvShowPassword.visibility = View.VISIBLE
             }
 
             override fun afterTextChanged(s: Editable?) {}
@@ -112,12 +112,9 @@ class RegisterFragment : Fragment() {
         else
             PasswordTransformationMethod.getInstance()
 
-        binding.ivPasswordToggle.setImageResource(
-            if (isPasswordVisible)
-                android.R.drawable.ic_menu_close_clear_cancel
-            else
-                android.R.drawable.ic_menu_view
-        )
+        binding.tvShowPassword.text =
+            if (isPasswordVisible) "Hide"
+            else "Show"
 
         binding.etPassword.setSelection(binding.etPassword.selectionEnd)
     }
@@ -165,14 +162,14 @@ class RegisterFragment : Fragment() {
 
         if (password.isEmpty()) {
             binding.etPassword.error = "Password is required"
-            binding.ivPasswordToggle.visibility = View.INVISIBLE
+            binding.tvShowPassword.visibility = View.INVISIBLE
             isValid = false
         } else if (password.length < 6) {
-            binding.ivPasswordToggle.visibility = View.INVISIBLE
+            binding.tvShowPassword.visibility = View.INVISIBLE
             binding.etPassword.error = "Password must be at least 6 characters"
             isValid = false
         } else {
-            binding.ivPasswordToggle.visibility = View.VISIBLE
+            binding.tvShowPassword.visibility = View.VISIBLE
         }
 
         return isValid
@@ -198,10 +195,9 @@ class RegisterFragment : Fragment() {
         binding.etName.error = null
         binding.etEmail.error = null
         binding.etPassword.error = null
-        binding.ivPasswordToggle.visibility = View.INVISIBLE
+        binding.tvShowPassword.visibility = View.INVISIBLE
         isPasswordVisible = false
         binding.etPassword.transformationMethod = PasswordTransformationMethod.getInstance()
-        binding.ivPasswordToggle.setImageResource(android.R.drawable.ic_menu_view)
         hideLoading()
     }
 

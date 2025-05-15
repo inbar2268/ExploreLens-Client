@@ -1,6 +1,7 @@
 package com.example.explorelens.ui.auth
 
 import android.os.Bundle
+import android.text.method.PasswordTransformationMethod
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -70,6 +71,12 @@ class ForgotPasswordFragment : Fragment() {
                 }
             )
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        binding.etEmail.text?.clear()
+        binding.etEmail.error = null
     }
 
     override fun onDestroyView() {
