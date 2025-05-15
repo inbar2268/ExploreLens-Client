@@ -731,19 +731,16 @@ class AppRenderer(
         val context = activity.applicationContext
         val repository = SiteDetailsRepository(context)
 
-        launch(Dispatchers.IO) {
-            val result = repository.fetchSiteDetails(siteId)
-
-            withContext(Dispatchers.Main) {
-                result.onSuccess { siteInfo ->
-                    updateAnchorWithDetails(anchor, siteName, siteInfo, siteId)
-                }
-
-                result.onFailure { error ->
-                    Log.e(TAG, "Failed to fetch site details: ${error.localizedMessage}")
-                }
+        // Use the callback-based method instead of the suspend method
+        repository.fetchSiteDetails(
+            siteId = siteId,
+            onSuccess = { siteInfo ->
+                updateAnchorWithDetails(anchor, siteName, siteInfo, siteId)
+            },
+            onError = {
+                Log.e(TAG, "Failed to fetch site details")
             }
-        }
+        )
     }
 
     private fun isValidSiteData(siteInfo: SiteInformation?, siteId: String?): Boolean {

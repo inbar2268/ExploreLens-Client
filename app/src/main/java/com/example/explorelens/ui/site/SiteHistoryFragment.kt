@@ -5,6 +5,8 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
@@ -21,8 +23,11 @@ import java.util.UUID
 import com.bumptech.glide.Glide
 import com.example.explorelens.data.repository.UserRepository
 import androidx.lifecycle.lifecycleScope
+import com.example.explorelens.utils.LoadingManager.showLoading
+import kotlinx.coroutines.Dispatchers
 import com.example.explorelens.data.repository.SiteDetailsRepository
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SiteHistoryFragment : Fragment() {
     private val TAG = "SiteHistoryFragment"
@@ -30,10 +35,14 @@ class SiteHistoryFragment : Fragment() {
     private var _binding: FragmentSiteHistoryBinding? = null
     private val binding get() = _binding!!
 
+    private var progressBar: ProgressBar? = null
+
     private lateinit var viewModel: SiteHistoryViewModel
     private lateinit var adapter: SiteHistoryAdapter
     private lateinit var authTokenManager: AuthTokenManager
     private lateinit var userRepository: UserRepository
+
+    private var isSyncing = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -46,13 +55,15 @@ class SiteHistoryFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        progressBar = view.findViewById(R.id.progressBar)
+
         userRepository = UserRepository(requireContext())
 
         authTokenManager = AuthTokenManager.getInstance(requireContext())
         setupViewModel()
         setupRecyclerView()
         loadUserProfile()
-        observeData()
+        syncAndObserveData()
         setupSwipeToRefresh()
     }
 
@@ -77,14 +88,14 @@ class SiteHistoryFragment : Fragment() {
             lifecycleOwner = viewLifecycleOwner
         )
 
+        // Set up grid layout with 2 columns
         binding.recyclerViewHistory.apply {
             layoutManager = GridLayoutManager(requireContext(), 2)
             adapter = this@SiteHistoryFragment.adapter
         }
     }
 
-    private fun observeData() {
-        // Get the current user ID
+    private fun syncAndObserveData() {
         val userId = getCurrentUserId()
         if (userId == null) {
             Log.e(TAG, "No user ID available, showing mock data")
@@ -92,16 +103,24 @@ class SiteHistoryFragment : Fragment() {
             return
         }
 
-        Log.d(TAG, "Loading history for user ID: $userId")
+        // Show loading indicator
+        showLoading(true)
+        isSyncing = true
 
-        // Sync site history first before observing
+        // Start sync in background
         lifecycleScope.launch {
             try {
-                // Synchronize site history with server before loading
+                // Remove any existing observers to prevent duplication
+                viewModel.getSiteHistoryByUserId(userId).removeObservers(viewLifecycleOwner)
+
                 // Observe site history data after sync
                 viewModel.getSiteHistoryByUserId(userId)
                     .observe(viewLifecycleOwner) { historyList ->
                         Log.d(TAG, "Received ${historyList.size} history items")
+
+                        // Hide loading indicator here when data is received
+                        showLoading(false)
+                        isSyncing = false
 
                         // Additional filter to ensure we only show the current user's history
                         val filteredList = historyList.filter { it.userId == userId }
@@ -122,10 +141,6 @@ class SiteHistoryFragment : Fragment() {
                             )
                         }
 
-                        // Update history count
-                        binding.historyCountTextView.text =
-                            "${uniqueSites.size} unique sites visited"
-
                         if (uniqueSites.isEmpty()) {
                             // No data for current user, show mock data
                             Log.d(TAG, "No history data for current user, showing mock data")
@@ -141,11 +156,13 @@ class SiteHistoryFragment : Fragment() {
                     }
             } catch (e: Exception) {
                 Log.e(TAG, "Error syncing and loading site history", e)
-                showMockData()
+                // Hide loading indicator on error
+                showLoading(false)
+                isSyncing = false
+              //  showMockData()
             }
         }
     }
-
     private fun showHistoryData(historyList: List<SiteHistory>) {
         binding.emptyStateView.visibility = View.GONE
         binding.recyclerViewHistory.visibility = View.VISIBLE
@@ -158,14 +175,44 @@ class SiteHistoryFragment : Fragment() {
     private fun setupSwipeToRefresh() {
         binding.swipeRefreshLayout.setOnRefreshListener {
             val userId = getCurrentUserId()
-            if (userId != null) {
+            if (userId != null && !isSyncing) {
                 Log.d(TAG, "User pulled to refresh, syncing site history")
-                viewModel.syncSiteHistory(userId)
+
+                // Show refreshing
+                isSyncing = true
+
+                // Launch sync in coroutine
+                lifecycleScope.launch {
+                    try {
+                        viewModel.syncSiteHistory(userId)
+                        withContext(Dispatchers.Main) {
+                            // Data will refresh automatically via LiveData
+                            binding.swipeRefreshLayout.isRefreshing = false
+                            isSyncing = false
+                            // Optional: show success message
+                            Toast.makeText(requireContext(), "History updated", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error syncing on refresh", e)
+                        withContext(Dispatchers.Main) {
+                            binding.swipeRefreshLayout.isRefreshing = false
+                            isSyncing = false
+                            // Show error message
+                            Toast.makeText(requireContext(), "Failed to sync", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } else {
+                // Stop animation if already syncing
+                binding.swipeRefreshLayout.isRefreshing = false
             }
             binding.swipeRefreshLayout.isRefreshing = false // Stop the animation
         }
     }
 
+    private fun showLoading(show: Boolean) {
+        progressBar?.visibility = if (show) View.VISIBLE else View.GONE
+    }
 
     private fun showMockData() {
         val mockData = createMockHistoryData()
@@ -264,19 +311,18 @@ class SiteHistoryFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
-
     private fun loadUserProfile() {
         val userId = getCurrentUserId() ?: return
 
         // Set default values while loading
-        binding.usernameTextView.text = "Explorer"
+      //  binding.usernameTextView.text = "Explorer"
 
         // Load user profile data
         lifecycleScope.launch {
             val user = userRepository.getUserFromDb()
             if (user != null) {
                 // Set username
-                binding.usernameTextView.text = user.username ?: "Explorer"
+              //  binding.usernameTextView.text = "Hi, ${user.username}" ?: "Explorer"
 
                 // Load profile image
                 if (!user.profilePictureUrl.isNullOrEmpty()) {
@@ -294,6 +340,7 @@ class SiteHistoryFragment : Fragment() {
             }
         }
     }
+
 
 
 }

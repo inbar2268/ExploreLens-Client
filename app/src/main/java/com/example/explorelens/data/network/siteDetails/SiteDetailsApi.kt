@@ -11,13 +11,11 @@ import retrofit2.http.Path
 
 interface SiteDetailsApi {
     @GET("/site-info/{siteid}")
-    suspend fun getSiteDetails(@Path("siteid") siteid: String): Response<SiteDetails>
-
+    fun getSiteDetails(@Path("siteid") siteid: String): Call<SiteDetails>
 
     @POST("/site-info/rating/{siteId}")
     suspend fun addRating(
         @Path("siteId") siteId: String,
         @Body siteDetailsRatingRequest: SiteDetailsRatingRequest
     ): Response<SiteDetails>
-
 }

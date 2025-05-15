@@ -130,23 +130,21 @@ class SiteDetailsFragment : Fragment() {
 
         Log.d("SiteDetailsFragment", "Fetching site details for: $siteId")
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            loadingIndicator.visibility = View.VISIBLE
+        loadingIndicator.visibility = View.VISIBLE
 
-            val result = withContext(Dispatchers.IO) {
-                siteDetailsRepository.fetchSiteDetails(siteId)
+        // Use the callback-based method from repository
+        siteDetailsRepository.fetchSiteDetails(
+            siteId = siteId,
+            onSuccess = { siteDetails ->
+                loadingIndicator.visibility = View.GONE
+                handleSiteDetailsSuccess(siteDetails)
+            },
+            onError = {
+                loadingIndicator.visibility = View.GONE
+                showError("Failed to load details")
+                Log.e("SiteDetailsFragment", "Error loading site details")
             }
-
-            loadingIndicator.visibility = View.GONE
-
-            result.fold(
-                onSuccess = { handleSiteDetailsSuccess(it) },
-                onFailure = {
-                    showError("Failed to load details: ${it.message ?: "Unknown error"}")
-                    Log.e("SiteDetailsFragment", "Error: $${it.message ?: "Unknown error"}")
-                }
-            )
-        }
+        )
     }
 
     private fun handleSiteDetailsSuccess(siteDetails: SiteDetails) {

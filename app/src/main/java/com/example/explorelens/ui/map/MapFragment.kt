@@ -1,13 +1,22 @@
 package com.example.explorelens.ui.map
 
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.example.explorelens.R
 import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.network.ExploreLensApiClient
@@ -19,8 +28,10 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.coroutines.Dispatchers
+import com.google.android.material.imageview.ShapeableImageView
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.Call
@@ -37,6 +48,13 @@ class MapFragment : Fragment() {
     private lateinit var googleMap: GoogleMap
     private lateinit var authTokenManager: AuthTokenManager
     private lateinit var siteHistoryRepository: SiteHistoryRepository
+    private lateinit var siteDetailsRepository: SiteDetailsRepository
+
+    // Store all site markers
+    private val siteMarkers = mutableListOf<SiteMarker>()
+
+    // Current popup dialog
+    private var popupDialog: AlertDialog? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -49,6 +67,7 @@ class MapFragment : Fragment() {
         // Initialize repositories
         authTokenManager = AuthTokenManager.getInstance(requireContext())
         siteHistoryRepository = SiteHistoryRepository(requireContext())
+        siteDetailsRepository = SiteDetailsRepository(requireContext())
 
         setupMap(savedInstanceState)
 
@@ -60,7 +79,13 @@ class MapFragment : Fragment() {
         mapView.getMapAsync { map ->
             googleMap = map
 
-            // Default initial location (can be anywhere)
+            // Set click listener for markers
+            googleMap.setOnMarkerClickListener { marker ->
+                showSitePopupDialog(marker)
+                true // Return true to consume the event
+            }
+
+            // Default initial location
             val defaultLocation = LatLng(31.7683, 35.2137) // Jerusalem as fallback
             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 8f))
 
@@ -124,8 +149,29 @@ class MapFragment : Fragment() {
                 firstLocation = location
             }
 
-            // Fetch site details to get the correct name
-            fetchSiteDetailsAndAddMarker(site, location)
+            // Format site ID to be more readable initially
+            val formattedSiteId = siteDetailsRepository.formatSiteId(site.siteInfoId)
+
+            // Create initial marker with formatted site ID
+            val marker = googleMap.addMarker(
+                MarkerOptions()
+                    .position(location)
+                    .title(formattedSiteId) // Use formatted ID until we get the real name
+            )
+
+            // Create and store site marker
+            val siteMarker = SiteMarker(
+                siteHistory = site,
+                latLng = location,
+                marker = marker
+            )
+            siteMarkers.add(siteMarker)
+
+            // Store reference in marker tag
+            marker?.tag = siteMarker
+
+            // Load site details from repository
+            loadSiteDetailsForMarker(siteMarker)
         }
 
         // Move camera to first location with reasonable zoom
@@ -134,55 +180,119 @@ class MapFragment : Fragment() {
         }
     }
 
-    private fun fetchSiteDetailsAndAddMarker(site: SiteHistory, location: LatLng) {
-        val cleanSiteId = site.siteInfoId.replace(" ", "")
-        val siteRepository = SiteDetailsRepository(requireContext())
+    private fun loadSiteDetailsForMarker(siteMarker: SiteMarker) {
+        // Use repository to fetch site details
+        siteDetailsRepository.getSiteDetailsLiveData(siteMarker.siteId).observe(viewLifecycleOwner) { siteDetails ->
+            if (siteDetails != null) {
+                // Update marker title
+                siteMarker.marker?.title = siteDetails.name ?: siteMarker.name
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                siteRepository.fetchSiteDetails(cleanSiteId)
-            }
-
-            val siteName = result.getOrNull()?.name ?: formatSiteId(site.siteInfoId)
-
-            val marker = googleMap.addMarker(
-                MarkerOptions()
-                    .position(location)
-                    .title(siteName)
-                    .snippet("Visited: ${formatDate(site.createdAt)}")
-            )
-
-            marker?.tag = site.siteInfoId
-
-            if (result.isSuccess) {
-                Log.d(TAG, "Added marker for $siteName at ${site.latitude}, ${site.longitude}")
-            } else {
-                Log.e(TAG, "Failed to fetch site details for ${site.siteInfoId}", result.exceptionOrNull())
-            }
-
-            // Set up marker click listener (only once is enough, move outside loop if needed)
-            googleMap.setOnInfoWindowClickListener { clickedMarker ->
-                val siteInfoId = clickedMarker.tag as? String
-                if (siteInfoId != null) {
-                    Log.d(TAG, "Marker clicked for site: $siteInfoId")
-                    navigateToSiteDetails(siteInfoId)
+                // If popup is showing for this marker, update it
+                val currentDialog = popupDialog
+                if (currentDialog != null && currentDialog.isShowing) {
+                    val dialogTag = currentDialog.findViewById<View>(R.id.root_layout)?.tag as? String
+                    if (dialogTag == siteMarker.siteId) {
+                        updateDialogContent(currentDialog, siteMarker.siteId, siteDetails)
+                    }
                 }
             }
         }
     }
 
+    private fun showSitePopupDialog(marker: Marker) {
+        // Find the site marker
+        val siteMarker = when (val tag = marker.tag) {
+            is SiteMarker -> tag
+            else -> {
+                Log.e(TAG, "Invalid marker tag: $tag")
+                return
+            }
+        }
 
-    private fun formatSiteId(siteInfoId: String): String {
-        // Format the site ID to be more readable
-        return siteInfoId.replace(Regex("(?<=[a-z])(?=[A-Z])"), " ")
-            .split(" ")
-            .joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+        Log.d(TAG, "Showing popup dialog for site: ${siteMarker.siteId}")
+
+        // Close existing dialog if open
+        popupDialog?.dismiss()
+
+        // Create custom popup dialog
+        val dialogView = layoutInflater.inflate(R.layout.marker_popup_dialog, null)
+
+        // Set tag to identify marker
+        dialogView.findViewById<View>(R.id.root_layout)?.tag = siteMarker.siteId
+
+        // Set up the dialog views
+        val siteNameTextView = dialogView.findViewById<TextView>(R.id.siteNameTextView)
+        val visitDateTextView = dialogView.findViewById<TextView>(R.id.visitDateTextView)
+        val siteImageView = dialogView.findViewById<ShapeableImageView>(R.id.siteImageView)
+        val viewDetailsButton = dialogView.findViewById<Button>(R.id.viewDetailsButton)
+        val closeButton = dialogView.findViewById<ImageView>(R.id.closeButton)
+
+        // Set initial values
+        siteNameTextView.text = siteMarker.name
+        visitDateTextView.text = siteMarker.visitDate
+
+        // Create and show the dialog
+        popupDialog = AlertDialog.Builder(requireContext(), R.style.TransparentDialog)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        // Set click listeners
+        viewDetailsButton.setOnClickListener {
+            navigateToSiteDetails(siteMarker.siteId)
+            popupDialog?.dismiss()
+        }
+
+        closeButton.setOnClickListener {
+            popupDialog?.dismiss()
+        }
+
+        // Show dialog
+        popupDialog?.show()
+
+        // Set window properties for better appearance
+        popupDialog?.window?.let { window ->
+            window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+            // Center the dialog
+            val params = window.attributes
+            params.gravity = Gravity.CENTER
+            window.attributes = params
+        }
+
+        // Load site details from repository
+        siteDetailsRepository.fetchSiteDetails(
+            siteMarker.siteId,
+            onSuccess = { siteDetails ->
+                updateDialogContent(popupDialog, siteMarker.siteId, siteDetails)
+            },
+            onError = {
+                // Dialog already shows initial data, so no need to do anything on error
+                Log.e(TAG, "Failed to load site details for popup")
+            }
+        )
     }
 
-    private fun formatDate(timestamp: Long): String {
-        val date = Date(timestamp)
-        val format = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
-        return format.format(date)
+    private fun updateDialogContent(dialog: AlertDialog?, siteId: String, siteDetails: com.example.explorelens.data.model.SiteDetails.SiteDetails) {
+        if (dialog == null || !dialog.isShowing) return
+
+        // Get views from dialog
+        val siteNameTextView = dialog.findViewById<TextView>(R.id.siteNameTextView)
+        val siteImageView = dialog.findViewById<ShapeableImageView>(R.id.siteImageView)
+
+        // Update site name
+        siteNameTextView?.text = siteDetails.name
+
+        // Load image
+        if (!siteDetails.imageUrl.isNullOrEmpty() && siteImageView != null && isAdded) {
+            Glide.with(requireContext())
+                .load(siteDetails.imageUrl)
+                .placeholder(R.drawable.noimage)
+                .error(R.drawable.noimage)
+                .centerCrop()
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .into(siteImageView)
+        }
     }
 
     private fun navigateToSiteDetails(siteInfoId: String) {
@@ -238,6 +348,9 @@ class MapFragment : Fragment() {
     override fun onDestroy() {
         super.onDestroy()
         mapView.onDestroy()
+        // Dismiss popup dialog if open
+        popupDialog?.dismiss()
+        popupDialog = null
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
