@@ -44,4 +44,5 @@
     <string name="use_cloud_ml">Use Cloud ML</string>
     <string name="title_activity_detail">DetailActivity</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
+
 </resources>

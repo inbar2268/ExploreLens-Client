@@ -41,14 +41,14 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_filter"
-                        app:tint="@color/filter"
+                        app:tint="@color/light_blue"
                         android:layout_marginEnd="8dp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="FILTER"
-                        android:textColor="@color/filter"
+                        android:textColor="@color/light_blue"
                         android:textSize="14sp"
                         android:textStyle="bold"
                         android:fontFamily="@font/harmonyos_sans_regular" />
@@ -68,7 +68,7 @@
                     android:focusable="true"
                     android:stateListAnimator="@null"
                     android:src="@drawable/ic_close"
-                    app:tint="@color/filter"/>
+                    app:tint="@color/light_blue"/>
 
             </RelativeLayout>
 
@@ -114,7 +114,7 @@
                     android:layout_marginEnd="8dp"
                     android:layout_weight="1"
                     android:text="CLEAR ALL"
-                    android:textColor="@color/filter"
+                    android:textColor="@color/light_blue"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:fontFamily="@font/harmonyos_sans_regular"
@@ -128,7 +128,7 @@
                     android:layout_height="40dp"
                     android:layout_weight="1"
                     android:background="@drawable/bg_button_primary"
-                    android:backgroundTint="@color/filter"
+                    android:backgroundTint="@color/light_blue"
                     android:text="APPLY"
                     android:textColor="@android:color/white"
                     android:textSize="12sp"

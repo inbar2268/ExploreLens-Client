@@ -2,9 +2,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@android:color/white"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:background="@android:color/white"
+    android:padding="24dp"
+    android:fontFamily="@font/harmonyos_sans_regular">
 
     <TextView
         android:layout_width="wrap_content"
@@ -12,7 +13,8 @@
         android:text="Select Map Type"
         android:textColor="#262626"
         android:textSize="20sp"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:fontFamily="@font/harmonyos_sans_black" />
 
     <RadioGroup
         android:id="@+id/mapTypeRadioGroup"
@@ -27,7 +29,9 @@
             android:layout_marginBottom="8dp"
             android:text="Normal"
             android:textColor="#262626"
-            android:textSize="16sp" />
+            android:textSize="14sp"
+            android:buttonTint="#262626"
+            android:fontFamily="@font/harmonyos_sans_regular" />
 
         <RadioButton
             android:id="@+id/hybridMapRadio"
@@ -36,7 +40,9 @@
             android:layout_marginBottom="8dp"
             android:text="Hybrid"
             android:textColor="#262626"
-            android:textSize="16sp" />
+            android:textSize="14sp"
+            android:buttonTint="#262626"
+            android:fontFamily="@font/harmonyos_sans_regular" />
 
         <RadioButton
             android:id="@+id/satelliteMapRadio"
@@ -45,7 +51,9 @@
             android:layout_marginBottom="8dp"
             android:text="Satellite"
             android:textColor="#262626"
-            android:textSize="16sp" />
+            android:textSize="14sp"
+            android:buttonTint="#262626"
+            android:fontFamily="@font/harmonyos_sans_regular" />
 
         <RadioButton
             android:id="@+id/terrainMapRadio"
@@ -53,7 +61,9 @@
             android:layout_height="wrap_content"
             android:text="Terrain"
             android:textColor="#262626"
-            android:textSize="16sp" />
+            android:textSize="14sp"
+            android:buttonTint="#262626"
+            android:fontFamily="@font/harmonyos_sans_regular" />
     </RadioGroup>
 
     <LinearLayout
@@ -65,15 +75,16 @@
         <Button
             android:id="@+id/cancelButton"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="56dp"
             android:layout_weight="1"
-            android:background="@drawable/dialog_button_background_cancel"
+            android:background="@drawable/bg_button_cancle"
             android:text="Cancel"
             android:textAllCaps="false"
             android:textColor="#262626"
-            android:textSize="16sp"
+            android:textSize="12sp"
+            android:fontFamily="@font/harmonyos_sans_medium"
             android:elevation="0dp"
-            android:stateListAnimator="@null"/>
+            android:stateListAnimator="@null" />
 
         <View
             android:layout_width="16dp"
@@ -82,15 +93,16 @@
         <Button
             android:id="@+id/confirmButton"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="56dp"
             android:layout_weight="1"
-            android:background="@drawable/dialog_button_background_confirm"
+            android:background="@drawable/bg_button_primary"
             android:text="Confirm"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
-            android:textSize="16sp"
+            android:textSize="12sp"
+            android:fontFamily="@font/harmonyos_sans_medium"
             android:elevation="0dp"
-            android:stateListAnimator="@null"/>
+            android:stateListAnimator="@null" />
     </LinearLayout>
 
 </LinearLayout>

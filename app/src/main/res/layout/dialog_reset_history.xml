@@ -2,25 +2,29 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@android:color/white"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:background="@android:color/white"
+    android:padding="24dp"
+    android:fontFamily="@font/harmonyos_sans_regular">
 
     <TextView
+        android:id="@+id/dialog_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Reset Sites History"
-        android:textColor="#262626"
+        android:textColor="#1E3348"
         android:textSize="20sp"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:fontFamily="@font/harmonyos_sans_black" />
 
     <TextView
+        android:id="@+id/dialog_message"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="Are you sure you want to clear all your sites history?"
         android:textColor="#8E8E93"
-        android:textSize="16sp" />
+        android:textSize="14sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -31,15 +35,16 @@
         <Button
             android:id="@+id/cancelButton"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="56dp"
             android:layout_weight="1"
-            android:background="@drawable/dialog_button_background_cancel"
+            android:background="@drawable/bg_button_cancle"
             android:text="Cancel"
             android:textAllCaps="false"
             android:textColor="#262626"
-            android:textSize="16sp"
+            android:textSize="12sp"
+            android:fontFamily="@font/harmonyos_sans_medium"
             android:elevation="0dp"
-            android:stateListAnimator="@null"/>
+            android:stateListAnimator="@null" />
 
         <View
             android:layout_width="16dp"
@@ -48,15 +53,16 @@
         <Button
             android:id="@+id/resetButton"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="56dp"
             android:layout_weight="1"
-            android:background="@drawable/dialog_button_background_confirm"
+            android:background="@drawable/bg_button_primary"
             android:text="Reset"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
-            android:textSize="16sp"
+            android:textSize="12sp"
+            android:fontFamily="@font/harmonyos_sans_medium"
             android:elevation="0dp"
-            android:stateListAnimator="@null"/>
+            android:stateListAnimator="@null" />
     </LinearLayout>
 
 </LinearLayout>

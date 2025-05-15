@@ -96,12 +96,12 @@ class LoginFragment : Fragment() {
         binding.tvForgotPassword.setOnClickListener {
             findNavController().navigate(R.id.action_loginFragment_to_forgotPasswordFragment)
         }
-        binding.ivPasswordToggle.setOnClickListener { togglePasswordVisibility() }
+        binding.tvShowPassword.setOnClickListener { togglePasswordVisibility() }
 
         binding.etPassword.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                binding.ivPasswordToggle.visibility = View.VISIBLE
+                binding.tvShowPassword.visibility = View.VISIBLE
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -122,12 +122,9 @@ class LoginFragment : Fragment() {
             if (isPasswordVisible) HideReturnsTransformationMethod.getInstance()
             else PasswordTransformationMethod.getInstance()
 
-        binding.ivPasswordToggle.setImageResource(
-            if (isPasswordVisible)
-                android.R.drawable.ic_menu_close_clear_cancel
-            else
-                android.R.drawable.ic_menu_view
-        )
+        binding.tvShowPassword.text =
+            if (isPasswordVisible) "Hide"
+            else "Show"
         binding.etPassword.setSelection(binding.etPassword.text.length)
     }
 
@@ -144,10 +141,10 @@ class LoginFragment : Fragment() {
 
         if (password.isEmpty()) {
             binding.etPassword.error = "Password is required"
-            binding.ivPasswordToggle.visibility = View.INVISIBLE
+            binding.tvShowPassword.visibility = View.INVISIBLE
             isValid = false
         } else{
-            binding.ivPasswordToggle.visibility = View.VISIBLE
+            binding.tvShowPassword.visibility = View.VISIBLE
 
         }
 
@@ -195,10 +192,9 @@ class LoginFragment : Fragment() {
         binding.etPassword.text?.clear()
         binding.etEmail.error = null
         binding.etPassword.error = null
-        binding.ivPasswordToggle.visibility = View.INVISIBLE
+        binding.tvShowPassword.visibility = View.INVISIBLE
         isPasswordVisible = false
         binding.etPassword.transformationMethod = PasswordTransformationMethod.getInstance()
-        binding.ivPasswordToggle.setImageResource(android.R.drawable.ic_menu_view)
         hideLoading()
     }
 }
