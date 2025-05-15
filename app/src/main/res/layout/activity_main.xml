@@ -11,27 +11,30 @@
         android:layout_width="fill_parent"
         android:layout_height="fill_parent" />
 
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/cameraButton"
+<!--    <androidx.appcompat.widget.AppCompatButton-->
+<!--        android:id="@+id/cameraButton"-->
+<!--        android:layout_width="80dp"-->
+<!--        android:layout_height="80dp"-->
+<!--        android:layout_gravity="bottom|center_horizontal"-->
+<!--        android:layout_marginBottom="40dp"-->
+<!--        android:background="@drawable/ic_camera_shutter_btn"-->
+<!--        android:elevation="4dp" />-->
+
+    <FrameLayout
+        android:id="@+id/cameraButtonContainer"
         android:layout_width="80dp"
         android:layout_height="80dp"
-        android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="40dp"
-        android:background="@drawable/ic_camera_shutter_btn"
-        android:elevation="4dp" />
+        android:layout_gravity="bottom|center_horizontal"
+        android:background="@drawable/camera_outer_ring">
 
-<!--    <ImageButton-->
-<!--        android:id="@+id/closeButton"-->
-<!--        android:layout_width="48dp"-->
-<!--        android:layout_height="48dp"-->
-<!--        android:layout_gravity="top|start"-->
-<!--        android:layout_margin="16dp"-->
-<!--        android:background="?android:attr/selectableItemBackgroundBorderless"-->
-<!--        android:contentDescription="close"-->
-<!--        android:padding="8dp"-->
-<!--        android:scaleType="fitCenter"-->
-<!--        android:src="@drawable/ic_close"-->
-<!--        app:tint="@color/white"/>-->
+        <View
+            android:id="@+id/cameraInnerCircle"
+            android:layout_width="67dp"
+            android:layout_height="67dp"
+            android:layout_gravity="center"
+            android:background="@drawable/camera_inner_circle" />
+    </FrameLayout>
 
     <ImageButton
         android:id="@+id/closeButton"
@@ -45,14 +48,27 @@
         android:scaleType="centerInside"
         app:tint="#FFFFFF"/>
 
-    <!-- Site Details Overlay Container -->
+    <ImageButton
+        android:id="@+id/layersButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/rounded_button_background"
+        android:src="@drawable/ic_layers"
+        android:contentDescription="Layers"
+        android:layout_gravity="top|end"
+        android:layout_margin="20dp"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
+        android:focusableInTouchMode="true"
+        app:tint="@color/black"/>
+
+
     <FrameLayout
         android:id="@+id/siteDetailsContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone"
         android:background="@color/white">
-</FrameLayout>
+    </FrameLayout>
 
-
-    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

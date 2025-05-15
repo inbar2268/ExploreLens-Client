@@ -19,6 +19,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.example.explorelens.R
 import com.example.explorelens.data.db.siteHistory.SiteHistory
+import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager
 import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.data.repository.SiteHistoryRepository
@@ -29,8 +30,16 @@ import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import kotlinx.coroutines.Dispatchers
 import com.google.android.material.imageview.ShapeableImageView
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MapFragment : Fragment() {
 
@@ -126,7 +135,6 @@ class MapFragment : Fragment() {
 
         // Clear existing markers
         googleMap.clear()
-        siteMarkers.clear()
 
         // Track bounds to fit all markers
         var firstLocation: LatLng? = null
@@ -307,6 +315,7 @@ class MapFragment : Fragment() {
                 arguments = bundle
             }
 
+            // Find the correct container ID in your layout
             val containerId = (view?.parent as? ViewGroup)?.id ?: R.id.nav_host_fragment
 
             parentFragmentManager.beginTransaction()
@@ -316,7 +325,6 @@ class MapFragment : Fragment() {
         }
     }
 
-    // Standard MapView lifecycle methods
     override fun onResume() {
         super.onResume()
         mapView.onResume()

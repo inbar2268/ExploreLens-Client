@@ -25,6 +25,7 @@ import com.example.explorelens.data.repository.UserRepository
 import androidx.lifecycle.lifecycleScope
 import com.example.explorelens.utils.LoadingManager.showLoading
 import kotlinx.coroutines.Dispatchers
+import com.example.explorelens.data.repository.SiteDetailsRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -77,10 +78,15 @@ class SiteHistoryFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        // Initialize adapter with click listener
-        adapter = SiteHistoryAdapter { siteHistory ->
-            navigateToSiteDetails(siteHistory)
-        }
+        val siteRepository = SiteDetailsRepository(requireContext())
+
+        adapter = SiteHistoryAdapter(
+            onItemClick = { siteHistory ->
+                navigateToSiteDetails(siteHistory)
+            },
+            siteRepository = siteRepository,
+            lifecycleOwner = viewLifecycleOwner
+        )
 
         // Set up grid layout with 2 columns
         binding.recyclerViewHistory.apply {
@@ -104,68 +110,52 @@ class SiteHistoryFragment : Fragment() {
         // Start sync in background
         lifecycleScope.launch {
             try {
-                // Call sync function
-                viewModel.syncSiteHistory(userId)
+                // Synchronize site history with server before loading
+                // Observe site history data after sync
+                viewModel.getSiteHistoryByUserId(userId)
+                    .observe(viewLifecycleOwner) { historyList ->
+                        Log.d(TAG, "Received ${historyList.size} history items")
 
-                // After sync completes, start observing data from Room
-                withContext(Dispatchers.Main) {
-                    isSyncing = false
-                    showLoading(false)
-                    observeData()
-                }
+                        // Additional filter to ensure we only show the current user's history
+                        val filteredList = historyList.filter { it.userId == userId }
+                        Log.d(TAG, "After filtering for current user: ${filteredList.size} items")
+
+                        // Group by siteInfoId to avoid duplicates
+                        val uniqueSites = filteredList.groupBy { it.siteInfoId }
+                            .map { entry -> entry.value.maxByOrNull { it.createdAt }!! }
+                            .sortedByDescending { it.createdAt }
+
+                        Log.d(TAG, "Unique sites after grouping: ${uniqueSites.size}")
+
+                        // Debug log each unique site
+                        uniqueSites.forEachIndexed { index, site ->
+                            Log.d(
+                                TAG,
+                                "Site $index: ID=${site.siteInfoId}, Created=${site.createdAt}"
+                            )
+                        }
+
+                        // Update history count
+
+                        if (uniqueSites.isEmpty()) {
+                            // No data for current user, show mock data
+                            Log.d(TAG, "No history data for current user, showing mock data")
+                            showMockData()
+                        } else {
+                            // Real data available, display it
+                            Log.d(
+                                TAG,
+                                "Displaying real history data for current user (${uniqueSites.size} sites)"
+                            )
+                            showHistoryData(uniqueSites)
+                        }
+                    }
             } catch (e: Exception) {
-                Log.e(TAG, "Error during sync", e)
-                withContext(Dispatchers.Main) {
-                    isSyncing = false
-                    showLoading(false)
-                    // Show error message
-                    Toast.makeText(requireContext(), "Sync failed, showing cached data", Toast.LENGTH_SHORT).show()
-                    observeData()
-                }
-            }
-        }
-    }
-
-    private fun observeData() {
-        val userId = getCurrentUserId()
-        if (userId == null) {
-            Log.e(TAG, "No user ID available, showing mock data")
-            showMockData()
-            return
-        }
-
-        Log.d(TAG, "Loading history for user ID: $userId")
-
-        // Just observe the data from Room without syncing
-        viewModel.getSiteHistoryByUserId(userId).observe(viewLifecycleOwner) { historyList ->
-            Log.d(TAG, "Received ${historyList.size} history items")
-
-            // Additional filter to ensure we only show the current user's history
-            val filteredList = historyList.filter { it.userId == userId }
-            Log.d(TAG, "After filtering for current user: ${filteredList.size} items")
-
-            // Group by siteInfoId to avoid duplicates
-            val uniqueSites = filteredList.groupBy { it.siteInfoId }
-                .map { entry -> entry.value.maxByOrNull { it.createdAt }!! }
-                .sortedByDescending { it.createdAt }
-
-            Log.d(TAG, "Unique sites after grouping: ${uniqueSites.size}")
-
-            // Update history count
-           // binding.historyCountTextView.text = "You've unlocked ${uniqueSites.size} unique sites!"
-
-            if (uniqueSites.isEmpty()) {
-                // No data for current user, show mock data
-                Log.d(TAG, "No history data for current user, showing mock data")
+                Log.e(TAG, "Error syncing and loading site history", e)
                 showMockData()
-            } else {
-                // Real data available, display it
-                Log.d(TAG, "Displaying real history data for current user (${uniqueSites.size} sites)")
-                showHistoryData(uniqueSites)
             }
         }
     }
-
     private fun showHistoryData(historyList: List<SiteHistory>) {
         binding.emptyStateView.visibility = View.GONE
         binding.recyclerViewHistory.visibility = View.VISIBLE
@@ -209,6 +199,7 @@ class SiteHistoryFragment : Fragment() {
                 // Stop animation if already syncing
                 binding.swipeRefreshLayout.isRefreshing = false
             }
+            binding.swipeRefreshLayout.isRefreshing = false // Stop the animation
         }
     }
 

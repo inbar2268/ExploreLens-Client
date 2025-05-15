@@ -1,4 +1,3 @@
-// SiteDetailsRepository.kt
 package com.example.explorelens.data.repository
 
 import android.content.Context
@@ -7,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import com.example.explorelens.data.model.SiteDetails.SiteDetailsRatingRequest
+import com.example.explorelens.data.model.comments.Review
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +24,7 @@ class SiteDetailsRepository(context: Context) {
 
     suspend fun addRating(siteId: String, rating: Float): Result<SiteDetails> {
         val userId = tokenManager.getUserId()
-        val request = userId?.let { SiteDetailsRatingRequest(rating, it) }
+        val request = userId?.let { SiteDetailsRatingRequest(rating,it) }
 
         return try {
             val response: Response<SiteDetails>? =
@@ -32,22 +32,20 @@ class SiteDetailsRepository(context: Context) {
 
             if (response?.isSuccessful == true) {
                 response.body()?.let {
-                    Log.d(TAG, "Rating added successfully: $it")
-                    // Update cache
-                    siteDetailsCache[siteId] = it
+                    Log.d("SiteDetailsRepository", "rating added successfully: $it")
                     Result.success(it)
                 } ?: run {
-                    Log.e(TAG, "Empty response body")
+                    Log.e("SiteDetailsRepository", "Empty response body")
                     Result.failure(Exception("Empty response body"))
                 }
             } else {
                 val errorBody = response?.errorBody()?.string()
                 val errorMessage = "Error ${response?.code()}: ${errorBody ?: "Unknown error"}"
-                Log.e(TAG, errorMessage)
+                Log.e("SiteDetailsRepository", errorMessage)
                 Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Network error: ${e.localizedMessage}", e)
+            Log.e("SiteDetailsRepository", "Network error: ${e.localizedMessage}", e)
             Result.failure(Exception("Network error: ${e.localizedMessage}"))
         }
     }
@@ -96,6 +94,7 @@ class SiteDetailsRepository(context: Context) {
 
         return result
     }
+
 
     // Add a method that returns a direct callback for immediate use
     fun fetchSiteDetails(

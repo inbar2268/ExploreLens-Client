@@ -13,11 +13,9 @@ interface SiteDetailsApi {
     @GET("/site-info/{siteid}")
     fun getSiteDetails(@Path("siteid") siteid: String): Call<SiteDetails>
 
-
     @POST("/site-info/rating/{siteId}")
     suspend fun addRating(
         @Path("siteId") siteId: String,
         @Body siteDetailsRatingRequest: SiteDetailsRatingRequest
     ): Response<SiteDetails>
-
 }

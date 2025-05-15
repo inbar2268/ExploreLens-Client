@@ -8,9 +8,12 @@ import android.opengl.Matrix
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.MotionEvent
 import android.view.View
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import com.example.explorelens.ArActivity
 import com.example.explorelens.extensions.convertYuv
 import com.example.explorelens.extensions.toFile
@@ -49,6 +52,8 @@ import com.example.explorelens.utils.GeoLocationUtils
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.detectionResult.AnalyzedResultApi
 import com.example.explorelens.data.repository.DetectionResultRepository
+import com.example.explorelens.data.repository.NearbyPlacesRepository
+import com.example.explorelens.data.repository.SiteDetailsRepository
 
 class AppRenderer(
     val activity: ArActivity,
@@ -94,12 +99,30 @@ class AppRenderer(
     fun bindView(view: ArActivityView) {
         this.view = view
 
-        view.snapshotButton.setOnClickListener {
+
+//        view.snapshotButton.setOnClickListener {
+//            scanButtonWasPressed = true
+//            view.setScanningActive(true)
+//            hideSnackbar()
+//        }
+
+        view.binding.cameraButtonContainer.setOnTouchListener { _, event ->
             scanButtonWasPressed = true
             view.setScanningActive(true)
             hideSnackbar()
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    view.binding.cameraInnerCircle.animate().scaleX(0.85f).scaleY(0.85f).setDuration(100).start()
+                }
+
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    view.binding.cameraInnerCircle.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+                }
+            }
+            false
         }
     }
+
 
     override fun onSurfaceCreated(render: SampleRender) {
         backgroundRenderer = BackgroundRenderer(render).apply {
@@ -107,6 +130,7 @@ class AppRenderer(
         }
         pointCloudRender.onSurfaceCreated(render)
         labelRenderer.onSurfaceCreated(render)
+        getNearbyPlacesForAR(listOf("bar", "hotel"))
     }
 
     override fun onSurfaceChanged(render: SampleRender?, width: Int, height: Int) {
@@ -503,7 +527,7 @@ class AppRenderer(
                         y = 0.5f,
                         siteName = "Colosseum"
                     ),
-                    siteInfoId = "6818fd47b249f52360e546ec",
+                    siteInfoId = "6818fcadb249f52360e546e9",
                 )
 
             launch(Dispatchers.Main) {
@@ -541,7 +565,7 @@ class AppRenderer(
 
 
     private fun showSnackbar(message: String): Unit =
-        activity.view.snackbarHelper.showError(activity, message)
+        view.snackbarHelper.showError(activity, message)
 
     private fun hideSnackbar() = activity.view.snackbarHelper.hide(activity)
 
@@ -680,77 +704,91 @@ class AppRenderer(
         obj: ImageAnalyzedResult,
         frame: Frame
     ): ARLabeledAnchor? {
-        val atX = obj.siteInformation?.x
-        val atY = obj.siteInformation?.y
-        val siteName = obj.siteInformation?.siteName
+        val siteInfo = obj.siteInformation
         val siteId = obj.siteInfoId
 
-        if (atX == null || atY == null || siteName == null || siteId == null) {
-            Log.e(TAG, "Missing location data or site name/id")
-            return null
+        if (!isValidSiteData(siteInfo, siteId)) return null
+
+        val anchor = createAnchor(session, snapshotData.cameraPose, siteInfo!!.x, siteInfo.y, frame)
+            ?: return null
+
+        val initialLabel = "${siteInfo.siteName}||Loading..."
+        val arLabeledAnchor = ARLabeledAnchor(anchor, initialLabel, siteInfo.siteName).apply {
+            this.siteId = siteId
         }
 
-        // Create anchor first so we can proceed with AR display
-        val anchor = placeLabelAccurateWithSnapshot(
-            session,
-            snapshotData.cameraPose,
-            atX,
-            atY,
-            frame
-        ) ?: return null
-
-        Log.d(TAG, "Anchor created for $siteName (ID: $siteId)")
-
-        // Initially create with just the site name
-        val arLabeledAnchor = ARLabeledAnchor(anchor, "$siteName||Loading...", siteName)
-        arLabeledAnchor.siteId = siteId
-
-        Log.d(TAG, "Fetching site details for ID: $siteId")
-
-        ExploreLensApiClient.siteDetailsApi.getSiteDetails(siteId)
-            .enqueue(object : Callback<SiteDetails> {
-                override fun onResponse(call: Call<SiteDetails>, response: Response<SiteDetails>) {
-                    if (response.isSuccessful) {
-                        val siteInfo = response.body()
-                        if (siteInfo != null) {
-                            val description = siteInfo.description
-
-                            // Get first sentence or first line for preview
-                            val previewText = extractPreviewText(description)
-
-                            // Update the label text with fetched description
-                            val newLabelText = "$siteName||$previewText"
-                            Log.d(TAG, "Updated label with description: $newLabelText")
-
-                            // Update the anchor label
-                            synchronized(arLabeledAnchors) {
-                                val index = arLabeledAnchors.indexOf(arLabeledAnchor)
-                                if (index != -1) {
-                                    // Create a new anchor with updated label text
-                                    val updatedAnchor = ARLabeledAnchor(
-                                        arLabeledAnchor.anchor,
-                                        newLabelText,
-                                        arLabeledAnchor.siteName
-                                    )
-                                    // Store full description for DetailActivity
-                                    updatedAnchor.fullDescription = description
-                                    arLabeledAnchors[index] = updatedAnchor
-                                    updatedAnchor.siteId = siteId
-                                }
-                            }
-                        }
-                    } else {
-                        Log.e(TAG, "Failed to fetch site details: ${response.code()}")
-                    }
-                }
-
-                override fun onFailure(call: Call<SiteDetails>, t: Throwable) {
-                    Log.e(TAG, "Network error fetching site details: ${t.message}")
-                }
-            })
+        fetchAndUpdateSiteDetails(arLabeledAnchor, siteInfo.siteName, siteId)
 
         return arLabeledAnchor
     }
+
+    private fun fetchAndUpdateSiteDetails(
+        anchor: ARLabeledAnchor,
+        siteName: String,
+        siteId: String
+    ) {
+        Log.d(TAG, "Fetching site details for ID: $siteId")
+        val context = activity.applicationContext
+        val repository = SiteDetailsRepository(context)
+
+        // Use the callback-based method instead of the suspend method
+        repository.fetchSiteDetails(
+            siteId = siteId,
+            onSuccess = { siteInfo ->
+                updateAnchorWithDetails(anchor, siteName, siteInfo, siteId)
+            },
+            onError = {
+                Log.e(TAG, "Failed to fetch site details")
+            }
+        )
+    }
+
+    private fun isValidSiteData(siteInfo: SiteInformation?, siteId: String?): Boolean {
+        if (siteInfo?.x == null || siteInfo.y == null || siteInfo.siteName == null || siteId.isNullOrBlank()) {
+            Log.e(TAG, "Missing location data or site name/id")
+            return false
+        }
+        return true
+    }
+
+    private fun createAnchor(
+        session: Session,
+        cameraPose: Pose,
+        atX: Float,
+        atY: Float,
+        frame: Frame
+    ): Anchor? {
+        return placeLabelAccurateWithSnapshot(session, cameraPose, atX, atY, frame).also {
+            if (it == null) {
+                Log.e(TAG, "Failed to place anchor")
+            }
+        }
+    }
+
+    private fun updateAnchorWithDetails(
+        oldAnchor: ARLabeledAnchor,
+        siteName: String,
+        siteInfo: SiteDetails,
+        siteId: String
+    ) {
+        val previewText = extractPreviewText(siteInfo.description)
+        val newLabelText = "$siteName||$previewText"
+
+        Log.d(TAG, "Updated label with description: $newLabelText")
+
+        synchronized(arLabeledAnchors) {
+            val index = arLabeledAnchors.indexOf(oldAnchor)
+            if (index != -1) {
+                val updatedAnchor =
+                    ARLabeledAnchor(oldAnchor.anchor, newLabelText, siteName).apply {
+                        this.fullDescription = siteInfo.description
+                        this.siteId = siteId
+                    }
+                arLabeledAnchors[index] = updatedAnchor
+            }
+        }
+    }
+
 
     // Helper function to extract a single line or sentence for preview
     private fun extractPreviewText(description: String): String {
@@ -795,7 +833,7 @@ class AppRenderer(
 
         // Pass the full description to DetailActivity if available
         activity.runOnUiThread {
-            activity.findViewById<View>(R.id.cameraButton)?.visibility = View.GONE
+            activity.findViewById<View>(R.id.cameraButtonContainer)?.visibility = View.GONE
             // Show site details as an overlay instead of starting a new activity
             if (siteId != null) {
                 view.showSiteDetails(siteId, clickedAnchor.fullDescription, siteName)
@@ -837,14 +875,44 @@ class AppRenderer(
                             "AnalyzeImage",
                             "Site detected: ${analyzedResult.siteInformation?.siteName ?: "Unknown"}"
                         )
-                        serverResult = analyzedResult // אם זה משתנה מסוג ImageAnalyzedResult
-                        // אם serverResult עדיין מוגדר כ List - תעדכני ליחיד או תשני את השם שלו
+                        serverResult = analyzedResult
                     }
                 }
 
                 result.onFailure { error ->
                     Log.e("AnalyzeImage", "Error analyzing image: ${error.localizedMessage}")
                     showSnackbar("Error analyzing the image: ${error.message}")
+                }
+            }
+        }
+    }
+
+    fun getNearbyPlacesForAR(categories: List<String>) {
+        Log.d("NearbyPlaces", "Fetching nearby places for AR...")
+
+        launch(Dispatchers.IO) {
+            val currentLocation = geoLocationUtils.getSingleCurrentLocation()
+                ?: return@launch
+            geoLocationUtils.updateLocation(currentLocation)
+            val repository = NearbyPlacesRepository()
+            val result = repository.fetchNearbyPlaces(
+                currentLocation.latitude,
+                currentLocation.longitude,
+                categories
+            )
+
+            withContext(Dispatchers.Main) {
+                result.onSuccess { places ->
+                    Log.d("NearbyPlaces", "Received ${places.size} places")
+                    showSnackbar("Received ${places.size} places")
+                    showSnackbar("Received ${places[0].name} , ${places[1].name} places")
+                    //updating AR nearbyPlaces anchors when creates
+                    // updateARViewWithPlaces(places)
+                }
+
+                result.onFailure { error ->
+                    Log.e("NearbyPlaces", "Error fetching places: ${error.localizedMessage}")
+                    showSnackbar("Couldn't load nearby places: ${error.message}")
                 }
             }
         }

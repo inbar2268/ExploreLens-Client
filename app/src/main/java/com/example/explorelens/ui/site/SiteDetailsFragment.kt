@@ -19,6 +19,7 @@ import android.widget.RatingBar
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.ArActivity
@@ -125,99 +126,73 @@ class SiteDetailsFragment : Fragment() {
     }
 
     private fun fetchSiteDetails(label: String) {
-        val labelWithoutSpaces = label.replace(" ", "")
-        Log.d("SiteDetailsFragment", "Sending request with label: $labelWithoutSpaces")
+        val siteId = label.replace(" ", "")
 
-        // Use the client from our networking package
-        val call = ExploreLensApiClient.siteDetailsApi.getSiteDetails(labelWithoutSpaces)
+        Log.d("SiteDetailsFragment", "Fetching site details for: $siteId")
 
-        call.enqueue(object : Callback<SiteDetails> {
-            override fun onResponse(call: Call<SiteDetails>, response: Response<SiteDetails>) {
-                if (!isAdded) return  // Check if fragment is still attached
+        loadingIndicator.visibility = View.VISIBLE
 
+        // Use the callback-based method from repository
+        siteDetailsRepository.fetchSiteDetails(
+            siteId = siteId,
+            onSuccess = { siteDetails ->
                 loadingIndicator.visibility = View.GONE
-
-                if (response.isSuccessful) {
-                    val siteDetailsResponse = response.body()
-                    Log.d("SiteDetailsFragment", "Raw response: ${response.raw()}")
-                    Log.d("SiteDetailsFragment", "Response received: $siteDetailsResponse")
-                    Log.d("SiteDetailsFragment", "Image URL: ${siteDetailsResponse?.imageUrl}")
-
-                    if (siteDetailsResponse != null) {
-                        // Store the complete SiteDetails object
-                        this@SiteDetailsFragment.SiteDetails = siteDetailsResponse
-
-                        labelTextView.text = siteDetailsResponse.name
-
-                        ratingView.setRating(siteDetailsResponse.averageRating ?: 0f)
-
-                        // Only update description if we don't already have one
-                        val hasPassedDescription =
-                            arguments?.getString("DESCRIPTION_KEY")?.isNotEmpty() == true
-                        if (!hasPassedDescription) {
-                            descriptionTextView.text = siteDetailsResponse.description
-                        }
-
-                        // Load image if available
-                        if (!siteDetailsResponse.imageUrl.isNullOrEmpty()) {
-                            Log.d(
-                                "SiteDetailsFragment",
-                                "Loading image from URL: ${siteDetailsResponse.imageUrl}"
-                            )
-                            try {
-                                Glide.with(requireContext())
-                                    .load(siteDetailsResponse.imageUrl)
-                                    .placeholder(R.drawable.eiffel) // This shows temporarily while loading
-                                    .error(R.drawable.eiffel) // This shows only if loading fails
-                                    .into(headerBackground)
-                            } catch (e: Exception) {
-                                Log.e("SiteDetailsFragment", "Error loading image: ${e.message}", e)
-                            }
-                        } else {
-                            Log.d("SiteDetailsFragment", "No image URL provided")
-                        }
-
-                        Log.d(
-                            "SiteDetailsFragment",
-                            "Rating from server: ${siteDetailsResponse.averageRating}, count: ${siteDetailsResponse.ratingCount}"
-                        )
-
-
-                        val siteId = siteDetailsResponse.id
-                        if (!siteId.isNullOrBlank()) {
-                            fetchSiteReviews(siteId)
-                        } else {
-                            Log.e("SiteDetailsFragment", "siteId is null or blank")
-                        }
-
-                        // Update rating if available
-                        if (siteDetailsResponse.ratingCount > 0) {
-                            ratingView.setRating(siteDetailsResponse.averageRating)
-                            Log.d(
-                                "SiteDetailsFragment",
-                                "Updated rating view to: ${siteDetailsResponse.averageRating}"
-                            )
-                        } else {
-                            Log.d("SiteDetailsFragment", "No ratings available, using default")
-                        }
-                    } else {
-                        Log.e("SiteDetailsFragment", "Response body is null")
-                        showError("No data returned from server")
-                    }
-                } else {
-                    Log.e("SiteDetailsFragment", "Error: ${response.code()}")
-                    showError("Failed to load details: ${response.code()}")
-                }
-            }
-
-            override fun onFailure(call: Call<SiteDetails>, t: Throwable) {
-                if (!isAdded) return  // Check if fragment is still attached
-
+                handleSiteDetailsSuccess(siteDetails)
+            },
+            onError = {
                 loadingIndicator.visibility = View.GONE
-                Log.e("SiteDetailsFragment", "Network error: ${t.message}", t)
-                showError("Network error: ${t.message}")
+                showError("Failed to load details")
+                Log.e("SiteDetailsFragment", "Error loading site details")
             }
-        })
+        )
+    }
+
+    private fun handleSiteDetailsSuccess(siteDetails: SiteDetails) {
+        this.SiteDetails = siteDetails
+
+        labelTextView.text = siteDetails.name
+        setDescriptionIfNotPassed(siteDetails.description)
+        loadImageIfAvailable(siteDetails.imageUrl)
+        updateRatingView(siteDetails.averageRating, siteDetails.ratingCount)
+
+        siteDetails.id?.let {
+            fetchSiteReviews(it)
+        } ?: Log.e("SiteDetailsFragment", "siteId is null or blank")
+    }
+
+    private fun setDescriptionIfNotPassed(description: String?) {
+        val hasPassedDescription = arguments?.getString("DESCRIPTION_KEY")?.isNotEmpty() == true
+        if (!hasPassedDescription) {
+            descriptionTextView.text = description
+        }
+    }
+
+    private fun loadImageIfAvailable(imageUrl: String?) {
+        if (!imageUrl.isNullOrEmpty()) {
+            try {
+                Glide.with(requireContext())
+                    .load(imageUrl)
+                    .placeholder(R.drawable.eiffel)
+                    .error(R.drawable.eiffel)
+                    .into(headerBackground)
+            } catch (e: Exception) {
+                Log.e("SiteDetailsFragment", "Error loading image: ${e.message}", e)
+            }
+        } else {
+            Log.d("SiteDetailsFragment", "No image URL provided")
+        }
+    }
+
+    private fun updateRatingView(averageRating: Float?, ratingCount: Int) {
+        if (averageRating != null) {
+            if (averageRating > 0) {
+                ratingView.setRating(averageRating ?: 0f)
+                Log.d("SiteDetailsFragment", "Updated rating view to: $averageRating")
+            } else {
+                Log.d("SiteDetailsFragment", "No ratings available, using default")
+                ratingView.setRating(0f)
+            }
+        }
     }
 
     private fun fetchSiteReviews(siteId: String) {
@@ -256,7 +231,7 @@ class SiteDetailsFragment : Fragment() {
     }
 
     @SuppressLint("MissingInflatedId")
-    private  fun showReviewsDialog() {
+    private fun showReviewsDialog() {
         Log.d("SiteDetailsFragment", "showReviewsDialog called")
         context?.let { ctx ->
             try {
@@ -305,10 +280,11 @@ class SiteDetailsFragment : Fragment() {
 
                                 val newReview = result.getOrNull()
                                 val user = userRepository.getUserFromDb()
-                                 val newReviewWithUser=
-                                     newReview?.let { it1 -> ReviewWithUser(it1,user) }
+                                val newReviewWithUser =
+                                    newReview?.let { it1 -> ReviewWithUser(it1, user) }
                                 if (newReviewWithUser != null) {
-                                    fetchedReviewsWithUsers = (fetchedReviewsWithUsers ?: emptyList()) + newReviewWithUser
+                                    fetchedReviewsWithUsers =
+                                        (fetchedReviewsWithUsers ?: emptyList()) + newReviewWithUser
                                     recyclerView.adapter = ReviewsAdapter(fetchedReviewsWithUsers)
                                     recyclerView.scrollToPosition(fetchedReviewsWithUsers.lastIndex)
 
@@ -389,9 +365,12 @@ class SiteDetailsFragment : Fragment() {
 //                                updateRatingView(new)
                             }
 
-                                dialog.dismiss()
+                            dialog.dismiss()
                         } else {
-                            Log.e("SiteDetailsFragment", "Failed to submit rating: ${result.exceptionOrNull()?.message}")
+                            Log.e(
+                                "SiteDetailsFragment",
+                                "Failed to submit rating: ${result.exceptionOrNull()?.message}"
+                            )
                             ToastHelper.showShortToast(ctx, "Failed to submit rating")
                         }
                     }
@@ -435,7 +414,7 @@ class SiteDetailsFragment : Fragment() {
             activity.view.hideSiteDetails()
 
             // Make sure the camera button is visible again
-            activity.findViewById<View>(R.id.cameraButton)?.visibility = View.VISIBLE
+            activity.findViewById<View>(R.id.cameraButtonContainer)?.visibility = View.VISIBLE
         } else {
             // For regular fragment navigation
             parentFragmentManager.beginTransaction().remove(this).commit()

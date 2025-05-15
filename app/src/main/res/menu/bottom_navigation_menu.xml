@@ -2,17 +2,17 @@
     <item
         android:id="@+id/siteHistoryFragment"
         android:icon="@drawable/ic_history_selector"
-        android:title="History" />
+        android:title="" />
     <item
         android:id="@+id/arActivity"
         android:icon="@drawable/ic_camera_selector"
-        android:title="Camera" />
+        android:title="" />
     <item
         android:id="@+id/mapFragment"
         android:icon="@drawable/ic_map_selector"
-        android:title="Map" />
+        android:title="" />
     <item
         android:id="@+id/profileFragment"
         android:icon="@drawable/ic_profile_selector"
-        android:title="Profile" />
+        android:title="" />
 </menu>
