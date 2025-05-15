@@ -1,5 +1,6 @@
 package com.example.explorelens.adapters.filterOptions
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,6 +17,7 @@ class FilterOptionAdapter(
 ) : RecyclerView.Adapter<FilterOptionAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        Log.d("FilterAdapter", "onCreateViewHolder called")
         val itemView = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_filter_option, parent, false)
         return ViewHolder(itemView)

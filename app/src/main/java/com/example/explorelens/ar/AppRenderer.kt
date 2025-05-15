@@ -105,17 +105,18 @@ class AppRenderer(
 //            view.setScanningActive(true)
 //            hideSnackbar()
 //        }
-        view.cameraButtonContainer.setOnTouchListener { _, event ->
+
+        view.binding.cameraButtonContainer.setOnTouchListener { _, event ->
             scanButtonWasPressed = true
             view.setScanningActive(true)
             hideSnackbar()
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    view.innerCircle.animate().scaleX(0.85f).scaleY(0.85f).setDuration(100).start()
+                    view.binding.cameraInnerCircle.animate().scaleX(0.85f).scaleY(0.85f).setDuration(100).start()
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    view.innerCircle.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+                    view.binding.cameraInnerCircle.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
                 }
             }
             false
@@ -564,7 +565,7 @@ class AppRenderer(
 
 
     private fun showSnackbar(message: String): Unit =
-        activity.view.snackbarHelper.showError(activity, message)
+        view.snackbarHelper.showError(activity, message)
 
     private fun hideSnackbar() = activity.view.snackbarHelper.hide(activity)
 

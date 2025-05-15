@@ -1,68 +1,66 @@
 package com.example.explorelens
+
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.Manifest
-import android.graphics.drawable.InsetDrawable
-import android.graphics.drawable.ShapeDrawable
-import android.graphics.drawable.shapes.RectShape
 import android.net.Uri
+import android.provider.Settings
 import android.util.Log
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import com.google.ar.core.CameraConfig
-import com.google.ar.core.CameraConfigFilter
-import com.google.ar.core.Config
-import com.example.explorelens.common.helpers.FullScreenHelper
-import com.google.ar.core.exceptions.CameraNotAvailableException
-import com.google.ar.core.exceptions.UnavailableApkTooOldException
-import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException
-import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
-import com.google.ar.core.exceptions.UnavailableSdkTooOldException
-import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
-import android.view.WindowManager
-import android.widget.Button
-import android.widget.ImageButton
-import android.widget.ImageView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
-import androidx.recyclerview.widget.DividerItemDecoration
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.example.explorelens.adapters.filterOptions.FilterOptionAdapter
 import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
 import com.example.explorelens.ar.ARCoreSessionLifecycleHelper
 import com.example.explorelens.ar.AppRenderer
 import com.example.explorelens.ar.ArActivityView
+import com.example.explorelens.common.helpers.FullScreenHelper
+import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.data.model.FilterOption
 import com.example.explorelens.data.repository.SiteHistoryRepository
+import com.example.explorelens.databinding.ActivityMainBinding
 import com.example.explorelens.utils.GeoLocationUtils
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.sidesheet.SideSheetBehavior
-import com.google.android.material.sidesheet.SideSheetCallback
-import com.google.android.material.sidesheet.SideSheetDialog
+import com.google.ar.core.CameraConfig
+import com.google.ar.core.CameraConfigFilter
+import com.google.ar.core.Config
+import com.google.ar.core.exceptions.*
 
+/**
+ * Main AR activity that handles camera preview, AR rendering, and location-based services
+ */
 class ArActivity : AppCompatActivity() {
 
-  val TAG = "ArActivity"
+  companion object {
+    private const val TAG = "ArActivity"
+    private const val LOCATION_PERMISSION_REQUEST = 1001
+    private const val CAMERA_PERMISSION_REQUEST = 1002
+    private const val ALL_PERMISSIONS_REQUEST = 1003
+
+    // Permission states
+    private const val PERMISSIONS_GRANTED = 0
+    private const val LOCATION_PERMISSION_REQUIRED = 1
+    private const val CAMERA_PERMISSION_REQUIRED = 2
+    private const val ALL_PERMISSIONS_REQUIRED = 3
+  }
+
+  // View binding
+  private lateinit var binding: ActivityMainBinding
+
+  // Core AR components
   lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
-  lateinit var renderer: AppRenderer
+  private lateinit var renderer: AppRenderer
   lateinit var view: ArActivityView
+
+  // Utils and data
   private lateinit var geoLocationUtils: GeoLocationUtils
-  private val LOCATION_PERMISSION_REQUEST = 1001
-  private val CAMERA_PERMISSION_REQUEST = 1002
   private lateinit var siteHistoryViewModel: SiteHistoryViewModel
+
+  // Filter options data
   private val filterOptionsArray = arrayOf(
     FilterOption("restaurant", iconResId = R.drawable.ic_restaurant),
     FilterOption("cafe", iconResId = R.drawable.ic_cafe),
@@ -72,21 +70,35 @@ class ArActivity : AppCompatActivity() {
     FilterOption("pharmacy", iconResId = R.drawable.ic_pharmacy),
     FilterOption("gym", iconResId = R.drawable.ic_gym)
   )
-  private val selectedFilters = mutableSetOf<String>()
+
+  // Permission state tracking
+  private var permissionState = ALL_PERMISSIONS_REQUIRED
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     Log.d(TAG, "onCreate called")
 
+    // Initialize view binding
+    binding = ActivityMainBinding.inflate(layoutInflater)
+    setContentView(binding.root)
+
+    initializeComponents()
+    configureWindowSettings()
+  }
+
+  private fun initializeComponents() {
     geoLocationUtils = GeoLocationUtils(applicationContext)
     val siteRepository = SiteHistoryRepository(applicationContext)
     siteHistoryViewModel = ViewModelProvider(
       this,
       SiteHistoryViewModel.Factory(siteRepository, geoLocationUtils)
     )[SiteHistoryViewModel::class.java]
-    WindowCompat.setDecorFitsSystemWindows(window, false)
 
     Log.d(TAG, "ViewModel initialized")
+  }
+
+  private fun configureWindowSettings() {
+    WindowCompat.setDecorFitsSystemWindows(window, false)
   }
 
   override fun onStart() {
@@ -95,54 +107,135 @@ class ArActivity : AppCompatActivity() {
     checkAndRequestPermissions()
   }
 
+  /**
+   * Check permission status and request missing permissions
+   */
   private fun checkAndRequestPermissions() {
     Log.d(TAG, "checkAndRequestPermissions called")
-    when {
-      !hasLocationPermissions() -> {
-        Log.d(TAG, "Location permissions not granted. Requesting...")
-        requestLocationPermissions()
-      }
-      !hasCameraPermission() -> {
-        Log.d(TAG, "Camera permissions not granted. Requesting...")
-        requestCameraPermission()
-      }
-      else -> {
-        Log.d(TAG, "Permissions granted. Setting up AR...")
+
+    // Determine permission state
+    updatePermissionState()
+
+    when (permissionState) {
+      PERMISSIONS_GRANTED -> {
+        Log.d(TAG, "All permissions granted. Setting up AR...")
         setupAr()
+      }
+      LOCATION_PERMISSION_REQUIRED -> {
+        Log.d(TAG, "Location permissions not granted. Requesting...")
+        showPermissionRationale(
+          "Location Access Needed",
+          "ExploreLens needs your location to identify points of interest around you.",
+          LOCATION_PERMISSION_REQUEST
+        )
+      }
+      CAMERA_PERMISSION_REQUIRED -> {
+        Log.d(TAG, "Camera permissions not granted. Requesting...")
+        showPermissionRationale(
+          "Camera Access Needed",
+          "ExploreLens needs camera access to provide the AR experience.",
+          CAMERA_PERMISSION_REQUEST
+        )
+      }
+      ALL_PERMISSIONS_REQUIRED -> {
+        Log.d(TAG, "Multiple permissions not granted. Requesting all...")
+        showPermissionRationale(
+          "Permissions Required",
+          "ExploreLens needs camera and location access to provide the AR experience.",
+          ALL_PERMISSIONS_REQUEST
+        )
       }
     }
   }
 
+  /**
+   * Update the current permission state based on granted permissions
+   */
+  private fun updatePermissionState() {
+    val hasLocationPermission = hasLocationPermissions()
+    val hasCameraPermission = hasCameraPermission()
+
+    permissionState = when {
+      hasLocationPermission && hasCameraPermission -> PERMISSIONS_GRANTED
+      hasLocationPermission -> CAMERA_PERMISSION_REQUIRED
+      hasCameraPermission -> LOCATION_PERMISSION_REQUIRED
+      else -> ALL_PERMISSIONS_REQUIRED
+    }
+
+    Log.d(TAG, "Permission state updated: $permissionState")
+  }
+
+  /**
+   * Shows rationale before requesting permissions
+   */
+  private fun showPermissionRationale(title: String, message: String, requestCode: Int) {
+    // Check if we should show rationale for any permission
+    val shouldShowLocationRationale = ActivityCompat.shouldShowRequestPermissionRationale(
+      this, Manifest.permission.ACCESS_FINE_LOCATION)
+    val shouldShowCameraRationale = ActivityCompat.shouldShowRequestPermissionRationale(
+      this, Manifest.permission.CAMERA)
+
+    if (shouldShowLocationRationale || shouldShowCameraRationale) {
+      // User has denied before, show rationale
+      AlertDialog.Builder(this)
+        .setTitle(title)
+        .setMessage(message)
+        .setPositiveButton("Grant") { _, _ ->
+          requestPermissionsBasedOnCode(requestCode)
+        }
+        .setNegativeButton("Cancel") { _, _ ->
+          Log.d(TAG, "Permission rationale denied by user")
+          showPermissionRequiredDialog()
+        }
+        .show()
+    } else {
+      // First time asking or user selected "Don't ask again"
+      requestPermissionsBasedOnCode(requestCode)
+    }
+  }
+
+  /**
+   * Request permissions based on request code
+   */
+  private fun requestPermissionsBasedOnCode(requestCode: Int) {
+    when (requestCode) {
+      LOCATION_PERMISSION_REQUEST -> requestLocationPermissions()
+      CAMERA_PERMISSION_REQUEST -> requestCameraPermission()
+      ALL_PERMISSIONS_REQUEST -> requestAllPermissions()
+    }
+  }
+
+  /**
+   * Setup AR components after permissions are granted
+   */
   private fun setupAr() {
     Log.d(TAG, "setupAr called")
 
-    // Setup ARCore session lifecycle helper and configuration.
+    // Setup ARCore session lifecycle helper
+    setupARCoreSession()
+
+    // Set up AR renderer
+    setupRenderer()
+
+    // Set up AR UI
+    setupArView()
+  }
+
+  private fun setupARCoreSession() {
     arCoreSessionHelper = ARCoreSessionLifecycleHelper(this)
     Log.d(TAG, "ARCoreSessionLifecycleHelper initialized")
 
     arCoreSessionHelper.exceptionCallback = { exception ->
-      val message = when (exception) {
-        is UnavailableArcoreNotInstalledException,
-        is UnavailableUserDeclinedInstallationException -> "Please install ARCore"
-        is UnavailableApkTooOldException -> "Please update ARCore"
-        is UnavailableSdkTooOldException -> "Please update this app"
-        is UnavailableDeviceNotCompatibleException -> "This device does not support AR"
-        is CameraNotAvailableException -> "Camera not available. Try restarting the app."
-        else -> "Failed to create AR session: $exception"
-      }
+      val message = getARExceptionMessage(exception)
       Log.e(TAG, message, exception)
-      Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+      ToastHelper.showShortToast(this,message)
     }
 
-    Log.d(TAG, "ARCore session helper setup complete")
-
-    // Configure session features, including: Lighting Estimation, Depth mode, Instant Placement.
     arCoreSessionHelper.beforeSessionResume = { session ->
       Log.d(TAG, "beforeSessionResume called")
 
       session.configure(
         session.config.apply {
-          // To get the best image of the object in question, enable autofocus.
           focusMode = Config.FocusMode.AUTO
           if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             depthMode = Config.DepthMode.AUTOMATIC
@@ -159,49 +252,108 @@ class ArActivity : AppCompatActivity() {
     }
 
     lifecycle.addObserver(arCoreSessionHelper)
+  }
 
-    // Set up AR renderer
+  private fun getARExceptionMessage(exception: Exception): String {
+    return when (exception) {
+      is UnavailableArcoreNotInstalledException,
+      is UnavailableUserDeclinedInstallationException -> "Please install ARCore"
+      is UnavailableApkTooOldException -> "Please update ARCore"
+      is UnavailableSdkTooOldException -> "Please update this app"
+      is UnavailableDeviceNotCompatibleException -> "This device does not support AR"
+      is CameraNotAvailableException -> "Camera not available. Try restarting the app."
+      else -> "Failed to create AR session: $exception"
+    }
+  }
+
+  private fun setupRenderer() {
     renderer = AppRenderer(this, geoLocationUtils, siteHistoryViewModel)
     lifecycle.addObserver(renderer)
     Log.d(TAG, "AR renderer setup complete")
+  }
 
-    // Set up AR UI
-    view = ArActivityView(this, renderer)
+  private fun setupArView() {
+    view = ArActivityView(this, renderer, filterOptionsArray)
     setContentView(view.root)
     renderer.bindView(view)
     lifecycle.addObserver(view)
-
-    setupCloseButton()
-    setupLayersButton()
     Log.d(TAG, "AR UI setup complete")
   }
 
-  private fun showPermissionDeniedDialog() {
-    Log.d(TAG, "showPermissionDeniedDialog called")
+  /**
+   * Show dialog when permissions are permanently denied
+   */
+  private fun showPermissionRequiredDialog() {
+    Log.d(TAG, "showPermissionRequiredDialog called")
+
+    // Determine which permissions are permanently denied
+    val locationPermanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(
+      this, Manifest.permission.ACCESS_FINE_LOCATION) &&
+            !hasLocationPermissions()
+
+    val cameraPermanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(
+      this, Manifest.permission.CAMERA) &&
+            !hasCameraPermission()
+
+    // Create appropriate message based on denied permissions
+    val message = when {
+      locationPermanentlyDenied && cameraPermanentlyDenied ->
+        "Both location and camera permissions are required for ExploreLens to work. " +
+                "Please enable them in Settings."
+      locationPermanentlyDenied ->
+        "Location permission is required to identify points of interest around you. " +
+                "Please enable it in Settings."
+      cameraPermanentlyDenied ->
+        "Camera permission is required for the AR experience. " +
+                "Please enable it in Settings."
+      else ->
+        "Required permissions were denied. ExploreLens needs these permissions to function properly."
+    }
+
     AlertDialog.Builder(this)
       .setTitle("Permissions Required")
-      .setMessage("Please enable location and camera permissions in settings to use this feature.")
+      .setMessage(message)
       .setPositiveButton("Go to Settings") { _, _ ->
-        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-        intent.data = Uri.fromParts("package", packageName, null)
-        startActivity(intent)
+        openAppSettings()
       }
-      .setNegativeButton("Cancel") { _, _ ->
-        Log.d(TAG, "Cancel button clicked")
-        navigateToProfile()  // Call the function to navigate to the profile
+      .setNegativeButton("Exit") { _, _ ->
+        Log.d(TAG, "User declined to grant permissions through settings")
+        navigateToProfile()
       }
+      .setCancelable(false)
       .show()
   }
 
+  /**
+   * Open app settings so user can enable permissions
+   */
+  private fun openAppSettings() {
+    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+    intent.data = Uri.fromParts("package", packageName, null)
+    startActivity(intent)
+  }
+
   private fun hasLocationPermissions(): Boolean {
-    val granted = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    val fineLocationGranted = ContextCompat.checkSelfPermission(
+      this,
+      Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    val coarseLocationGranted = ContextCompat.checkSelfPermission(
+      this,
+      Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    val granted = fineLocationGranted && coarseLocationGranted
     Log.d(TAG, "hasLocationPermissions: $granted")
     return granted
   }
 
   private fun hasCameraPermission(): Boolean {
-    val granted = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    val granted = ContextCompat.checkSelfPermission(
+      this,
+      Manifest.permission.CAMERA
+    ) == PackageManager.PERMISSION_GRANTED
     Log.d(TAG, "hasCameraPermission: $granted")
     return granted
   }
@@ -210,7 +362,10 @@ class ArActivity : AppCompatActivity() {
     Log.d(TAG, "requestLocationPermissions called")
     ActivityCompat.requestPermissions(
       this,
-      arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+      arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+      ),
       LOCATION_PERMISSION_REQUEST
     )
   }
@@ -224,6 +379,19 @@ class ArActivity : AppCompatActivity() {
     )
   }
 
+  private fun requestAllPermissions() {
+    Log.d(TAG, "requestAllPermissions called")
+    ActivityCompat.requestPermissions(
+      this,
+      arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.CAMERA
+      ),
+      ALL_PERMISSIONS_REQUEST
+    )
+  }
+
   override fun onRequestPermissionsResult(
     requestCode: Int,
     permissions: Array<out String>,
@@ -233,28 +401,61 @@ class ArActivity : AppCompatActivity() {
 
     Log.d(TAG, "onRequestPermissionsResult called with requestCode: $requestCode")
 
+    if (grantResults.isEmpty()) {
+      Log.d(TAG, "Permission request was cancelled")
+      updatePermissionState()
+      return
+    }
+
     when (requestCode) {
       LOCATION_PERMISSION_REQUEST -> {
-        if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+        if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
           Log.d(TAG, "Location permissions granted")
-          if (!hasCameraPermission()) {
-            requestCameraPermission()
-          } else {
-            setupAr()
-          }
+          updatePermissionState()
+          checkAndRequestPermissions() // Continue with permission flow
         } else {
           Log.d(TAG, "Location permissions denied")
-          showPermissionDeniedDialog()
+          updatePermissionState()
+          if (!ActivityCompat.shouldShowRequestPermissionRationale(
+              this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+            // User selected "Don't ask again"
+            showPermissionRequiredDialog()
+          } else {
+            // User simply denied
+            checkAndRequestPermissions() // Continue with permission flow
+          }
         }
       }
 
       CAMERA_PERMISSION_REQUEST -> {
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
           Log.d(TAG, "Camera permission granted")
-          setupAr()
+          updatePermissionState()
+          checkAndRequestPermissions() // Continue with permission flow
         } else {
           Log.d(TAG, "Camera permission denied")
-          showPermissionDeniedDialog()
+          updatePermissionState()
+          if (!ActivityCompat.shouldShowRequestPermissionRationale(
+              this, Manifest.permission.CAMERA)) {
+            // User selected "Don't ask again"
+            showPermissionRequiredDialog()
+          } else {
+            // User simply denied
+            checkAndRequestPermissions() // Continue with permission flow
+          }
+        }
+      }
+
+      ALL_PERMISSIONS_REQUEST -> {
+        val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+        if (allGranted) {
+          Log.d(TAG, "All permissions granted")
+          updatePermissionState()
+          setupAr() // All permissions granted, proceed with setup
+        } else {
+          Log.d(TAG, "Some permissions denied")
+          updatePermissionState()
+          checkAndRequestPermissions() // Continue with permission flow for remaining permissions
         }
       }
 
@@ -272,6 +473,7 @@ class ArActivity : AppCompatActivity() {
     intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
     intent.putExtra("RETURNED_FROM_AR", true)
     startActivity(intent)
+    finish() // Finish this activity so it's removed from the stack
   }
 
   override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -290,190 +492,17 @@ class ArActivity : AppCompatActivity() {
     return super.onTouchEvent(event)
   }
 
-  private fun setupCloseButton() {
-    val closeButton = findViewById<ImageButton>(R.id.closeButton)
-    closeButton?.setOnClickListener {
-      Log.d(TAG, "Close button clicked")
-      val intent = Intent(this, MainActivity::class.java)
-      intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-      intent.putExtra("RETURNED_FROM_AR", true)
-      startActivity(intent)
-    }
-  }
-
-
-  private fun setupLayersButton() {
-    val layersButton = findViewById<ImageButton>(R.id.layersButton)
-    layersButton?.setOnClickListener {
-      Log.d(TAG, "Layers button clicked")
-      showFilterSideSheet() // Call the new function to show the side sheet
-    }
-  }
-
-  private fun showFilterSideSheet() {
-    val sideSheetDialog = SideSheetDialog(this)
-    val inflater = layoutInflater.inflate(R.layout.filter_side_sheet, null)
-    sideSheetDialog.setContentView(inflater)
-
-    // Set fullscreen flags for the dialog window to hide system bars
-    sideSheetDialog.window?.apply {
-      setFlags(
-        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-      )
-
-      // Apply edge-to-edge display
-      WindowCompat.setDecorFitsSystemWindows(this, false)
-
-      // Using the newer system UI controller approach
-      decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-              or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-              or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-              or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-              or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-              or View.SYSTEM_UI_FLAG_FULLSCREEN)
-    }
-
-    // Listen for dialog events to maintain fullscreen
-    sideSheetDialog.setOnShowListener {
-      FullScreenHelper.setFullScreenOnWindowFocusChanged(this@ArActivity, true)
-    }
-
-    val closeButton = inflater.findViewById<ImageView>(R.id.btn_close_side_sheet)
-    val filterOptionsRecyclerView = inflater.findViewById<RecyclerView>(R.id.filterOptionsRecyclerViewSideSheet)
-    val applyButton = inflater.findViewById<Button>(R.id.applyButtonSideSheet)
-    val clearAllButton = inflater.findViewById<Button>(R.id.clearAllButtonSideSheet)
-
-    val allFilterOptions = filterOptionsArray.map { filterOptionName ->
-      FilterOption(
-        name = filterOptionName.name,
-        isChecked = selectedFilters.contains(filterOptionName.name),
-        iconResId = filterOptionName.iconResId
-      )
-    }.toMutableList()
-
-    val adapter = FilterOptionAdapter(allFilterOptions) { _, _ ->
-    }
-    filterOptionsRecyclerView.layoutManager = LinearLayoutManager(this)
-    filterOptionsRecyclerView.adapter = adapter
-
-    val dividerHeightPx = 3 // 3 pixel height
-    val dividerColor = ContextCompat.getColor(this, R.color.light_gray)
-    val dividerMarginPx = 50 // 50 pixel left and right margin
-
-    val divider = ShapeDrawable(RectShape())
-    divider.intrinsicHeight = dividerHeightPx
-
-    DrawableCompat.setTint(divider, dividerColor)
-
-    val insetDivider = InsetDrawable(divider, dividerMarginPx, 0, dividerMarginPx, 0)
-
-    val itemDecorator = DividerItemDecoration(
-      filterOptionsRecyclerView.context,
-      LinearLayoutManager.VERTICAL
-    ).apply {
-      setDrawable(insetDivider)
-    }
-    filterOptionsRecyclerView.addItemDecoration(itemDecorator)
-
-    closeButton.setOnClickListener {
-      sideSheetDialog.dismiss()
-    }
-
-    applyButton.setOnClickListener {
-      selectedFilters.clear()
-      selectedFilters.addAll(adapter.getCurrentChoices()) // Update selectedFilters from adapter
-      Log.d(TAG, "Selected Filters (on Apply): $selectedFilters")
-      Toast.makeText(this, "Filters Applied: $selectedFilters", Toast.LENGTH_SHORT).show()
-      sideSheetDialog.dismiss()
-      // Implement your logic to apply these 'selectedFilters'
-    }
-
-    clearAllButton.setOnClickListener {
-      selectedFilters.clear()
-      allFilterOptions.forEach { it.isChecked = false }
-      adapter.notifyDataSetChanged()
-    }
-
-    // Handle dismissal to restore any UI state if needed
-    sideSheetDialog.setOnDismissListener {
-      // Make sure full screen mode is maintained after dialog dismisses
-      FullScreenHelper.setFullScreenOnWindowFocusChanged(this@ArActivity, true)
-    }
-
-    sideSheetDialog.setCanceledOnTouchOutside(true)
-    sideSheetDialog.show()
-  }
-
-//  private fun showFilterSideSheet() {
-//    val sideSheetDialog = SideSheetDialog(this)
-//    val inflater = layoutInflater.inflate(R.layout.filter_side_sheet, null)
-//    sideSheetDialog.setContentView(inflater)
-//
-//    val closeButton = inflater.findViewById<ImageView>(R.id.btn_close_side_sheet)
-//    val filterOptionsRecyclerView = inflater.findViewById<RecyclerView>(R.id.filterOptionsRecyclerViewSideSheet)
-//    val applyButton = inflater.findViewById<Button>(R.id.applyButtonSideSheet)
-//    val clearAllButton = inflater.findViewById<Button>(R.id.clearAllButtonSideSheet)
-//
-//    val allFilterOptions = filterOptionsArray.map { filterOptionName ->
-//      FilterOption(
-//        name = filterOptionName.name,
-//        isChecked = selectedFilters.contains(filterOptionName.name),
-//        iconResId = filterOptionName.iconResId
-//      )
-//    }.toMutableList()
-//
-//    val adapter = FilterOptionAdapter(allFilterOptions) { _, _ ->
-//    }
-//    filterOptionsRecyclerView.layoutManager = LinearLayoutManager(this)
-//    filterOptionsRecyclerView.adapter = adapter
-//
-//    val dividerHeightPx = 3 // 1 pixel height
-//    val dividerColor = ContextCompat.getColor(this, R.color.light_gray)
-//    val dividerMarginPx = 50 // 20 pixel left and right margin
-//
-//    val divider = ShapeDrawable(RectShape())
-//    divider.intrinsicHeight = dividerHeightPx
-//
-//    DrawableCompat.setTint(divider, dividerColor)
-//
-//    val insetDivider = InsetDrawable(divider, dividerMarginPx, 0, dividerMarginPx, 0)
-//
-//    val itemDecorator = DividerItemDecoration(
-//      filterOptionsRecyclerView.context,
-//      LinearLayoutManager.VERTICAL
-//    ).apply {
-//      setDrawable(insetDivider)
-//    }
-//    filterOptionsRecyclerView.addItemDecoration(itemDecorator)
-//
-//    closeButton.setOnClickListener {
-//      sideSheetDialog.dismiss()
-//    }
-//
-//    applyButton.setOnClickListener {
-//      selectedFilters.clear()
-//      selectedFilters.addAll(adapter.getCurrentChoices()) // Update selectedFilters from adapter
-//      Log.d(TAG, "Selected Filters (on Apply): $selectedFilters")
-//      Toast.makeText(this, "Filters Applied: $selectedFilters", Toast.LENGTH_SHORT).show()
-//      sideSheetDialog.dismiss()
-//      // Implement your logic to apply these 'selectedFilters'
-//    }
-//
-//    clearAllButton.setOnClickListener {
-//      selectedFilters.clear()
-//      allFilterOptions.forEach { it.isChecked = false }
-//      adapter.notifyDataSetChanged()
-//    }
-//
-//    sideSheetDialog.setCanceledOnTouchOutside(true)
-//    sideSheetDialog.show()
-//  }
-
-
   override fun onResume() {
     super.onResume()
     Log.d(TAG, "onResume called - Activity resumed and interactive")
+
+    // Re-check permissions if returning from settings
+    if (permissionState != PERMISSIONS_GRANTED) {
+      updatePermissionState()
+      if (permissionState == PERMISSIONS_GRANTED) {
+        setupAr()
+      }
+    }
   }
 
   override fun onPause() {
