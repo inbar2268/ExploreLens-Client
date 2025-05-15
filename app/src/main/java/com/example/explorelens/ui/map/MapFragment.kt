@@ -12,6 +12,7 @@ import com.example.explorelens.R
 import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager
+import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.data.repository.SiteHistoryRepository
 import com.example.explorelens.ui.site.SiteDetailsFragment
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -19,7 +20,9 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -132,59 +135,42 @@ class MapFragment : Fragment() {
     }
 
     private fun fetchSiteDetailsAndAddMarker(site: SiteHistory, location: LatLng) {
-        // Remove spaces from site ID for API call
         val cleanSiteId = site.siteInfoId.replace(" ", "")
+        val siteRepository = SiteDetailsRepository(requireContext())
 
-        ExploreLensApiClient.siteDetailsApi.getSiteDetails(cleanSiteId)
-            .enqueue(object : Callback<com.example.explorelens.data.model.SiteDetails.SiteDetails> {
-                override fun onResponse(
-                    call: Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
-                    response: Response<com.example.explorelens.data.model.SiteDetails.SiteDetails>
-                ) {
-                    // Use site name from response, fallback to original ID if not available
-                    val siteName = response.body()?.name ?: formatSiteId(site.siteInfoId)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                siteRepository.fetchSiteDetails(cleanSiteId)
+            }
 
-                    // Add marker with site info
-                    val marker = googleMap.addMarker(
-                        MarkerOptions()
-                            .position(location)
-                            .title(siteName)
-                            .snippet("Visited: ${formatDate(site.createdAt)}")
-                    )
+            val siteName = result.getOrNull()?.name ?: formatSiteId(site.siteInfoId)
 
-                    // Store siteInfoId as the marker's tag for navigation
-                    marker?.tag = site.siteInfoId
+            val marker = googleMap.addMarker(
+                MarkerOptions()
+                    .position(location)
+                    .title(siteName)
+                    .snippet("Visited: ${formatDate(site.createdAt)}")
+            )
 
-                    Log.d(TAG, "Added marker for $siteName at ${site.latitude}, ${site.longitude}")
+            marker?.tag = site.siteInfoId
+
+            if (result.isSuccess) {
+                Log.d(TAG, "Added marker for $siteName at ${site.latitude}, ${site.longitude}")
+            } else {
+                Log.e(TAG, "Failed to fetch site details for ${site.siteInfoId}", result.exceptionOrNull())
+            }
+
+            // Set up marker click listener (only once is enough, move outside loop if needed)
+            googleMap.setOnInfoWindowClickListener { clickedMarker ->
+                val siteInfoId = clickedMarker.tag as? String
+                if (siteInfoId != null) {
+                    Log.d(TAG, "Marker clicked for site: $siteInfoId")
+                    navigateToSiteDetails(siteInfoId)
                 }
-
-                override fun onFailure(
-                    call: Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
-                    t: Throwable
-                ) {
-                    // Fallback marker if API call fails
-                    val marker = googleMap.addMarker(
-                        MarkerOptions()
-                            .position(location)
-                            .title(formatSiteId(site.siteInfoId))
-                            .snippet("Visited: ${formatDate(site.createdAt)}")
-                    )
-
-                    marker?.tag = site.siteInfoId
-
-                    Log.e(TAG, "Failed to fetch site details for ${site.siteInfoId}", t)
-                }
-            })
-
-        // Set up marker click listener (moved outside the API call to ensure it's always set)
-        googleMap.setOnInfoWindowClickListener { marker ->
-            val siteInfoId = marker.tag as? String
-            if (siteInfoId != null) {
-                Log.d(TAG, "Marker clicked for site: $siteInfoId")
-                navigateToSiteDetails(siteInfoId)
             }
         }
     }
+
 
     private fun formatSiteId(siteInfoId: String): String {
         // Format the site ID to be more readable

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import com.example.explorelens.data.model.SiteDetails.SiteDetailsRatingRequest
+import com.example.explorelens.data.model.comments.Review
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager
 import retrofit2.Response
@@ -35,6 +36,21 @@ class SiteDetailsRepository(context: Context) {
             }
         } catch (e: Exception) {
             Log.e("SiteDetailsRepository", "Network error: ${e.localizedMessage}", e)
+            Result.failure(Exception("Network error: ${e.localizedMessage}"))
+        }
+    }
+
+    suspend fun fetchSiteDetails(siteId: String): Result<SiteDetails> {
+        return try {
+            val response = ExploreLensApiClient.siteDetailsApi.getSiteDetails(siteId)
+            if (response.isSuccessful) {
+                response.body()?.let { Result.success(it) }
+                    ?: Result.failure(Exception("Empty response body"))
+            } else {
+                val error = response.errorBody()?.string() ?: "Unknown error"
+                Result.failure(Exception("Error ${response.code()}: $error"))
+            }
+        } catch (e: Exception) {
             Result.failure(Exception("Network error: ${e.localizedMessage}"))
         }
     }

@@ -1,12 +1,18 @@
 package com.example.explorelens.adapters.siteHistory
 
 import android.util.Log
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.explorelens.R
 import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.network.ExploreLensApiClient
+import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.databinding.ItemSiteHistoryBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -15,7 +21,9 @@ import java.util.*
 
 class SiteHistoryViewHolder(
     private val binding: ItemSiteHistoryBinding,
-    private val onItemClick: (SiteHistory) -> Unit
+    private val onItemClick: (SiteHistory) -> Unit,
+    private val siteRepository: SiteDetailsRepository,
+    private val lifecycleOwner: LifecycleOwner
 ) : RecyclerView.ViewHolder(binding.root) {
 
     fun bind(siteHistory: SiteHistory) {
@@ -33,50 +41,32 @@ class SiteHistoryViewHolder(
 
         // Fetch site details to get correct name and image
         val cleanSiteId = siteHistory.siteInfoId.replace(" ", "")
-        ExploreLensApiClient.siteDetailsApi.getSiteDetails(cleanSiteId)
-            .enqueue(object : Callback<com.example.explorelens.data.model.SiteDetails.SiteDetails> {
-                override fun onResponse(
-                    call: Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
-                    response: Response<com.example.explorelens.data.model.SiteDetails.SiteDetails>
-                ) {
-                    if (response.isSuccessful) {
-                        val siteDetails = response.body()
+        lifecycleOwner.lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                siteRepository.fetchSiteDetails(cleanSiteId)
+            }
 
-                        // Update site name
-                        siteDetails?.name?.let {
-                            binding.siteNameTextView.text = it
-                        }
+            result.fold(
+                onSuccess = { siteDetails ->
+                    binding.siteNameTextView.text = siteDetails.name
 
-                        // Load image from site details
-                        siteDetails?.imageUrl?.let { imageUrl ->
-                            Glide.with(binding.root.context)
-                                .load(imageUrl)
-                                .placeholder(R.drawable.noimage)
-                                .error(R.drawable.noimage)
-                                .centerCrop()
-                                .into(binding.siteImageView)
-                        }
-                    } else {
-                        Log.e("SiteHistoryViewHolder", "Failed to fetch site details: ${response.code()}")
+                    siteDetails.imageUrl?.let { imageUrl ->
+                        Glide.with(binding.root.context)
+                            .load(imageUrl)
+                            .placeholder(R.drawable.noimage)
+                            .error(R.drawable.noimage)
+                            .centerCrop()
+                            .into(binding.siteImageView)
                     }
-
-                    // Set click listener
-                    binding.root.setOnClickListener {
-                        onItemClick(siteHistory)
-                    }
+                },
+                onFailure = { error ->
+                    Log.e("SiteHistoryViewHolder", "Failed to fetch site details: ${error.message}")
                 }
-
-                override fun onFailure(
-                    call: Call<com.example.explorelens.data.model.SiteDetails.SiteDetails>,
-                    t: Throwable
-                ) {
-                    Log.e("SiteHistoryViewHolder", "Error fetching site details", t)
-
+            )
                     // Set click listener even if API call fails
                     binding.root.setOnClickListener {
                         onItemClick(siteHistory)
                     }
                 }
-            })
     }
 }
