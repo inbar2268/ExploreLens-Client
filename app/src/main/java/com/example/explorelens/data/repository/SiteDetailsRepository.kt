@@ -12,6 +12,7 @@ import com.example.explorelens.data.model.SiteDetails.SiteDetails // API model
 import com.example.explorelens.data.model.SiteDetails.SiteDetailsRatingRequest
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -60,32 +61,74 @@ class SiteDetailsRepository(context: Context) {
         }
     }
 
-    // Method to get site details as LiveData
+    // Method to sync site details from server to Room
+    suspend fun syncSiteDetails(siteId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val cleanSiteId = siteId.replace(" ", "")
+
+        return@withContext try {
+            Log.d(TAG, "Syncing site details for: $cleanSiteId")
+
+            // Use suspendCancellableCoroutine to convert callback-based API to suspend
+            val result = suspendCancellableCoroutine<Result<SiteDetails?>> { continuation ->
+                ExploreLensApiClient.siteDetailsApi.getSiteDetails(cleanSiteId)
+                    .enqueue(object : Callback<SiteDetails> {
+                        override fun onResponse(call: Call<SiteDetails>, response: Response<SiteDetails>) {
+                            if (response.isSuccessful) {
+                                val siteDetails = response.body()
+                                continuation.resume(Result.success(siteDetails))
+                            } else {
+                                val error = response.errorBody()?.string() ?: "Unknown error"
+                                Log.e(TAG, "Sync failed: Error ${response.code()}: $error")
+                                continuation.resume(Result.failure(Exception("Error ${response.code()}: $error")))
+                            }
+                        }
+
+                        override fun onFailure(call: Call<SiteDetails>, t: Throwable) {
+                            Log.e(TAG, "Sync network error: ${t.localizedMessage}", t)
+                            continuation.resume(Result.failure(Exception("Network error: ${t.localizedMessage}")))
+                        }
+                    })
+            }
+
+            // Process the result
+            result.fold(
+                onSuccess = { siteDetails ->
+                    if (siteDetails != null) {
+                        // Save to Room database
+                        val entity = siteDetails.toEntity()
+                        siteDetailsDao.insertSiteDetails(entity)
+
+                        Log.d(TAG, "Successfully synced site details to Room: ${siteDetails.name}")
+                        Result.success(Unit)
+                    } else {
+                        Log.e(TAG, "Empty response body during sync")
+                        Result.failure(Exception("Empty response body"))
+                    }
+                },
+                onFailure = { error ->
+                    Log.e(TAG, "Sync failed: ${error.message}")
+                    Result.failure(error)
+                }
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Sync error: ${e.localizedMessage}", e)
+            Result.failure(Exception("Sync error: ${e.localizedMessage}"))
+        }
+    }
+
+    // Method to get site details as LiveData (only from Room)
     fun getSiteDetailsLiveData(siteId: String): LiveData<SiteDetails?> {
         val cleanSiteId = siteId.replace(" ", "")
 
         return siteDetailsDao.getSiteDetailsById(cleanSiteId).switchMap { cachedEntity: SiteDetailsEntity? ->
             val result = MutableLiveData<SiteDetails?>()
-
-            // Always set an initial value
             result.value = cachedEntity?.toModel()
-
-            // Always try to fetch fresh data from server
-            fetchSiteDetailsFromServer(cleanSiteId) { serverSiteDetails ->
-                if (serverSiteDetails != null) {
-                    result.postValue(serverSiteDetails)
-                } else if (cachedEntity == null && result.value == null) {
-                    // Only post null if we don't have cached data and no value was set
-                    result.postValue(null)
-                }
-            }
-
             result
         }
     }
 
-    // Callback-based method for fetching site details
-    fun fetchSiteDetails(
+    // Callback-based method that syncs first, then uses LiveData
+    fun fetchSiteDetailsWithSync(
         siteId: String,
         onSuccess: (SiteDetails) -> Unit,
         onError: () -> Unit
@@ -96,87 +139,62 @@ class SiteDetailsRepository(context: Context) {
             return
         }
 
-        // Check local database first
-        GlobalScope.launch(Dispatchers.IO) {
-            val cachedEntity = siteDetailsDao.getSiteDetailsByIdSync(cleanSiteId)
+        CoroutineScope(Dispatchers.IO).launch {
+            // First sync from server to Room
+            Log.d(TAG, "Starting sync for site: $cleanSiteId")
+            val syncResult = syncSiteDetails(cleanSiteId)
 
             withContext(Dispatchers.Main) {
-                if (cachedEntity != null) {
-                    onSuccess(cachedEntity.toModel())
-                }
-            }
+                if (syncResult.isSuccess) {
+                    Log.d(TAG, "Sync successful, now getting from Room")
+                    // Now get from Room
+                    GlobalScope.launch(Dispatchers.IO) {
+                        val cachedEntity = siteDetailsDao.getSiteDetailsByIdSync(cleanSiteId)
 
-            // Always fetch from server for fresh data
-            withContext(Dispatchers.Main) {
-                fetchSiteDetailsFromServer(cleanSiteId) { serverSiteDetails ->
-                    if (serverSiteDetails != null) {
-                        onSuccess(serverSiteDetails)
-                    } else if (cachedEntity == null) {
-                        onError()
-                    }
-                }
-            }
-        }
-    }
-
-    // Suspend method that actually makes a network call
-    suspend fun fetchSiteDetails(siteId: String): Result<SiteDetails> = withContext(Dispatchers.IO) {
-        val cleanSiteId = siteId.replace(" ", "")
-
-        try {
-            // Check local database first
-            val cachedEntity = siteDetailsDao.getSiteDetailsByIdSync(cleanSiteId)
-
-            // Use suspendCancellableCoroutine to convert callback-based API to suspend
-            val result = suspendCancellableCoroutine<Result<SiteDetails>> { continuation ->
-                fetchSiteDetailsFromServer(cleanSiteId) { siteDetails ->
-                    if (siteDetails != null) {
-                        continuation.resume(Result.success(siteDetails))
-                    } else {
-                        cachedEntity?.let {
-                            continuation.resume(Result.success(it.toModel()))
-                        } ?: continuation.resume(Result.failure(Exception("Failed to fetch site details")))
-                    }
-                }
-            }
-
-            result
-        } catch (e: Exception) {
-            // Return cached data if available, otherwise error
-            val cachedEntity = siteDetailsDao.getSiteDetailsByIdSync(cleanSiteId)
-            cachedEntity?.let { Result.success(it.toModel()) }
-                ?: Result.failure(Exception("Network error: ${e.localizedMessage}"))
-        }
-    }
-
-    private fun fetchSiteDetailsFromServer(
-        siteId: String,
-        callback: (SiteDetails?) -> Unit
-    ) {
-        ExploreLensApiClient.siteDetailsApi.getSiteDetails(siteId)
-            .enqueue(object : Callback<SiteDetails> {
-                override fun onResponse(call: Call<SiteDetails>, response: Response<SiteDetails>) {
-                    if (response.isSuccessful) {
-                        val siteDetails = response.body()
-                        if (siteDetails != null) {
-                            // Save to local database
-                            GlobalScope.launch(Dispatchers.IO) {
-                                val entity = siteDetails.toEntity()
-                                siteDetailsDao.insertSiteDetails(entity)
+                        withContext(Dispatchers.Main) {
+                            if (cachedEntity != null) {
+                                onSuccess(cachedEntity.toModel())
+                            } else {
+                                Log.e(TAG, "No data in Room after successful sync")
+                                onError()
                             }
                         }
-                        callback(siteDetails)
-                    } else {
-                        Log.e(TAG, "Failed to fetch site details: ${response.code()}")
-                        callback(null)
+                    }
+                } else {
+                    Log.w(TAG, "Sync failed, checking for cached data")
+                    // If sync fails, try to get from Room anyway (offline support)
+                    GlobalScope.launch(Dispatchers.IO) {
+                        val cachedEntity = siteDetailsDao.getSiteDetailsByIdSync(cleanSiteId)
+
+                        withContext(Dispatchers.Main) {
+                            if (cachedEntity != null) {
+                                Log.d(TAG, "Using cached data after sync failure")
+                                onSuccess(cachedEntity.toModel())
+                            } else {
+                                Log.e(TAG, "No cached data available and sync failed")
+                                onError()
+                            }
+                        }
                     }
                 }
+            }
+        }
+    }
 
-                override fun onFailure(call: Call<SiteDetails>, t: Throwable) {
-                    Log.e(TAG, "Error fetching site details", t)
-                    callback(null)
-                }
-            })
+    // Legacy callback method (kept for backward compatibility)
+    fun fetchSiteDetails(
+        siteId: String,
+        onSuccess: (SiteDetails) -> Unit,
+        onError: () -> Unit
+    ) {
+        // For now, redirect to the new sync method
+        fetchSiteDetailsWithSync(siteId, onSuccess, onError)
+    }
+
+    // Method to get site details from Room (suspend)
+    suspend fun getSiteDetailsFromRoom(siteId: String): SiteDetails? = withContext(Dispatchers.IO) {
+        val cleanSiteId = siteId.replace(" ", "")
+        return@withContext siteDetailsDao.getSiteDetailsByIdSync(cleanSiteId)?.toModel()
     }
 
     // Helper to format a site ID
