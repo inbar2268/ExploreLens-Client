@@ -110,11 +110,17 @@ class SiteHistoryFragment : Fragment() {
         // Start sync in background
         lifecycleScope.launch {
             try {
-                // Synchronize site history with server before loading
+                // Remove any existing observers to prevent duplication
+                viewModel.getSiteHistoryByUserId(userId).removeObservers(viewLifecycleOwner)
+
                 // Observe site history data after sync
                 viewModel.getSiteHistoryByUserId(userId)
                     .observe(viewLifecycleOwner) { historyList ->
                         Log.d(TAG, "Received ${historyList.size} history items")
+
+                        // Hide loading indicator here when data is received
+                        showLoading(false)
+                        isSyncing = false
 
                         // Additional filter to ensure we only show the current user's history
                         val filteredList = historyList.filter { it.userId == userId }
@@ -135,8 +141,6 @@ class SiteHistoryFragment : Fragment() {
                             )
                         }
 
-                        // Update history count
-
                         if (uniqueSites.isEmpty()) {
                             // No data for current user, show mock data
                             Log.d(TAG, "No history data for current user, showing mock data")
@@ -152,7 +156,10 @@ class SiteHistoryFragment : Fragment() {
                     }
             } catch (e: Exception) {
                 Log.e(TAG, "Error syncing and loading site history", e)
-                showMockData()
+                // Hide loading indicator on error
+                showLoading(false)
+                isSyncing = false
+              //  showMockData()
             }
         }
     }
