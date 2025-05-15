@@ -44,7 +44,7 @@
                 android:layout_width="18dp"
                 android:layout_height="18dp"
                 android:src="@drawable/ic_location"
-                app:tint="#29B6F6"
+                app:tint="#2682D9"
             android:contentDescription="Location icon" />
 
             <TextView
