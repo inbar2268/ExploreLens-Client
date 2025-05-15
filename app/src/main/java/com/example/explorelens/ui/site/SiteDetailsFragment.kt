@@ -25,12 +25,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.ArActivity
 import com.example.explorelens.R
 import com.example.explorelens.common.helpers.ToastHelper
-import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.model.comments.Review
 import com.example.explorelens.data.model.SiteDetails.SiteDetails
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 import com.bumptech.glide.Glide
 import com.example.explorelens.data.model.comments.ReviewWithUser
 import com.example.explorelens.data.repository.ReviewsRepository
@@ -435,8 +431,8 @@ class SiteDetailsFragment : Fragment() {
             // Make sure the camera button is visible again
             activity.findViewById<View>(R.id.cameraButtonContainer)?.visibility = View.VISIBLE
         } else {
-            // For regular fragment navigation
-            parentFragmentManager.beginTransaction().remove(this).commit()
+            // For regular fragment navigation, use back press behavior
+            requireActivity().onBackPressedDispatcher.onBackPressed()
         }
     }
 }
