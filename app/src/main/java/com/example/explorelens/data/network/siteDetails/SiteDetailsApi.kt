@@ -11,7 +11,7 @@ import retrofit2.http.Path
 
 interface SiteDetailsApi {
     @GET("/site-info/{siteid}")
-    fun getSiteDetails(@Path("siteid") siteid: String): Call<SiteDetails>
+    suspend fun getSiteDetails(@Path("siteid") siteid: String): Response<SiteDetails>
 
 
     @POST("/site-info/rating/{siteId}")
