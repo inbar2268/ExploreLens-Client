@@ -45,7 +45,7 @@ class SettingsFragment : Fragment() {
             findNavController().navigate(R.id.action_settingsFragment_to_profileFragment)
         }
 
-        binding.editProfileRow.setOnClickListener {
+        binding.editUserRow.setOnClickListener {
             // Navigate to edit user screen
             // Example: startActivity(Intent(requireContext(), EditUserActivity::class.java))
         }
@@ -55,7 +55,7 @@ class SettingsFragment : Fragment() {
             // Example: startActivity(Intent(requireContext(), ChangePasswordActivity::class.java))
         }
 
-        binding.deleteAccountRow.setOnClickListener {
+        binding.deleteUserRow.setOnClickListener {
             showDeleteUserDialog()
         }
 
@@ -67,7 +67,7 @@ class SettingsFragment : Fragment() {
             showMapTypeDialog()
         }
 
-        binding.logoutButton.setOnClickListener {
+        binding.logoutRow.setOnClickListener {
             showLogoutDialog()
         }
 

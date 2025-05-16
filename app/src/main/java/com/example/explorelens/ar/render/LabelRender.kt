@@ -73,32 +73,56 @@ class LabelRender {
   }
 
   val labelOrigin = FloatArray(3)
-
   fun draw(
     render: SampleRender,
     viewProjectionMatrix: FloatArray,
     pose: Pose,
     cameraPose: Pose,
-    label: String
+    label: String,
+    scale: Float
   ) {
-    Log.d(TAG, "Drawing label: $label")
+    Log.d(TAG, "Drawing label: $label with scale: $scale")
 
-    // Set the label origin from the pose
-    // Adjust Y position slightly upward for better positioning
     labelOrigin[0] = pose.tx()
-    labelOrigin[1] = pose.ty() + 0.1f  // Offset upward slightly
+    labelOrigin[1] = pose.ty() + 0.1f
     labelOrigin[2] = pose.tz()
 
-    // Set the shader uniforms
     shader
       .setMat4("u_ViewProjection", viewProjectionMatrix)
       .setVec3("u_LabelOrigin", labelOrigin)
       .setVec3("u_CameraPos", cameraPose.translation)
+      .setFloat("u_Scale", scale) // 💡 כאן שולחים את ה-scale
       .setTexture("uTexture", cache.get(render, label))
 
-    // Draw the mesh
     render.draw(mesh, shader)
-
-    Log.d(TAG, "Draw completed for label: $label")
   }
 }
+
+//  fun draw(
+//    render: SampleRender,
+//    viewProjectionMatrix: FloatArray,
+//    pose: Pose,
+//    cameraPose: Pose,
+//    label: String
+//  ) {
+//    Log.d(TAG, "Drawing label: $label")
+//
+//    // Set the label origin from the pose
+//    // Adjust Y position slightly upward for better positioning
+//    labelOrigin[0] = pose.tx()
+//    labelOrigin[1] = pose.ty() + 0.1f  // Offset upward slightly
+//    labelOrigin[2] = pose.tz()
+//
+//    // Set the shader uniforms
+//    shader
+//      .setMat4("u_ViewProjection", viewProjectionMatrix)
+//      .setVec3("u_LabelOrigin", labelOrigin)
+//      .setVec3("u_CameraPos", cameraPose.translation)
+//      .setTexture("uTexture", cache.get(render, label))
+//
+//    // Draw the mesh
+//    render.draw(mesh, shader)
+//
+//    Log.d(TAG, "Draw completed for label: $label")
+//  }
+//}

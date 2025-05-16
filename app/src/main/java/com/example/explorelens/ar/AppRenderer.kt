@@ -197,9 +197,14 @@ class AppRenderer(
             anchorsToRender.addAll(arLabeledAnchors)
         }
 
+
         for (arDetectedObject in anchorsToRender) {
             val anchor = arDetectedObject.anchor
 
+            val anchorPose = anchor.pose
+            val cameraPose = lastSnapshotData?.cameraPose ?: frame.camera.pose
+
+            val scale = computeScale(cameraPose, anchorPose)
             Log.d(TAG, "Anchor tracking state: ${anchor.trackingState}")
             Log.d(TAG, "Label: ${arDetectedObject.label}")
             if (anchor.trackingState != TrackingState.TRACKING) continue
@@ -208,10 +213,18 @@ class AppRenderer(
                 viewProjectionMatrix,
                 anchor.pose,
                 lastSnapshotData?.cameraPose ?: frame.camera.pose,
-                arDetectedObject.label
+                arDetectedObject.label,
+                scale
             )
         }
     }
+
+    private fun computeScale(cameraPose: Pose, anchorPose: Pose): Float {
+        val distance = distanceBetween(cameraPose, anchorPose) // משתמש בשיטה קיימת
+        val rawScale = 1.0f / distance
+        return rawScale.coerceIn(0.5f, 3.0f)
+    }
+
 
     private fun processObjectResults(frame: Frame, session: Session) {
         val obj = serverResult
