@@ -129,10 +129,12 @@ class AppRenderer(
             setUseDepthVisualization(render, false)
         }
         pointCloudRender.onSurfaceCreated(render)
-        labelRenderer.onSurfaceCreated(render)
+
+        // Pass the activity context to labelRenderer
+        labelRenderer.onSurfaceCreated(render, activity)
+
         getNearbyPlacesForAR(listOf("bar", "hotel"))
     }
-
     override fun onSurfaceChanged(render: SampleRender?, width: Int, height: Int) {
         displayRotationHelper.onSurfaceChanged(width, height)
     }
@@ -527,7 +529,7 @@ class AppRenderer(
                         y = 0.5f,
                         siteName = "Colosseum"
                     ),
-                    siteInfoId = "6818fcadb249f52360e546e9",
+                    siteInfoId = "6817c17ec96f0e5280196da6",
                 )
 
             launch(Dispatchers.Main) {
@@ -671,7 +673,7 @@ class AppRenderer(
                 val dZ = closestPointZ - anchorPos[2]
                 val perpendicularDistance = sqrt(dX * dX + dY * dY + dZ * dZ)
 
-                val touchThreshold = 0.5f
+                val touchThreshold = 0.2f
 
                 if (dotProduct > 0 && perpendicularDistance < touchThreshold) {
                     if (distanceToAnchor < closestDistance) {

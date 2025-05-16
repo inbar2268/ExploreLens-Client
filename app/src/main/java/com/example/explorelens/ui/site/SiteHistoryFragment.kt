@@ -99,7 +99,6 @@ class SiteHistoryFragment : Fragment() {
         val userId = getCurrentUserId()
         if (userId == null) {
             Log.e(TAG, "No user ID available, showing mock data")
-            showMockData()
             return
         }
 
@@ -144,7 +143,6 @@ class SiteHistoryFragment : Fragment() {
                         if (uniqueSites.isEmpty()) {
                             // No data for current user, show mock data
                             Log.d(TAG, "No history data for current user, showing mock data")
-                            showMockData()
                         } else {
                             // Real data available, display it
                             Log.d(
@@ -159,7 +157,6 @@ class SiteHistoryFragment : Fragment() {
                 // Hide loading indicator on error
                 showLoading(false)
                 isSyncing = false
-              //  showMockData()
             }
         }
     }
@@ -212,63 +209,6 @@ class SiteHistoryFragment : Fragment() {
 
     private fun showLoading(show: Boolean) {
         progressBar?.visibility = if (show) View.VISIBLE else View.GONE
-    }
-
-    private fun showMockData() {
-        val mockData = createMockHistoryData()
-
-        if (mockData.isNotEmpty()) {
-            binding.emptyStateView.visibility = View.GONE
-            binding.recyclerViewHistory.visibility = View.VISIBLE
-            adapter.submitList(mockData)
-        } else {
-            binding.emptyStateView.visibility = View.VISIBLE
-            binding.recyclerViewHistory.visibility = View.GONE
-        }
-    }
-
-    private fun createMockHistoryData(): List<SiteHistory> {
-        val currentTime = System.currentTimeMillis()
-        val userId = getCurrentUserId() ?: "mock_user"
-
-        return listOf(
-            SiteHistory(
-                id = UUID.randomUUID().toString(),
-                siteInfoId = "EiffelTower",
-                userId = userId, // Use current user ID for mock data
-                geohash = "u09tvw",
-                latitude = 48.8584,
-                longitude = 2.2945,
-                createdAt = currentTime - (3 * 24 * 60 * 60 * 1000) // 3 days ago
-            ),
-            SiteHistory(
-                id = UUID.randomUUID().toString(),
-                siteInfoId = "SagradaFamilia",
-                userId = userId, // Use current user ID for mock data
-                geohash = "sp3e3k",
-                latitude = 41.4036,
-                longitude = 2.1744,
-                createdAt = currentTime - (12 * 60 * 60 * 1000) // 12 hours ago
-            ),
-            SiteHistory(
-                id = UUID.randomUUID().toString(),
-                siteInfoId = "BigBen",
-                userId = userId, // Use current user ID for mock data
-                geohash = "gcpvj0",
-                latitude = 51.5007,
-                longitude = -0.1246,
-                createdAt = currentTime - (1 * 24 * 60 * 60 * 1000) // 1 day ago
-            ),
-            SiteHistory(
-                id = UUID.randomUUID().toString(),
-                siteInfoId = "Colosseum",
-                userId = userId, // Use current user ID for mock data
-                geohash = "sr2yd0",
-                latitude = 41.8902,
-                longitude = 12.4922,
-                createdAt = currentTime - (2 * 24 * 60 * 60 * 1000) // 2 days ago
-            )
-        )
     }
 
     private fun navigateToSiteDetails(siteHistory: SiteHistory) {

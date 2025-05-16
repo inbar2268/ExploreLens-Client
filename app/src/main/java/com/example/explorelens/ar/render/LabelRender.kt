@@ -1,5 +1,6 @@
 package com.example.explorelens.ar.render
 
+import android.content.Context
 import com.google.ar.core.Pose
 import com.example.explorelens.common.samplerender.Mesh
 import com.example.explorelens.common.samplerender.SampleRender
@@ -46,12 +47,19 @@ class LabelRender {
       }
   }
 
-  val cache = TextTextureCache()
+  // Store context for later use
+  private lateinit var context: Context
+  lateinit var cache: TextTextureCache
 
   lateinit var mesh: Mesh
   lateinit var shader: Shader
 
-  fun onSurfaceCreated(render: SampleRender) {
+  fun onSurfaceCreated(render: SampleRender, context: Context) {
+    this.context = context
+
+    // Initialize cache with context for font loading
+    cache = TextTextureCache(context)
+
     // Create shader with proper blending for transparency
     shader = Shader.createFromAssets(render, "shaders/label.vert", "shaders/label.frag", null)
       .setBlend(
