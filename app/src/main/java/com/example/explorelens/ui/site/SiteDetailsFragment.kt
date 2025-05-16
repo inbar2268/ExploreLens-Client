@@ -132,19 +132,38 @@ class SiteDetailsFragment : Fragment() {
 
         loadingIndicator.visibility = View.VISIBLE
 
-        // Use the callback-based method from repository
-        siteDetailsRepository.fetchSiteDetails(
-            siteId = siteId,
-            onSuccess = { siteDetails ->
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                // First sync from server to Room
+                Log.d("SiteDetailsFragment", "Syncing site details from server to Room...")
+                val syncResult = siteDetailsRepository.syncSiteDetails(siteId)
+
+                if (syncResult.isFailure) {
+                    Log.w("SiteDetailsFragment", "Sync failed: ${syncResult.exceptionOrNull()?.message}")
+                    // Continue anyway - we might have cached data
+                } else {
+                    Log.d("SiteDetailsFragment", "Sync successful")
+                }
+
+                // Now observe Room data
+                Log.d("SiteDetailsFragment", "Setting up Room observer...")
+                siteDetailsRepository.getSiteDetailsLiveData(siteId).observe(viewLifecycleOwner) { siteDetails ->
+                    loadingIndicator.visibility = View.GONE
+
+                    if (siteDetails != null) {
+                        Log.d("SiteDetailsFragment", "Got site details from Room: ${siteDetails.name}")
+                        handleSiteDetailsSuccess(siteDetails)
+                    } else {
+                        Log.e("SiteDetailsFragment", "No site details found in Room")
+                        showError("Failed to load details")
+                    }
+                }
+            } catch (e: Exception) {
                 loadingIndicator.visibility = View.GONE
-                handleSiteDetailsSuccess(siteDetails)
-            },
-            onError = {
-                loadingIndicator.visibility = View.GONE
-                showError("Failed to load details")
-                Log.e("SiteDetailsFragment", "Error loading site details")
+                Log.e("SiteDetailsFragment", "Error in fetchSiteDetails: ${e.message}", e)
+                showError("Failed to load details: ${e.message}")
             }
-        )
+        }
     }
 
     private fun handleSiteDetailsSuccess(siteDetails: SiteDetails) {
