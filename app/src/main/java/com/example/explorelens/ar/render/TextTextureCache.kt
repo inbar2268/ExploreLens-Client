@@ -95,7 +95,7 @@ class TextTextureCache(private val context: Context) {
   // Description text paint with custom font
   val descPaint = Paint().apply {
     textSize = 35f // Slightly increased
-    color = Color.argb(200, 60, 60, 60) // Slightly transparent dark gray
+    color = Color.argb(255, 45, 45, 45) // Slightly transparent dark gray
     style = Paint.Style.FILL
     isAntiAlias = true
     textAlign = Paint.Align.CENTER
@@ -162,7 +162,7 @@ class TextTextureCache(private val context: Context) {
     labelPaint.getTextBounds(label, 0, label.length, labelBounds)
 
     // Define padding and container
-    val padding = 5f
+    val padding = 20f
     val containerRect = RectF(
       padding,
       padding,
@@ -201,12 +201,14 @@ class TextTextureCache(private val context: Context) {
     innerRect.inset(1f, 1f)
     canvas.drawRoundRect(innerRect, cornerRadius - 1, cornerRadius - 1, innerGlowPaint)
 
-    // Calculate text positioning
-    val centerY = h / 2f
+    // Calculate text positioning - position label lower as requested
+    val topOffset = 60f // Increased from 40f to move label lower
     val labelY = if (description.isEmpty()) {
-      centerY + labelBounds.height() / 2f
+      // If no description, center the label
+      h / 2f + labelBounds.height() / 2f
     } else {
-      centerY - 20f
+      // Position label moderately high, not too close to top
+      containerRect.top + topOffset + labelBounds.height()
     }
 
     // Draw label text with slight text shadow for depth
@@ -216,15 +218,17 @@ class TextTextureCache(private val context: Context) {
     canvas.drawText(label, w / 2f + 1f, labelY + 1f, textShadowPaint)
     canvas.drawText(label, w / 2f, labelY, labelPaint)
 
-    // Draw description if it exists
+    // Draw description if it exists - with more space now
     if (description.isNotEmpty()) {
-      val firstLine = extractFirstLine(description)
+      val firstLine = extractFirstSentencesCompletely(description)
       val availableWidth = w - (2 * padding + 40f)
-      val formattedText = formatTextToFit(firstLine, descPaint, availableWidth)
+      val formattedText = formatTextToFit(firstLine, descPaint, availableWidth, true)
 
       val descBounds = Rect()
       descPaint.getTextBounds(formattedText, 0, formattedText.length, descBounds)
-      val descY = labelY + labelBounds.height() + 30f
+
+      // Position description with even more spacing below the label
+      val descY = labelY + 70f // Increased spacing from 50f to 70f
 
       // Draw description text with shadow
       val descShadowPaint = Paint(descPaint).apply {
@@ -232,7 +236,7 @@ class TextTextureCache(private val context: Context) {
       }
 
       formattedText.split("\n").forEachIndexed { index, line ->
-        val lineY = descY + (index * descPaint.textSize * 1.2f)
+        val lineY = descY + (index * descPaint.textSize * 1.2f) // Increased line spacing
         canvas.drawText(line, w / 2f + 1f, lineY + 1f, descShadowPaint)
         canvas.drawText(line, w / 2f, lineY, descPaint)
       }
@@ -242,18 +246,71 @@ class TextTextureCache(private val context: Context) {
     return bitmap
   }
 
-  // Extract the first sentence or line of text
-  private fun extractFirstLine(text: String): String {
-    val sentenceEnd = text.indexOfAny(charArrayOf('.', '!', '?', '\n'), 0)
-    return if (sentenceEnd >= 0) {
-      text.substring(0, sentenceEnd + 1)
-    } else {
-      text
+  // Extract full sentences without cutting them off
+  private fun extractFirstSentencesCompletely(text: String): String {
+    if (text.isEmpty()) return ""
+
+    // Find all sentence endings
+    val sentenceEndings = mutableListOf<Int>()
+    var startIndex = 0
+
+    // Find all periods, exclamation points, and question marks
+    while (startIndex < text.length) {
+      val nextEnding = text.indexOfAny(charArrayOf('.', '!', '?'), startIndex)
+      if (nextEnding < 0) break
+
+      // Include the punctuation mark and check if there's a space after it
+      val endingPos = if (nextEnding + 1 < text.length && text[nextEnding + 1] == ' ')
+        nextEnding + 1 else nextEnding
+
+      sentenceEndings.add(endingPos)
+      startIndex = endingPos + 1
     }
+
+    // If we found at least one sentence ending
+    if (sentenceEndings.isNotEmpty()) {
+      // Take either the first sentence if it's very long, or up to two sentences
+      if (sentenceEndings[0] > 350) {
+        // If first sentence is very long, take just part of it
+        val cutoff = text.substring(0, 350)
+        val lastSpace = cutoff.lastIndexOf(' ')
+        return if (lastSpace > 0) {
+          text.substring(0, lastSpace).trim() + "..."
+        } else {
+          cutoff + "..."
+        }
+      } else if (sentenceEndings.size > 1 && sentenceEndings[1] < 500) {
+        // Take first two sentences if they're not too long together
+        return text.substring(0, sentenceEndings[1] + 1).trim()
+      } else {
+        // Otherwise just take the first full sentence
+        return text.substring(0, sentenceEndings[0] + 1).trim()
+      }
+    }
+
+    // If no sentence endings found, check for line breaks
+    val lineEnd = text.indexOf('\n')
+    if (lineEnd >= 0) {
+      return text.substring(0, lineEnd).trim()
+    }
+
+    // If text is too long without any breaks, find a good cutoff point
+    if (text.length > 500) {
+      val cutoff = text.substring(0, 500)
+      val lastSpace = cutoff.lastIndexOf(' ')
+      return if (lastSpace > 0) {
+        text.substring(0, lastSpace).trim() + "..."
+      } else {
+        cutoff + "..."
+      }
+    }
+
+    // If all else fails, return the whole text
+    return text
   }
 
-  // Format text to fit within available width
-  private fun formatTextToFit(text: String, paint: Paint, maxWidth: Float): String {
+  // Enhanced text fitting with better word boundary detection
+  private fun formatTextToFit(text: String, paint: Paint, maxWidth: Float, allowThreeLines: Boolean = false): String {
     if (paint.measureText(text) <= maxWidth) {
       return text
     }
@@ -271,7 +328,25 @@ class TextTextureCache(private val context: Context) {
         if (currentLine.isNotEmpty()) {
           lines.add(currentLine)
         }
-        currentLine = word
+        // Check if the word itself is too long for the line
+        if (paint.measureText(word) > maxWidth) {
+          // If word is too long, break it with hyphen
+          var wordPart = ""
+          for (char in word) {
+            val testPart = wordPart + char
+            if (paint.measureText(testPart + "-") <= maxWidth) {
+              wordPart = testPart
+            } else {
+              if (wordPart.isNotEmpty()) {
+                lines.add(wordPart + "-")
+                wordPart = char.toString()
+              }
+            }
+          }
+          currentLine = wordPart
+        } else {
+          currentLine = word
+        }
       }
     }
 
@@ -279,15 +354,24 @@ class TextTextureCache(private val context: Context) {
       lines.add(currentLine)
     }
 
-    // Limit to 2 lines for iPhone notification style
-    if (lines.size > 2) {
-      val lastLine = lines[1]
-      lines[1] = if (lastLine.length > 3) {
-        lastLine.substring(0, lastLine.length - 3) + "..."
+    // Limit to allowed number of lines
+    val maxLines = if (allowThreeLines) 3 else 2
+
+    if (lines.size > maxLines) {
+      val lastLine = lines[maxLines - 1]
+      // Better truncation - ensure we don't cut in middle of word
+      val words = lastLine.split(" ")
+      if (words.size > 1) {
+        val truncated = words.dropLast(1).joinToString(" ") + "..."
+        lines[maxLines - 1] = truncated
       } else {
-        lastLine + "..."
+        lines[maxLines - 1] = if (lastLine.length > 5) {
+          lastLine.substring(0, lastLine.length - 3) + "..."
+        } else {
+          lastLine + "..."
+        }
       }
-      return lines.take(2).joinToString("\n")
+      return lines.take(maxLines).joinToString("\n")
     }
 
     return lines.joinToString("\n")
