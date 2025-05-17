@@ -5,8 +5,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingStart="120dp"
-    android:paddingEnd="120dp"
+    android:paddingStart="80dp"
+    android:paddingEnd="80dp"
     android:paddingLeft="34dp"
     android:paddingRight="34dp">
 
@@ -58,7 +58,7 @@
                         android:layout_height="wrap_content"
                         android:text="Eiffel Tower"
                         android:textColor="#333333"
-                        android:textSize="20sp"
+                        android:textSize="14sp"
                         android:textStyle="bold"
                         android:fontFamily="@font/harmonyos_sans_black"
                         android:maxLines="1"
@@ -67,8 +67,8 @@
                     <!-- Close button aligned to top end -->
                     <ImageView
                         android:id="@+id/closeButton"
-                        android:layout_width="14dp"
-                        android:layout_height="20dp"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
                         android:layout_alignParentEnd="true"
                         android:layout_alignTop="@id/siteNameTextView"
                         android:src="@drawable/ic_close"
@@ -87,8 +87,8 @@
                         android:gravity="center_vertical">
 
                         <ImageView
-                            android:layout_width="14dp"
-                            android:layout_height="14dp"
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
                             android:src="@drawable/ic_calendar"
                             app:tint="#267AD9" />
 
@@ -99,7 +99,7 @@
                             android:layout_marginStart="4dp"
                             android:text="Visited: May 10, 2025"
                             android:textColor="#757575"
-                            android:textSize="12sp"
+                            android:textSize="10sp"
                             android:fontFamily="@font/harmonyos_sans_regular" />
                     </LinearLayout>
                 </RelativeLayout>
@@ -112,6 +112,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="10dp"
                 android:textStyle="bold"
+                android:layout_marginTop="4dp"
                 android:text="View Details"
                 android:backgroundTint="#10B5C7"
                 android:textColor="#FFFFFF"
