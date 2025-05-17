@@ -58,6 +58,7 @@ class SiteHistoryFragment : Fragment() {
         progressBar = view.findViewById(R.id.progressBar)
 
         userRepository = UserRepository(requireContext())
+
         authTokenManager = AuthTokenManager.getInstance(requireContext())
         setupViewModel()
         setupRecyclerView()

@@ -1,6 +1,8 @@
 package com.example.explorelens.ar.render
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -15,14 +17,32 @@ import com.example.explorelens.common.samplerender.Texture
 import java.nio.ByteBuffer
 
 /**
- * Generates and caches GL textures for label names.
+ * Generates and caches GL textures for label names with iPhone notification-style design.
  */
-class TextTextureCache {
+class TextTextureCache(private val context: Context) {
   companion object {
     private const val TAG = "TextTextureCache"
   }
 
   private val cacheMap = mutableMapOf<String, Texture>()
+
+  private val lato: Typeface? by lazy {
+    try {
+      Typeface.createFromAsset(context.assets, "fonts/Montserrat-Light.ttf")
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to load Lato-Italic.ttf", e)
+      null
+    }
+  }
+
+  private val montserrat: Typeface? by lazy {
+    try {
+      Typeface.createFromAsset(context.assets, "fonts/Montserrat-SemiBoldItalic.ttf")
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to load Montserrat-Light.ttf", e)
+      null
+    }
+  }
 
   /**
    * Get a texture for a given string. If that string hasn't been used yet, create a texture for it
@@ -62,69 +82,87 @@ class TextTextureCache {
     return texture
   }
 
-  // Clean, elegant text for the label
+  // Label text paint with larger size and custom font
   val labelPaint = Paint().apply {
-    textSize = 36f // REDUCED text size for better fit
-    color = Color.BLACK
+    textSize = 70f // Increased from 36f
+    color = Color.argb(255, 45, 45, 45) // Darker gray for better readability
     style = Paint.Style.FILL
     isAntiAlias = true
     textAlign = Paint.Align.CENTER
-    typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+    typeface = montserrat ?: Typeface.create("sans-serif-black", Typeface.BOLD) // Fallback font
   }
 
-  // Smaller text for the description
+  // Description text paint with custom font
   val descPaint = Paint().apply {
-    textSize = 26f // REDUCED text size for description
-    color = Color.BLACK
+    textSize = 35f // Slightly increased
+    color = Color.argb(255, 45, 45, 45) // Slightly transparent dark gray
     style = Paint.Style.FILL
     isAntiAlias = true
     textAlign = Paint.Align.CENTER
-    typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+    typeface = lato ?: Typeface.create("sans-serif", Typeface.NORMAL) // Fallback font
   }
 
-  // Background container paint
+  // iPhone-style glassmorphism background with blur effect
   val bgPaint = Paint().apply {
-    color = Color.argb(220, 255, 255, 255) // Semi-transparent white
+    color = Color.argb(220, 255, 255, 255) // More transparent white
     style = Paint.Style.FILL
+    isAntiAlias = true
+    // For glassmorphism effect, we'll create multiple layers
+  }
+
+  // Thin white frame
+  val framePaint = Paint().apply {
+    color = Color.argb(255, 255, 255, 255) // Semi-transparent white
+    style = Paint.Style.STROKE
+    strokeWidth = 5f // Thin frame
     isAntiAlias = true
   }
 
-  // Light gray outline for the container
-  val outlinePaint = Paint().apply {
-    color = Color.argb(255, 200, 200, 200) // Light gray
+  val innerFramePaint = Paint().apply {
+    color = Color.argb(255, 255, 255, 255) // Slightly transparent
     style = Paint.Style.STROKE
     strokeWidth = 3f
     isAntiAlias = true
   }
+  // Shadow paint for depth
+  val shadowPaint = Paint().apply {
+    color = Color.argb(10, 0, 0, 0) // Very light shadow
+    style = Paint.Style.FILL
+    isAntiAlias = true
+    maskFilter = BlurMaskFilter(8f, BlurMaskFilter.Blur.NORMAL)
+  }
+
+  // Inner glow effect
+  val innerGlowPaint = Paint().apply {
+    color = Color.argb(60, 255, 255, 255)
+    style = Paint.Style.STROKE
+    strokeWidth = 1f
+    isAntiAlias = true
+  }
 
   private fun generateBitmapFromString(string: String): Bitmap {
-    Log.d(TAG, "Generating texture for: $string")
+    Log.d(TAG, "Generating iPhone-style texture for: $string")
 
-    // Parse the input string (if it contains the separator)
+    // Parse the input string
     val parts = string.split("||", limit = 2)
     val label = parts[0].trim()
     val description = if (parts.size > 1) parts[1].trim() else ""
 
-    // Make bitmap dimensions larger to accommodate longer description line
-    val w = 850 // Width increased
-    val h = 420 // Increased height for better text positioning
+    // Larger dimensions for better quality
+    val w = 900 // Increased width
+    val h = 450 // Increased height
 
     val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-
-    // Start with transparent background
     bitmap.eraseColor(Color.TRANSPARENT)
 
     val canvas = Canvas(bitmap)
 
-    // Calculate text bounds to ensure proper positioning
+    // Calculate text bounds
     val labelBounds = Rect()
     labelPaint.getTextBounds(label, 0, label.length, labelBounds)
 
-    // Calculate vertical offsets based on text height to prevent cutoff
-    val titleOffset = labelBounds.height() * 1.5f
-
-    // Define the container rectangle with padding - make it larger
-    val padding = 50f
+    // Define padding and container
+    val padding = 20f
     val containerRect = RectF(
       padding,
       padding,
@@ -132,65 +170,151 @@ class TextTextureCache {
       h - padding
     )
 
-    // Draw rounded rectangle for the container
-    val cornerRadius = 30f // Large corner radius for modern look
-    canvas.drawRoundRect(containerRect, cornerRadius, cornerRadius, bgPaint)
-    canvas.drawRoundRect(containerRect, cornerRadius, cornerRadius, outlinePaint)
+    // Draw shadow first (behind the container)
+    val shadowRect = RectF(containerRect)
+    shadowRect.offset(3f, 3f) // Slight offset for shadow
+    val cornerRadius = 22f // Larger corner radius for modern look
+    canvas.drawRoundRect(shadowRect, cornerRadius, cornerRadius, shadowPaint)
 
-    // Center the label vertically and horizontally
-    // Position text based on its measured height to avoid cutoff
-    val labelY = h * 0.38f + titleOffset/2
+    // Create layered glassmorphism effect
+    // Layer 1: Base blur effect
+    val blurPaint1 = Paint(bgPaint).apply {
+      alpha = 180
+    }
+    canvas.drawRoundRect(containerRect, cornerRadius, cornerRadius, blurPaint1)
+
+    // Layer 2: Lighter overlay for glassmorphism
+    val blurPaint2 = Paint().apply {
+      color = Color.argb(80, 255, 255, 255)
+      style = Paint.Style.FILL
+      isAntiAlias = true
+    }
+    canvas.drawRoundRect(containerRect, cornerRadius, cornerRadius, blurPaint2)
+
+    // Draw thin white frame
+    canvas.drawRoundRect(containerRect, cornerRadius, cornerRadius, framePaint)
+
+    // Draw inner glow for depth
+    val innerRect = RectF(containerRect)
+    canvas.drawRoundRect(innerRect, cornerRadius - 3, cornerRadius - 3, innerFramePaint)
+
+    innerRect.inset(1f, 1f)
+    canvas.drawRoundRect(innerRect, cornerRadius - 1, cornerRadius - 1, innerGlowPaint)
+
+    // Calculate text positioning - position label lower as requested
+    val topOffset = 60f // Increased from 40f to move label lower
+    val labelY = if (description.isEmpty()) {
+      // If no description, center the label
+      h / 2f + labelBounds.height() / 2f
+    } else {
+      // Position label moderately high, not too close to top
+      containerRect.top + topOffset + labelBounds.height()
+    }
+
+    // Draw label text with slight text shadow for depth
+    val textShadowPaint = Paint(labelPaint).apply {
+      color = Color.argb(30, 0, 0, 0)
+    }
+    canvas.drawText(label, w / 2f + 1f, labelY + 1f, textShadowPaint)
     canvas.drawText(label, w / 2f, labelY, labelPaint)
 
-    // Draw description if it exists - position it properly below the title
+    // Draw description if it exists - with more space now
     if (description.isNotEmpty()) {
-      // Get first line by looking for period, exclamation, question mark, or newline
-      val firstLine = extractFirstLine(description)
+      val firstLine = extractFirstSentencesCompletely(description)
+      val availableWidth = w - (2 * padding + 40f)
+      val formattedText = formatTextToFit(firstLine, descPaint, availableWidth, true)
 
-      // Get the available width for the description (container width minus padding)
-      val availableWidth = w - (2 * padding + 20f)  // Extra 20px margin on sides
-
-      // Format the text to fit within the available width
-      val formattedText = formatTextToFit(firstLine, descPaint, availableWidth)
-
-      // Position description below the title with proper spacing
       val descBounds = Rect()
       descPaint.getTextBounds(formattedText, 0, formattedText.length, descBounds)
-      val descY = labelY + labelBounds.height() + descBounds.height() + 20f
 
-      // Draw each line of the formatted text
+      // Position description with even more spacing below the label
+      val descY = labelY + 70f // Increased spacing from 50f to 70f
+
+      // Draw description text with shadow
+      val descShadowPaint = Paint(descPaint).apply {
+        color = Color.argb(20, 0, 0, 0)
+      }
+
       formattedText.split("\n").forEachIndexed { index, line ->
-        val lineY = descY + (index * descPaint.textSize * 1.2f)
+        val lineY = descY + (index * descPaint.textSize * 1.2f) // Increased line spacing
+        canvas.drawText(line, w / 2f + 1f, lineY + 1f, descShadowPaint)
         canvas.drawText(line, w / 2f, lineY, descPaint)
       }
     }
 
-    Log.d(TAG, "Created bitmap: ${bitmap.width}x${bitmap.height}, config: ${bitmap.config}")
-
+    Log.d(TAG, "Created iPhone-style bitmap: ${bitmap.width}x${bitmap.height}")
     return bitmap
   }
 
-  // Extract the first sentence or line of text
-  private fun extractFirstLine(text: String): String {
-    // Try to get the first sentence
-    val sentenceEnd = text.indexOfAny(charArrayOf('.', '!', '?', '\n'), 0)
-    return if (sentenceEnd >= 0) {
-      // Include the punctuation mark
-      text.substring(0, sentenceEnd + 1)
-    } else {
-      // If no sentence-ending punctuation found, use the whole text
-      text
+  // Extract full sentences without cutting them off
+  private fun extractFirstSentencesCompletely(text: String): String {
+    if (text.isEmpty()) return ""
+
+    // Find all sentence endings
+    val sentenceEndings = mutableListOf<Int>()
+    var startIndex = 0
+
+    // Find all periods, exclamation points, and question marks
+    while (startIndex < text.length) {
+      val nextEnding = text.indexOfAny(charArrayOf('.', '!', '?'), startIndex)
+      if (nextEnding < 0) break
+
+      // Include the punctuation mark and check if there's a space after it
+      val endingPos = if (nextEnding + 1 < text.length && text[nextEnding + 1] == ' ')
+        nextEnding + 1 else nextEnding
+
+      sentenceEndings.add(endingPos)
+      startIndex = endingPos + 1
     }
+
+    // If we found at least one sentence ending
+    if (sentenceEndings.isNotEmpty()) {
+      // Take either the first sentence if it's very long, or up to two sentences
+      if (sentenceEndings[0] > 350) {
+        // If first sentence is very long, take just part of it
+        val cutoff = text.substring(0, 350)
+        val lastSpace = cutoff.lastIndexOf(' ')
+        return if (lastSpace > 0) {
+          text.substring(0, lastSpace).trim() + "..."
+        } else {
+          cutoff + "..."
+        }
+      } else if (sentenceEndings.size > 1 && sentenceEndings[1] < 500) {
+        // Take first two sentences if they're not too long together
+        return text.substring(0, sentenceEndings[1] + 1).trim()
+      } else {
+        // Otherwise just take the first full sentence
+        return text.substring(0, sentenceEndings[0] + 1).trim()
+      }
+    }
+
+    // If no sentence endings found, check for line breaks
+    val lineEnd = text.indexOf('\n')
+    if (lineEnd >= 0) {
+      return text.substring(0, lineEnd).trim()
+    }
+
+    // If text is too long without any breaks, find a good cutoff point
+    if (text.length > 500) {
+      val cutoff = text.substring(0, 500)
+      val lastSpace = cutoff.lastIndexOf(' ')
+      return if (lastSpace > 0) {
+        text.substring(0, lastSpace).trim() + "..."
+      } else {
+        cutoff + "..."
+      }
+    }
+
+    // If all else fails, return the whole text
+    return text
   }
 
-  // Format text to fit within available width, with proper line breaks
-  private fun formatTextToFit(text: String, paint: Paint, maxWidth: Float): String {
-    // If text already fits, return it as is
+  // Enhanced text fitting with better word boundary detection
+  private fun formatTextToFit(text: String, paint: Paint, maxWidth: Float, allowThreeLines: Boolean = false): String {
     if (paint.measureText(text) <= maxWidth) {
       return text
     }
 
-    // If text is too long, break it into multiple lines
     val words = text.split(" ")
     val lines = mutableListOf<String>()
     var currentLine = ""
@@ -201,29 +325,53 @@ class TextTextureCache {
       if (paint.measureText(testLine) <= maxWidth) {
         currentLine = testLine
       } else {
-        // Current line is full, start a new line
         if (currentLine.isNotEmpty()) {
           lines.add(currentLine)
         }
-        currentLine = word
+        // Check if the word itself is too long for the line
+        if (paint.measureText(word) > maxWidth) {
+          // If word is too long, break it with hyphen
+          var wordPart = ""
+          for (char in word) {
+            val testPart = wordPart + char
+            if (paint.measureText(testPart + "-") <= maxWidth) {
+              wordPart = testPart
+            } else {
+              if (wordPart.isNotEmpty()) {
+                lines.add(wordPart + "-")
+                wordPart = char.toString()
+              }
+            }
+          }
+          currentLine = wordPart
+        } else {
+          currentLine = word
+        }
       }
     }
 
-    // Add the last line if it's not empty
     if (currentLine.isNotEmpty()) {
       lines.add(currentLine)
     }
 
-    // Limit to 2 lines maximum to fit in the container
-    if (lines.size > 3) {
-      val lastLine = lines[1]
-      // Add ellipsis if we're truncating
-      lines[1] = if (lastLine.length > 3) {
-        lastLine.substring(0, lastLine.length - 3) + "..."
+    // Limit to allowed number of lines
+    val maxLines = if (allowThreeLines) 3 else 2
+
+    if (lines.size > maxLines) {
+      val lastLine = lines[maxLines - 1]
+      // Better truncation - ensure we don't cut in middle of word
+      val words = lastLine.split(" ")
+      if (words.size > 1) {
+        val truncated = words.dropLast(1).joinToString(" ") + "..."
+        lines[maxLines - 1] = truncated
       } else {
-        lastLine + "..."
+        lines[maxLines - 1] = if (lastLine.length > 5) {
+          lastLine.substring(0, lastLine.length - 3) + "..."
+        } else {
+          lastLine + "..."
+        }
       }
-      return lines.take(3).joinToString("\n")
+      return lines.take(maxLines).joinToString("\n")
     }
 
     return lines.joinToString("\n")
