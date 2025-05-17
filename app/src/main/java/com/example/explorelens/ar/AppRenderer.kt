@@ -71,6 +71,8 @@ class AppRenderer(
     val pointCloudRender = PointCloudRender()
     val labelRenderer = LabelRender()
 
+    private val layerManager = ARLayerManager(activity)
+
     val viewMatrix = FloatArray(16)
     val projectionMatrix = FloatArray(16)
     val viewProjectionMatrix = FloatArray(16)
@@ -83,6 +85,33 @@ class AppRenderer(
     private var hasLoadedAnchors = false
     private val convertFloats = FloatArray(4)
     private val convertFloatsOut = FloatArray(4)
+
+    private var mockLayerAnchor: ARLayerManager.LayerLabelInfo? = null
+    private val mockPlaceData = mapOf(
+        "place_id" to "mock-place-2",
+        "name" to "Gym Mock Place",
+        "location" to mapOf(
+            "lat" to 32.42773353018067,
+            "lng" to 34.933969622735574
+        ),
+        "rating" to 4.5,
+        "type" to "gym",
+        "address" to "123 Mock Gym St.",
+        "phone_number" to "000-000-0000",
+        "business_status" to "OPERATIONAL",
+        "opening_hours" to mapOf(
+            "open_now" to true,
+            "weekday_text" to listOf(
+                "Monday: 9:00 AM – 5:00 PM",
+                "Tuesday: 9:00 AM – 5:00 PM",
+                "Wednesday: 9:00 AM – 5:00 PM",
+                "Thursday: 9:00 AM – 5:00 PM",
+                "Friday: 9:00 AM – 5:00 PM",
+                "Saturday: 10:00 AM – 4:00 PM",
+                "Sunday: Closed"
+            )
+        )
+    )
 
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
@@ -132,6 +161,8 @@ class AppRenderer(
 
         // Pass the activity context to labelRenderer
         labelRenderer.onSurfaceCreated(render, activity)
+
+        layerManager.onSurfaceCreated(render)
 
         getNearbyPlacesForAR(listOf("bar", "hotel"))
     }
@@ -191,6 +222,7 @@ class AppRenderer(
         }
         processObjectResults(frame, session)
         drawAnchors(render, frame)
+        layerManager.drawLayerLabels(render, viewProjectionMatrix, camera.pose, frame)
     }
 
     private fun drawAnchors(render: SampleRender, frame: Frame) {
@@ -230,6 +262,8 @@ class AppRenderer(
                 return
             }
             val anchor = fetchAndCreateAnchor(session, snapshotData, obj, frame)
+            mockLayerAnchor = createLayerLabelAnchor(session, snapshotData, obj, frame)
+
             launch {
                 val currentLocation =
                     geoLocationUtils.getSingleCurrentLocation() // Await the result
@@ -722,6 +756,65 @@ class AppRenderer(
         fetchAndUpdateSiteDetails(arLabeledAnchor, siteInfo.siteName, siteId)
 
         return arLabeledAnchor
+    }
+
+    private fun createLayerLabelAnchor(
+        session: Session,
+        snapshotData: Snapshot,
+        obj: ImageAnalyzedResult,
+        frame: Frame
+    ): ARLayerManager.LayerLabelInfo? {
+        val siteInfo = obj.siteInformation
+        val siteId = obj.siteInfoId
+
+        if (!isValidSiteData(siteInfo, siteId)) return null
+
+        // Get the camera pose
+        val cameraPose = snapshotData.cameraPose
+
+        // First create an anchor at the same position
+        val anchor = createAnchor(session, cameraPose, siteInfo!!.x, siteInfo.y, frame)
+            ?: return null
+
+        // Get the anchor's position
+        val anchorPos = anchor.pose.translation
+
+        // Calculate the direction from camera to anchor
+        val dirX = anchorPos[0] - cameraPose.tx()
+        val dirY = anchorPos[1] - cameraPose.ty()
+        val dirZ = anchorPos[2] - cameraPose.tz()
+
+        // Normalize the direction vector
+        val length = kotlin.math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ)
+        val normDirX = dirX / length
+        val normDirY = dirY / length
+        val normDirZ = dirZ / length
+
+        // Calculate right vector (perpendicular to direction and world up)
+        val rightX = -normDirZ
+        val rightY = 0f  // Assuming Y is up in world space
+        val rightZ = normDirX
+
+        // Normalize the right vector
+        val rightLength = kotlin.math.sqrt(rightX * rightX + rightY * rightY + rightZ * rightZ)
+        val normRightX = rightX / rightLength
+        val normRightY = rightY / rightLength
+        val normRightZ = rightZ / rightLength
+
+        // Add an offset to the right (0.5 meters)
+        val offsetDistance = 0.5f
+        val offsetX = anchorPos[0] + normRightX * offsetDistance
+        val offsetY = anchorPos[1] + 0.15f  // Slightly higher
+        val offsetZ = anchorPos[2] + normRightZ * offsetDistance
+
+        // Create a new pose for the offset position
+        val offsetPose = Pose.makeTranslation(offsetX, offsetY, offsetZ)
+
+        // Create a new anchor at the offset position
+        val offsetAnchor = session.createAnchor(offsetPose)
+
+        // Create a layer label at the offset position
+        return layerManager.addLayerLabel(session, offsetAnchor, mockPlaceData)
     }
 
     private fun fetchAndUpdateSiteDetails(
