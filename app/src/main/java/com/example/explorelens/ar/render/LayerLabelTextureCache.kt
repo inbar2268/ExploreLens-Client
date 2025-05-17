@@ -1,3 +1,4 @@
+
 package com.example.explorelens.ar.render
 
 import android.content.Context
@@ -17,9 +18,7 @@ import com.example.explorelens.R
 import com.example.explorelens.common.samplerender.GLError
 import com.example.explorelens.common.samplerender.SampleRender
 import com.example.explorelens.common.samplerender.Texture
-import com.google.ar.core.Pose
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 /**
  * Generates and caches GL textures for nearby place labels with a frosted glass design.
@@ -49,36 +48,69 @@ class LayerLabelTextureCache(private val context: Context) {
         }
     }
 
-    // Icons for the label
+    // Regular icons
     private val starIcon: Bitmap? by lazy {
-        try {
-            val drawable = ContextCompat.getDrawable(context, R.drawable.ic_star)
-            drawableToBitmap(drawable, 36, 36)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load star icon", e)
-            null
-        }
+        loadIconFromResource(R.drawable.ic_star)
     }
 
     private val phoneIcon: Bitmap? by lazy {
-        try {
-            val drawable = ContextCompat.getDrawable(context, R.drawable.ic_phone)
-            drawableToBitmap(drawable, 36, 36)
+        loadIconFromResource(R.drawable.ic_phone)
+    }
+
+    private val clockIcon: Bitmap? by lazy {
+        loadIconFromResource(R.drawable.ic_clock)
+    }
+
+    // Type-specific icons with larger size
+    private val restaurantIcon: Bitmap? by lazy {
+        loadIconFromResource(R.drawable.ic_restaurant, 48, 48)
+    }
+
+    private val cafeIcon: Bitmap? by lazy {
+        loadIconFromResource(R.drawable.ic_cafe, 48, 48)
+    }
+
+    private val barIcon: Bitmap? by lazy {
+        loadIconFromResource(R.drawable.ic_bar, 48, 48)
+    }
+
+    private val bakeryIcon: Bitmap? by lazy {
+        loadIconFromResource(R.drawable.ic_bakery, 48, 48)
+    }
+
+    private val hotelIcon: Bitmap? by lazy {
+        loadIconFromResource(R.drawable.ic_hotel, 48, 48)
+    }
+
+    private val pharmacyIcon: Bitmap? by lazy {
+        loadIconFromResource(R.drawable.ic_pharmacy, 48, 48)
+    }
+
+    private val gymIcon: Bitmap? by lazy {
+        loadIconFromResource(R.drawable.ic_gym, 48, 48)
+    }
+
+    // Helper function to load icon from resource
+    private fun loadIconFromResource(resId: Int, width: Int = 36, height: Int = 36): Bitmap? {
+        return try {
+            val drawable = ContextCompat.getDrawable(context, resId)
+            drawableToBitmap(drawable, width, height)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load phone icon", e)
+            Log.e(TAG, "Failed to load icon resource: $resId", e)
             null
         }
     }
 
-    private val clockIcon: Bitmap? by lazy {
-        try {
-            val drawable = ContextCompat.getDrawable(context, R.drawable.ic_clock)
-            drawableToBitmap(drawable, 36, 36)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load clock icon", e)
-            null
-        }
-    }
+    // Map of type to icon
+    private val typeIcons = mapOf(
+        "restaurant" to restaurantIcon,
+        "cafe" to cafeIcon,
+        "bar" to barIcon,
+        "bakery" to bakeryIcon,
+        "hotel" to hotelIcon,
+        "pharmacy" to pharmacyIcon,
+        "gym" to gymIcon
+    )
 
     /**
      * Get a texture for a given place info. If that info hasn't been used yet, create a texture for it
@@ -131,16 +163,6 @@ class LayerLabelTextureCache(private val context: Context) {
         typeface = robotoBold ?: Typeface.DEFAULT_BOLD
     }
 
-    // Subtitle text paint (for place type)
-    private val subtitlePaint = Paint().apply {
-        textSize = 50f
-        color = Color.BLACK
-        style = Paint.Style.FILL
-        isAntiAlias = true
-        textAlign = Paint.Align.LEFT
-        typeface = robotoRegular ?: Typeface.DEFAULT
-    }
-
     // Details text paint (for phone number, rating)
     private val detailPaint = Paint().apply {
         textSize = 45f
@@ -161,18 +183,18 @@ class LayerLabelTextureCache(private val context: Context) {
         typeface = robotoRegular ?: Typeface.DEFAULT
     }
 
+    // Outer frame
+    private val framePaint = Paint().apply {
+        color = Color.argb(255, 255, 255, 255) // Fully opaque white
+        style = Paint.Style.STROKE
+        strokeWidth = 5f // Thicker frame
+        isAntiAlias = true
+    }
+
     // Frosted glass background
     private val backgroundPaint = Paint().apply {
         color = Color.argb(200, 255, 255, 255) // Translucent white
         style = Paint.Style.FILL
-        isAntiAlias = true
-    }
-
-    // Subtle border/shadow for depth
-    private val borderPaint = Paint().apply {
-        color = Color.argb(30, 0, 0, 0) // Very light shadow
-        style = Paint.Style.STROKE
-        strokeWidth = 2f
         isAntiAlias = true
     }
 
@@ -189,7 +211,7 @@ class LayerLabelTextureCache(private val context: Context) {
 
         // Extract data from place info
         val name = placeInfo["name"] as? String ?: "Unknown Place"
-        val type = placeInfo["type"] as? String ?: "Unknown"
+        val type = placeInfo["type"] as? String ?: "unknown"
         val rating = placeInfo["rating"] as? Double ?: 0.0
         val phoneNumber = placeInfo["phone_number"] as? String ?: "No phone"
 
@@ -200,8 +222,11 @@ class LayerLabelTextureCache(private val context: Context) {
         val statusText = if (isOpen) "Open" else "Closed"
         val statusColor = if (isOpen) Color.rgb(0, 140, 0) else Color.rgb(200, 0, 0) // Green for open, red for closed
 
-        // Fixed dimensions for this label style
-        val width = 900
+        // Get the appropriate icon for this place type
+        val typeIcon = typeIcons[type.toLowerCase()]
+
+        // Fixed dimensions for this label style - narrower width
+        val width = 720 // Reduced from 900
         val height = 500
 
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -222,19 +247,25 @@ class LayerLabelTextureCache(private val context: Context) {
         // Draw background
         canvas.drawRoundRect(bgRect, 40f, 40f, backgroundPaint)
 
-        // Draw subtle border
-        canvas.drawRoundRect(bgRect, 40f, 40f, borderPaint)
+        // Draw outer frame
+        canvas.drawRoundRect(bgRect, 40f, 40f, framePaint)
 
         // Start position for text
         var yPosition = 110f
 
-        // Draw place name
-        canvas.drawText(name, 60f, yPosition, titlePaint)
-        yPosition += 70f
+        // Draw type icon and place name
+        val nameX = if (typeIcon != null) {
+            // Draw type icon to the left of the name
+            canvas.drawBitmap(typeIcon, 60f, yPosition - 40f, null)
+            // Offset the name text
+            120f
+        } else {
+            // No icon, start text at normal position
+            60f
+        }
 
-        // Draw place type
-        val capitalizedType = type.capitalize()
-        canvas.drawText(capitalizedType, 60f, yPosition, subtitlePaint)
+        // Draw place name
+        canvas.drawText(name, nameX, yPosition, titlePaint)
         yPosition += 70f
 
         // Draw divider line
@@ -279,4 +310,3 @@ class LayerLabelTextureCache(private val context: Context) {
         return bitmap
     }
 }
-

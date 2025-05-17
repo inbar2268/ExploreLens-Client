@@ -1,12 +1,20 @@
 package com.example.explorelens.ar.render
 
 import android.content.Context
+import android.opengl.GLES30
 import android.util.Log
+import com.example.explorelens.common.samplerender.Mesh
 import com.example.explorelens.common.samplerender.SampleRender
+import com.example.explorelens.common.samplerender.Shader
+import com.example.explorelens.common.samplerender.VertexBuffer
 import com.google.ar.core.Pose
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.FloatBuffer
 
+/**
+ * Renderer for layer labels that manages drawing them in 3D space.
+ */
 class LayerLabelRenderer {
     companion object {
         private const val TAG = "LayerLabelRenderer"
@@ -14,23 +22,24 @@ class LayerLabelRenderer {
 
     private lateinit var context: Context
     private lateinit var cache: LayerLabelTextureCache
-    private lateinit var mesh: com.example.explorelens.common.samplerender.Mesh
-    private lateinit var shader: com.example.explorelens.common.samplerender.Shader
+    private lateinit var mesh: Mesh
+    private lateinit var shader: Shader
 
     // Constants for vertex buffer setup
     private val COORDS_BUFFER_SIZE = 2 * 4 * 4
+
+    // Updated buffer with adjusted ratio for narrower label width
     private val NDC_QUAD_COORDS_BUFFER = ByteBuffer.allocateDirect(COORDS_BUFFER_SIZE)
         .order(ByteOrder.nativeOrder())
         .asFloatBuffer().apply {
             put(floatArrayOf(
-                -2.5f, -1.25f, // Bottom left - wider aspect ratio for this label
-                2.5f, -1.25f,  // Bottom right
-                -2.5f, 1.25f,  // Top left
-                2.5f, 1.25f,   // Top right
+                -2.0f, -1.5f, // Bottom left - adjusted for narrower width
+                2.0f, -1.5f,  // Bottom right
+                -2.0f, 1.5f,  // Top left
+                2.0f, 1.5f,   // Top right
             ))
             position(0)
         }
-
     private val SQUARE_TEX_COORDS_BUFFER = ByteBuffer.allocateDirect(COORDS_BUFFER_SIZE)
         .order(ByteOrder.nativeOrder())
         .asFloatBuffer().apply {
@@ -50,15 +59,15 @@ class LayerLabelRenderer {
         cache = LayerLabelTextureCache(context)
 
         // Create shader with proper blending
-        shader = com.example.explorelens.common.samplerender.Shader.createFromAssets(
+        shader = Shader.createFromAssets(
             render,
             "shaders/layer_label.vert",
             "shaders/layer_label.frag",
             null
         )
             .setBlend(
-                com.example.explorelens.common.samplerender.Shader.BlendFactor.SRC_ALPHA,
-                com.example.explorelens.common.samplerender.Shader.BlendFactor.ONE_MINUS_SRC_ALPHA
+                Shader.BlendFactor.SRC_ALPHA,
+                Shader.BlendFactor.ONE_MINUS_SRC_ALPHA
             )
             .setDepthTest(false)
             .setDepthWrite(false)
@@ -68,12 +77,12 @@ class LayerLabelRenderer {
 
         // Create mesh from vertex buffers
         val vertexBuffers = arrayOf(
-            com.example.explorelens.common.samplerender.VertexBuffer(render, 2, NDC_QUAD_COORDS_BUFFER),
-            com.example.explorelens.common.samplerender.VertexBuffer(render, 2, SQUARE_TEX_COORDS_BUFFER),
+            VertexBuffer(render, 2, NDC_QUAD_COORDS_BUFFER),
+            VertexBuffer(render, 2, SQUARE_TEX_COORDS_BUFFER),
         )
-        mesh = com.example.explorelens.common.samplerender.Mesh(
+        mesh = Mesh(
             render,
-            com.example.explorelens.common.samplerender.Mesh.PrimitiveMode.TRIANGLE_STRIP,
+            Mesh.PrimitiveMode.TRIANGLE_STRIP,
             null,
             vertexBuffers
         )
