@@ -1,6 +1,10 @@
 package com.example.explorelens.ui.auth
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.text.method.HideReturnsTransformationMethod
+import android.text.method.PasswordTransformationMethod
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,6 +23,8 @@ class ResetPasswordFragment : Fragment() {
     private var _binding: FragmentResetPasswordBinding? = null
     private val binding get() = _binding!!
     private lateinit var authRepository: AuthRepository
+    private var isNewPasswordVisible = false
+    private var isConfirmPasswordVisible = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -40,33 +46,98 @@ class ResetPasswordFragment : Fragment() {
         binding.btnSubmitReset.setOnClickListener {
             attemptPasswordReset()
         }
+
+        binding.tvShowNewPassword.setOnClickListener { toggleNewPasswordVisibility() }
+        binding.tvShowConfirmPassword.setOnClickListener { toggleConfirmPasswordVisibility() }
+
+        binding.etNewPassword.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                binding.tvShowNewPassword.visibility = View.VISIBLE
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        binding.etConfirmPassword.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                binding.tvShowConfirmPassword.visibility = View.VISIBLE
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
     }
 
-    private fun attemptPasswordReset() {
+    private fun toggleNewPasswordVisibility() {
+        isNewPasswordVisible = !isNewPasswordVisible
+        binding.etNewPassword.transformationMethod =
+            if (isNewPasswordVisible) HideReturnsTransformationMethod.getInstance()
+            else PasswordTransformationMethod.getInstance()
+
+        binding.tvShowNewPassword.text =
+            if (isNewPasswordVisible) "Hide"
+            else "Show"
+        binding.etNewPassword.setSelection(binding.etNewPassword.text.length)
+    }
+
+    private fun toggleConfirmPasswordVisibility() {
+        isConfirmPasswordVisible = !isConfirmPasswordVisible
+        binding.etConfirmPassword.transformationMethod =
+            if (isConfirmPasswordVisible) HideReturnsTransformationMethod.getInstance()
+            else PasswordTransformationMethod.getInstance()
+
+        binding.tvShowConfirmPassword.text =
+            if (isConfirmPasswordVisible) "Hide"
+            else "Show"
+        binding.etConfirmPassword.setSelection(binding.etConfirmPassword.text.length)
+    }
+
+    private fun validateResetPasswordFields(): Boolean {
         val token = binding.etToken.text.toString().trim()
         val newPassword = binding.etNewPassword.text.toString()
         val confirmPassword = binding.etConfirmPassword.text.toString()
+        var isValid = true
 
-        // Validate inputs
         if (token.isEmpty()) {
             binding.etToken.error = "Token is required"
-            return
+            isValid = false
+        } else {
+            binding.etToken.error = null // Clear error if not empty
         }
 
         if (newPassword.isEmpty()) {
             binding.etNewPassword.error = "Password is required"
-            return
+            binding.tvShowNewPassword.visibility = View.INVISIBLE
+            isValid = false
+        } else if (newPassword.length < 6) {
+            binding.etNewPassword.error = "Password is required"
+            binding.tvShowNewPassword.visibility = View.INVISIBLE
+            isValid = false
+        } else {
+            binding.etNewPassword.error = null // Clear error if not empty
+            binding.tvShowNewPassword.visibility = View.VISIBLE
         }
 
-        if (newPassword.length < 6) {
-            binding.etNewPassword.error = "Password must be at least 6 characters"
-            return
+        if (confirmPassword.isEmpty()) {
+            binding.etConfirmPassword.error = "Confirm password is required"
+            binding.tvShowConfirmPassword.visibility = View.INVISIBLE
+            isValid = false
+        } else {
+            binding.etConfirmPassword.error = null // Clear error if not empty
+            binding.tvShowConfirmPassword.visibility = View.VISIBLE
         }
 
         if (newPassword != confirmPassword) {
             binding.etConfirmPassword.error = "Passwords do not match"
-            return
+            binding.tvShowConfirmPassword.visibility = View.INVISIBLE
+            isValid = false
         }
+
+        return isValid
+    }
+
+    private fun performPasswordReset() {
+        val token = binding.etToken.text.toString().trim()
+        val newPassword = binding.etNewPassword.text.toString()
 
         LoadingManager.showLoading(requireActivity())
 
@@ -82,9 +153,32 @@ class ResetPasswordFragment : Fragment() {
                 onFailure = { exception ->
                     val errorMessage = exception.message ?: "Failed to reset password"
                     ToastHelper.showShortToast(context, errorMessage)
+                    // Visibility of show/hide is handled in validation
                 }
             )
         }
+    }
+
+    private fun attemptPasswordReset() {
+        if (validateResetPasswordFields()) {
+            performPasswordReset()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        binding.etToken.text?.clear()
+        binding.etNewPassword.text?.clear()
+        binding.etConfirmPassword.text?.clear()
+        binding.etToken.error = null
+        binding.etNewPassword.error = null
+        binding.etConfirmPassword.error = null
+        binding.tvShowNewPassword.visibility = View.INVISIBLE // Hide on resume
+        binding.tvShowConfirmPassword.visibility = View.INVISIBLE // Hide on resume
+        isNewPasswordVisible = false
+        isConfirmPasswordVisible = false
+        binding.etNewPassword.transformationMethod = PasswordTransformationMethod.getInstance()
+        binding.etConfirmPassword.transformationMethod = PasswordTransformationMethod.getInstance()
     }
 
     override fun onDestroyView() {

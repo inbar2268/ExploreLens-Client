@@ -82,7 +82,8 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
         val fragmentsWithoutBottomNav = listOf(
             R.id.loginFragment,
             R.id.registerFragment,
-            R.id.forgotPasswordFragment
+            R.id.forgotPasswordFragment,
+            R.id.resetPasswordFragment
         )
 
         if (fragmentId in fragmentsWithoutBottomNav) {

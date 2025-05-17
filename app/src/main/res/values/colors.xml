@@ -24,23 +24,21 @@
   <color name="primary">#262d3a</color>
   <color name="primary_dark">#1976D2</color>
   <color name="accent">#03A9F4</color>
-  <color name="black">#FF000000</color>
-  <color name="white">#FFFFFFFF</color>
-  <color name="gray">#757575</color>
   <color name="yellow">#FFEB3B</color>
-  <color name="light_gray">#E0E0E0</color>
   <color name="bottom_nav_background">#FFFFFFFF</color>
   <color name="bottom_nav_selected">#3373F2</color>
   <color name="bottom_nav_unselected">#8E8E93</color>
   <color name="semi_transparent_background">#80000000</color>
   <color name="filter">#3373F2</color>
-  <color name="restaurant_color">#FFB74D</color> <!-- Tomato Red -->
-  <color name="cafe_color">#A1887F</color>       <!-- Mocha Brown -->
-  <color name="bar_color">#9575CD</color>        <!-- Deep Purple -->
-  <color name="bakery_color">#FFD54F</color>     <!-- Golden Honey -->
-  <color name="hotel_color">#64B5F6</color>      <!-- Royal Indigo -->
-  <color name="pharmacy_color">#81C784</color>   <!-- Emerald Green -->
-  <color name="gym_color">#FF6F61</color>
   <color name="dialog_cancel_text">#262626</color>
   <color name="dialog_logout_text">#FFFFFF</color>
+
+
+  <color name="light_blue">#87BFE0</color>
+  <color name="black">#FF000000</color>
+  <color name="white">#FFFFFFFF</color>
+  <color name="red">#FF3B30</color>
+  <color name="gray">#F5F5F5</color>
+  <color name="light_gray">#FCFCFC</color>
+
 </resources>
