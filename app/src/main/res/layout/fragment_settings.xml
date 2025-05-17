@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical">
+    android:background="@android:color/white"
+    android:orientation="vertical"
+    android:fontFamily="@font/harmonyos_sans_regular">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/topBar"
@@ -18,9 +21,9 @@
             android:layout_width="38dp"
             android:layout_height="38dp"
             android:layout_marginStart="14dp"
+            android:background="@android:color/transparent"
             android:contentDescription="Back"
             android:src="@drawable/ic_back"
-            android:background="@android:color/transparent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -32,8 +35,9 @@
             android:layout_height="wrap_content"
             android:text="Settings"
             android:textColor="@color/black"
-            android:textSize="17sp"
+            android:textSize="16sp"
             android:textStyle="bold"
+            android:fontFamily="@font/harmonyos_sans_medium"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -44,235 +48,250 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="14dp"
-        android:text="User Account"
-        android:textStyle="bold"
-        android:textSize="15sp"/>
+        android:fontFamily="@font/harmonyos_sans_medium"
+        android:paddingStart="16dp"
+        android:paddingTop="18dp"
+        android:paddingBottom="6dp"
+        android:text="Account"
+        android:textColor="#1e3851"
+        android:textSize="18sp"
+        android:textStyle="bold" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#E0E0E0" />
-
-    <LinearLayout
-        android:id="@+id/editUserRow"
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="14dp">
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:foreground="?android:attr/selectableItemBackground"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp">
 
-        <ImageView
-            android:layout_width="21dp"
-            android:layout_height="21dp"
-            android:layout_marginEnd="14dp"
+        <LinearLayout
+            android:id="@+id/editProfileRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:background="@color/light_gray"> <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginEnd="12dp"
             android:src="@drawable/ic_edit_user" />
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/black"
-            android:text="Edit user"
-            android:textSize="13sp"/>
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Edit profile"
+                android:textColor="#1e3851"
+                android:textSize="14sp"
+                android:fontFamily="@font/harmonyos_sans_regular" />
 
-        <ImageView
-            android:layout_width="21dp"
-            android:layout_height="21dp"
-            app:tint="@color/gray"
-            android:src="@drawable/ic_arrow_right" />
-    </LinearLayout>
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_arrow_right"
+                app:tint="#B0B0B0" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginStart="51dp"
-        android:background="#E0E0E0" />
-
-    <LinearLayout
-        android:id="@+id/changePasswordRow"
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="14dp">
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="1dp"
+        android:layout_marginEnd="16dp"
+        android:foreground="?android:attr/selectableItemBackground"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp">
 
-        <ImageView
-            android:layout_width="21dp"
-            android:layout_height="21dp"
-            android:layout_marginEnd="14dp"
+        <LinearLayout
+            android:id="@+id/changePasswordRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:background="@color/light_gray"> <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginEnd="12dp"
             android:src="@drawable/ic_change_password" />
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/black"
-            android:text="Change password"
-            android:textSize="13sp"/>
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Change password"
+                android:textColor="#1e3851"
+                android:textSize="14sp"
+                android:fontFamily="@font/harmonyos_sans_regular" />
 
-        <ImageView
-            android:layout_width="21dp"
-            android:layout_height="21dp"
-            app:tint="@color/gray"
-            android:src="@drawable/next" />
-    </LinearLayout>
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_arrow_right"
+                app:tint="#B0B0B0" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginStart="51dp"
-        android:background="#E0E0E0" />
-
-    <LinearLayout
-        android:id="@+id/deleteUserRow"
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="14dp">
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="1dp"
+        android:layout_marginEnd="16dp"
+        android:foreground="?android:attr/selectableItemBackground"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp">
 
-        <ImageView
-            android:layout_width="21dp"
-            android:layout_height="21dp"
-            android:layout_marginEnd="14dp"
+        <LinearLayout
+            android:id="@+id/deleteAccountRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:background="@color/light_gray"> <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginEnd="12dp"
             android:src="@drawable/ic_delete_user" />
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/black"
-            android:text="Delete user"
-            android:textSize="13sp"/>
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Delete account"
+                android:textColor="#1e3851"
+                android:textSize="14sp"
+                android:fontFamily="@font/harmonyos_sans_regular" />
 
-        <ImageView
-            android:layout_width="21dp"
-            android:layout_height="21dp"
-            app:tint="@color/gray"
-            android:src="@drawable/ic_arrow_right" />
-    </LinearLayout>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#E0E0E0" />
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_arrow_right"
+                app:tint="#B0B0B0" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="14dp"
-        android:text="History &amp; Map"
-        android:textStyle="bold"
-        android:textSize="15sp"/>
+        android:fontFamily="@font/harmonyos_sans_medium"
+        android:paddingStart="16dp"
+        android:paddingTop="18dp"
+        android:paddingBottom="6dp"
+        android:text="Site History &amp; Map"
+        android:textColor="#1e3851"
+        android:textSize="18sp"
+        android:textStyle="bold" />
 
-    <LinearLayout
-        android:id="@+id/resetHistoryRow"
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="14dp">
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:foreground="?android:attr/selectableItemBackground"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp">
 
-        <ImageView
-            android:layout_width="21dp"
-            android:layout_height="21dp"
-            android:layout_marginEnd="14dp"
+        <LinearLayout
+            android:id="@+id/resetHistoryRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:background="@color/light_gray"> <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginEnd="12dp"
             android:src="@drawable/ic_history" />
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/black"
-            android:text="Reset sites history"
-            android:textSize="13sp"/>
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Reset site history"
+                android:textColor="#1e3851"
+                android:textSize="14sp"
+                android:fontFamily="@font/harmonyos_sans_regular" />
 
-        <ImageView
-            android:layout_width="21dp"
-            android:layout_height="21dp"
-            app:tint="@color/gray"
-            android:src="@drawable/ic_arrow_right" />
-    </LinearLayout>
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_arrow_right"
+                app:tint="#B0B0B0" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginStart="51dp"
-        android:background="#E0E0E0" />
-
-    <LinearLayout
-        android:id="@+id/changeMapTypeRow"
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="14dp">
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="1dp"
+        android:layout_marginEnd="16dp"
+        android:foreground="?android:attr/selectableItemBackground"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp">
 
-        <ImageView
-            android:layout_width="21dp"
-            android:layout_height="21dp"
-            android:layout_marginEnd="14dp"
+        <LinearLayout
+            android:id="@+id/changeMapTypeRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:background="@color/light_gray"> <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginEnd="12dp"
             android:src="@drawable/ic_map" />
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/black"
-            android:text="Change default map type"
-            android:textSize="13sp"/>
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/harmonyos_sans_regular"
+                android:text="Change map type"
+                android:textColor="#1e3851"
+                android:textSize="14sp" />
 
-        <TextView
-            android:id="@+id/currentMapTypeTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="7dp"
-            android:text="Normal"
-            android:textSize="13sp"/>
+            <TextView
+                android:id="@+id/currentMapTypeTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="7dp"
+                android:textSize="14sp"
+                android:textColor="@color/light_blue"
+                android:fontFamily="@font/harmonyos_sans_regular"
+                tools:text="Normal" />
 
-        <ImageView
-            android:layout_width="21dp"
-            android:layout_height="21dp"
-            app:tint="@color/gray"
-            android:src="@drawable/ic_arrow_right" />
-    </LinearLayout>
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_arrow_right"
+                app:tint="#B0B0B0" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
-    <View
+    <Button
+        android:id="@+id/logoutButton"
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#E0E0E0" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="14dp"
-        android:text="Account"
-        android:textStyle="bold"
-        android:textSize="15sp"/>
-
-    <LinearLayout
-        android:id="@+id/logoutRow"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="14dp">
-
-        <ImageView
-            android:layout_width="21dp"
-            android:layout_height="21dp"
-            android:layout_marginEnd="14dp"
-            app:tint="@android:color/holo_red_dark"
-            android:src="@drawable/ic_logout" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Logout"
-            android:textColor="@android:color/holo_red_dark"
-            android:textSize="13sp"/>
-    </LinearLayout>
+        android:layout_height="50dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/bg_button_primary"
+        android:fontFamily="@font/harmonyos_sans_medium"
+        android:text="Log out"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/changeMapTypeCard" />
 
 </LinearLayout>
