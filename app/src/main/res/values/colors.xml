@@ -41,4 +41,9 @@
   <color name="gray">#F5F5F5</color>
   <color name="light_gray">#FDFDFD</color>
 
+
+  <color name="optimal_distance">#4CAF50</color>  <!-- Green -->
+  <color name="good_distance">#2196F3</color>     <!-- Blue -->
+  <color name="medium_distance">#FFC107</color>   <!-- Yellow -->
+  <color name="far_distance">#FF9800</color>      <!-- Orange -->
 </resources>

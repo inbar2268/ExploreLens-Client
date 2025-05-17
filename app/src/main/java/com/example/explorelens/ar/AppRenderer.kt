@@ -219,11 +219,59 @@ class AppRenderer(
         }
     }
 
+
+
     private fun computeScale(cameraPose: Pose, anchorPose: Pose): Float {
-        val distance = distanceBetween(cameraPose, anchorPose) // משתמש בשיטה קיימת
-        val rawScale = 1.0f / distance
-        return rawScale.coerceIn(0.5f, 3.0f)
+        val distance = distanceBetween(cameraPose, anchorPose)
+
+        val minDistance = 0.3f  // Even closer minimum distance
+        val maxDistance = 10.0f
+        val maxScale = 2.0f     // Slightly larger max scale
+        val minScale = 0.4f     // Ensure it doesn't get too tiny
+
+        return when {
+            distance <= minDistance -> {
+                // Linear scaling for very close objects
+                maxScale * (distance / minDistance)  // Scale down from max as distance decreases
+            }
+            distance >= maxDistance -> minScale
+            else -> {
+                // Adjusted non-linear scaling
+                val normalizedDistance = (distance - minDistance) / (maxDistance - minDistance)
+                val scaleFactor = 1.0f - (normalizedDistance * normalizedDistance * 0.6f + normalizedDistance * 0.4f) // Emphasize close range
+                minScale + scaleFactor * (maxScale - minScale)
+            }
+        }
     }
+
+//    private fun computeScale(cameraPose: Pose, anchorPose: Pose): Float {
+//        val distance = distanceBetween(cameraPose, anchorPose)
+//
+//        // Define distance thresholds in meters
+//        val minDistance = 0.5f  // Below this distance, use maximum scale
+//        val maxDistance = 10.0f // Beyond this distance, use minimum scale
+//
+//        // Define scale thresholds
+//        val maxScale = 1.5f     // Scale for closest objects
+//        val minScale = 0.5f     // Minimum scale for distant objects
+//
+//        // Use a non-linear scaling function for smoother transition
+//        // This creates a more gradual falloff that maintains good visibility at medium distances
+//        return when {
+//            distance <= minDistance -> maxScale
+//            distance >= maxDistance -> minScale
+//            else -> {
+//                // Calculate a normalized position between min and max distance
+//                val normalizedDistance = (distance - minDistance) / (maxDistance - minDistance)
+//
+//                // Apply a non-linear curve: modified quadratic falloff for more readability at middle distances
+//                val scaleFactor = 1.0f - (normalizedDistance * normalizedDistance * 0.7f + normalizedDistance * 0.3f)
+//
+//                // Interpolate between max and min scale based on the calculated factor
+//                minScale + scaleFactor * (maxScale - minScale)
+//            }
+//        }
+//    }
 
 
     private fun processObjectResults(frame: Frame, session: Session) {
@@ -278,14 +326,9 @@ class AppRenderer(
         labelY: Float, // Normalized 0-1
         frame: Frame
     ): Anchor? {
-        // Log input coordinates
+        // Log input coordinates for debugging
         Log.d(TAG, "Input coordinates (normalized): x=$labelX, y=$labelY")
-        Log.d(
-            TAG,
-            "Snapshot pose: tx=${snapshotPose.tx()}, ty=${snapshotPose.ty()}, tz=${snapshotPose.tz()}"
-        )
 
-        // 1. Calculate the direction vector in camera space
         // Convert normalized coordinates (0-1) to view space (-1 to 1)
         val viewportX = (labelX * 2.0f) - 1.0f
         val viewportY = -((labelY * 2.0f) - 1.0f) // Negate because Y is flipped
@@ -293,10 +336,10 @@ class AppRenderer(
         // Direction vector in camera space (z is negative because camera looks down negative z-axis)
         val directionVector = floatArrayOf(viewportX, viewportY, -1.0f)
 
-        // 2. Transform direction vector to world space using snapshot pose
+        // Transform direction vector to world space using snapshot pose
         val worldDirection = snapshotPose.transformPoint(directionVector)
 
-        // 3. Normalize the direction vector
+        // Normalize the direction vector
         val magnitude = sqrt(
             worldDirection[0] * worldDirection[0] +
                     worldDirection[1] * worldDirection[1] +
@@ -309,15 +352,13 @@ class AppRenderer(
             worldDirection[2] / magnitude
         )
 
-        // 4. Convert the input coordinates to view coordinates for the hit test
-        // Convert normalized coordinates to image pixel coordinates
+        // Convert to view coordinates for hit test
         val imageWidth = frame.camera.imageIntrinsics.imageDimensions[0].toFloat()
         val imageHeight = frame.camera.imageIntrinsics.imageDimensions[1].toFloat()
 
         val pixelX = labelX * imageWidth
         val pixelY = labelY * imageHeight
 
-        // Convert to view coordinates
         convertFloats[0] = pixelX
         convertFloats[1] = pixelY
         frame.transformCoordinates2d(
@@ -327,11 +368,10 @@ class AppRenderer(
             convertFloatsOut
         )
 
-        // 5. Perform a hit test at the actual input coordinates (not center)
         val hits = frame.hitTest(convertFloatsOut[0], convertFloatsOut[1])
 
-        // Default distance if no hit is found
-        var distance = 2.0f
+        // Default distance if no hit is found - reduced from 2.0f to 1.5f for closer placement
+        var distance = 1.5f
 
         if (hits.isNotEmpty()) {
             val hitResult = hits.first()
@@ -341,24 +381,22 @@ class AppRenderer(
             Log.d(TAG, "Hit test failed, using default distance: $distance")
         }
 
-        // 6. Calculate final world position
+        // Calculate final world position
+        // Add a slight horizontal offset (0.1f) if labels still appear left-aligned
         val worldPosition = floatArrayOf(
             snapshotPose.tx() + normalizedDirection[0] * distance,
-            snapshotPose.ty() + normalizedDirection[1] * distance, // No Y correction needed
+            snapshotPose.ty() + normalizedDirection[1] * distance,
             snapshotPose.tz() + normalizedDirection[2] * distance
         )
 
-        // 7. Create anchor with final position
+        // Create anchor with final position
         val anchorPose = Pose.makeTranslation(
             worldPosition[0],
             worldPosition[1],
             worldPosition[2]
         )
 
-        Log.d(
-            TAG,
-            "Created anchor at: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}"
-        )
+        Log.d(TAG, "Created anchor at: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}")
 
         return session.createAnchor(anchorPose)
     }

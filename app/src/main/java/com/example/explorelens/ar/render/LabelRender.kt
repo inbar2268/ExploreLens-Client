@@ -21,10 +21,10 @@ class LabelRender {
       ).asFloatBuffer().apply {
         put(
           floatArrayOf(
-            -2.0f, -1.2f, // Bottom left - adjusted for 700x420 aspect ratio
-            2.0f, -1.2f,  // Bottom right
-            -2.0f, 1.2f,  // Top left
-            2.0f, 1.2f,   // Top right
+            -1.0f, -0.6f, // Bottom left - adjusted to be symmetric
+            1.0f, -0.6f,  // Bottom right
+            -1.0f, 0.6f,  // Top left
+            1.0f, 0.6f,   // Top right
           )
         )
         position(0)
@@ -73,17 +73,22 @@ class LabelRender {
   }
 
   val labelOrigin = FloatArray(3)
+
   fun draw(
     render: SampleRender,
     viewProjectionMatrix: FloatArray,
     pose: Pose,
     cameraPose: Pose,
     label: String,
-    scale: Float
+    scale: Float,
+    offsetX: Float = 0f  // New parameter for horizontal adjustment
   ) {
     Log.d(TAG, "Drawing label: $label with scale: $scale")
 
-    labelOrigin[0] = pose.tx()
+    val enhancedScale = scale * 2.0f
+
+    // Apply horizontal offset
+    labelOrigin[0] = pose.tx() + offsetX
     labelOrigin[1] = pose.ty() + 0.1f
     labelOrigin[2] = pose.tz()
 
@@ -91,12 +96,36 @@ class LabelRender {
       .setMat4("u_ViewProjection", viewProjectionMatrix)
       .setVec3("u_LabelOrigin", labelOrigin)
       .setVec3("u_CameraPos", cameraPose.translation)
-      .setFloat("u_Scale", scale) // 💡 כאן שולחים את ה-scale
+      .setFloat("u_Scale", enhancedScale)
       .setTexture("uTexture", cache.get(render, label))
 
     render.draw(mesh, shader)
   }
 }
+//  fun draw(
+//    render: SampleRender,
+//    viewProjectionMatrix: FloatArray,
+//    pose: Pose,
+//    cameraPose: Pose,
+//    label: String,
+//    scale: Float
+//  ) {
+//    Log.d(TAG, "Drawing label: $label with scale: $scale")
+//
+//    labelOrigin[0] = pose.tx()
+//    labelOrigin[1] = pose.ty() + 0.1f
+//    labelOrigin[2] = pose.tz()
+//
+//    shader
+//      .setMat4("u_ViewProjection", viewProjectionMatrix)
+//      .setVec3("u_LabelOrigin", labelOrigin)
+//      .setVec3("u_CameraPos", cameraPose.translation)
+//      .setFloat("u_Scale", scale) // 💡 כאן שולחים את ה-scale
+//      .setTexture("uTexture", cache.get(render, label))
+//
+//    render.draw(mesh, shader)
+//  }
+//}
 
 //  fun draw(
 //    render: SampleRender,
