@@ -46,6 +46,7 @@ import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
 import com.example.explorelens.Model
 import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
+import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
 import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import com.example.explorelens.model.ARLabeledAnchor
 import com.example.explorelens.utils.GeoLocationUtils
@@ -54,6 +55,7 @@ import com.example.explorelens.data.network.detectionResult.AnalyzedResultApi
 import com.example.explorelens.data.repository.DetectionResultRepository
 import com.example.explorelens.data.repository.NearbyPlacesRepository
 import com.example.explorelens.data.repository.SiteDetailsRepository
+import com.google.ar.core.Config
 
 class AppRenderer(
     val activity: ArActivity,
@@ -112,11 +114,13 @@ class AppRenderer(
             hideSnackbar()
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    view.binding.cameraInnerCircle.animate().scaleX(0.85f).scaleY(0.85f).setDuration(100).start()
+                    view.binding.cameraInnerCircle.animate().scaleX(0.85f).scaleY(0.85f)
+                        .setDuration(100).start()
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    view.binding.cameraInnerCircle.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+                    view.binding.cameraInnerCircle.animate().scaleX(1f).scaleY(1f).setDuration(100)
+                        .start()
                 }
             }
             false
@@ -907,7 +911,7 @@ class AppRenderer(
                     showSnackbar("Received ${places.size} places")
                     showSnackbar("Received ${places[0].name} , ${places[1].name} places")
                     //updating AR nearbyPlaces anchors when creates
-                    // updateARViewWithPlaces(places)
+                    updateARViewWithPlaces(places)
                 }
 
                 result.onFailure { error ->
@@ -916,6 +920,52 @@ class AppRenderer(
                 }
             }
         }
+    }
+
+    private fun updateARViewWithPlaces(places: List<PointOfInterest>) {
+        val session = activity.arCoreSessionHelper.sessionCache ?: return
+        val earth = session.earth ?: return
+
+        if (!session.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
+            Handler(Looper.getMainLooper()).post {
+                showSnackbar("Geospatial API not supported")
+            }
+            return
+        }
+
+        if (earth.trackingState != TrackingState.TRACKING) {
+            return
+        }
+
+        val existingLabels = arLabeledAnchors.map { it.siteName }
+        val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
+        for (point in places) {
+            if (existingLabels.contains(point.name)) continue
+
+            val targetLat = point.location.lat
+            val targetLng = point.location.lng
+            val elevationFromPlace = point.elevation
+            val baseAltitude = elevationFromPlace ?: earth.cameraGeospatialPose.altitude
+            val targetAltitude = baseAltitude + 10.0
+
+            val anchor =
+                earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
+            Log.d(
+                "GeoAR",
+                "Created Anchor at $targetLat, $targetLng, $targetAltitude for ${point.name}"
+            )
+
+            val labeledAnchor = ARLabeledAnchor(
+                anchor,
+                point.name,
+                point.address,
+                "Rating: ${point.rating}"
+            )
+            synchronized(arLabeledAnchors) {
+                arLabeledAnchors.add(labeledAnchor)
+            }
+        }
+
     }
 
     private fun createSiteHistoryForDetectedObject(
