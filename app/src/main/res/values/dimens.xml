@@ -1,4 +1,8 @@
 <resources>
       <dimen name="fab_margin">16dp</dimen>
     <dimen name="filter_side_sheet_width">280dp</dimen>
+    <dimen name="recycler_bottom_padding">8dp</dimen>
+    <dimen name="chat_input_height">68dp</dimen>
+    <dimen name="site_image_height">160dp</dimen>
+
 </resources>
