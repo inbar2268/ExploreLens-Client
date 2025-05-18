@@ -8,10 +8,15 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.request.RequestOptions
 import com.example.explorelens.R
 import com.example.explorelens.adapters.ChatAdapter
 import com.example.explorelens.databinding.FragmentChatBinding
 import com.example.explorelens.data.model.ChatMessage
+import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.data.repository.UserRepository
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.launch
@@ -25,14 +30,20 @@ class ChatFragment : Fragment() {
     private lateinit var chatAdapter: ChatAdapter
     private val chatMessages = mutableListOf<ChatMessage>()
     private lateinit var userRepository: UserRepository
+    private lateinit var siteDetailsRepository: SiteDetailsRepository
 
-    // Site name passed from SiteDetailsFragment
     private var siteName: String? = null
+    private var siteImageUrl: String? = null
 
-    // Mock data for historical site information
     private val defaultWelcomeMessage = "Welcome to HistoryGuide! I can provide information about historical sites and monuments. What would you like to know about?"
     private val siteSpecificWelcomeMessage = "Welcome to HistoryGuide! I'm your virtual guide for %s. What would you like to know about this historical site?"
     private val personalizedWelcomeMessage = "Hi %s! Welcome to HistoryGuide. I'm your virtual guide for %s. What would you like to know about this historical site?"
+
+    private val siteImages = mapOf(
+        "eiffel" to R.drawable.eiffel,
+        "colosseum" to R.drawable.eiffel,
+        "taj_mahal" to R.drawable.eiffel
+    )
 
     private val historicalSiteResponses = mapOf(
         "eiffel" to "The Eiffel Tower is a world-famous iron structure located in Paris, France. Built by engineer Gustave Eiffel for the 1889 World's Fair, it stands 330 meters tall and was once the tallest man-made structure in the world. Today, it remains one of the most iconic landmarks globally, attracting millions of visitors each year who admire its unique design and panoramic views of Paris.",
@@ -54,50 +65,105 @@ class ChatFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize user repository
         userRepository = UserRepository(requireActivity().application)
+        siteDetailsRepository = SiteDetailsRepository(requireContext())
 
-        // Get site name from arguments
         siteName = arguments?.getString("SITE_NAME_KEY")
+        siteImageUrl = arguments?.getString("SITE_IMAGE_URL_KEY")
 
-        // Log the site name for debugging
         Log.d("ChatFragment", "Site name: $siteName")
+        Log.d("ChatFragment", "Site image URL: $siteImageUrl")
 
-        // Set up title
         if (!siteName.isNullOrEmpty()) {
             binding.titleText.text = siteName
         } else {
             binding.titleText.text = "Chat"
         }
 
-        // Set up site image if relevant
-        setupSiteImage()
+        if (!siteImageUrl.isNullOrEmpty()) {
+            loadSiteImage(siteImageUrl)
+        } else {
+            fetchSiteDetails()
+        }
 
-        // Set up back button
         binding.backButton.setOnClickListener {
             requireActivity().onBackPressed()
         }
 
         setupRecyclerView()
         setupClickListeners()
-
-        // Load user data and then show welcome message
         loadUserDataAndShowWelcome()
-
-        // Ensure the bottom navigation bar is visible but doesn't overlap with the chat input
         adjustBottomNavigationVisibility()
+    }
+
+    private fun fetchSiteDetails() {
+        if (!siteName.isNullOrEmpty()) {
+            val siteKey = identifySiteKeyFromName(siteName!!)
+
+            val imageResId = siteImages[siteKey]
+            if (imageResId != null) {
+                binding.siteImageView.apply {
+                    setImageResource(imageResId)
+                    visibility = View.VISIBLE
+                }
+            } else {
+                val siteId = siteName?.replace(" ", "")
+                if (!siteId.isNullOrEmpty()) {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        try {
+                            val result = siteDetailsRepository.syncSiteDetails(siteId)
+                            if (result.isSuccess) {
+                                siteDetailsRepository.getSiteDetailsLiveData(siteId)
+                                    .observe(viewLifecycleOwner) { siteDetails ->
+                                        if (siteDetails != null && !siteDetails.imageUrl.isNullOrEmpty()) {
+                                            siteImageUrl = siteDetails.imageUrl
+                                            loadSiteImage(siteDetails.imageUrl)
+                                        } else {
+                                            binding.siteImageView.visibility = View.GONE
+                                        }
+                                    }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("ChatFragment", "Error fetching site details: ${e.message}")
+                            binding.siteImageView.visibility = View.GONE
+                        }
+                    }
+                }
+            }
+        } else {
+            binding.siteImageView.visibility = View.GONE
+        }
+    }
+
+    private fun loadSiteImage(imageUrl: String?) {
+        if (!imageUrl.isNullOrEmpty()) {
+            try {
+                binding.siteImageView.visibility = View.VISIBLE
+
+                Glide.with(requireContext())
+                    .load(imageUrl)
+                    .transition(DrawableTransitionOptions.withCrossFade(300))
+                    .apply(RequestOptions()
+                        .placeholder(R.drawable.eiffel)
+                        .error(R.drawable.eiffel)
+                        .centerCrop())
+                    .into(binding.siteImageView)
+
+            } catch (e: Exception) {
+                Log.e("ChatFragment", "Error loading image: ${e.message}")
+                binding.siteImageView.visibility = View.GONE
+            }
+        } else {
+            binding.siteImageView.visibility = View.GONE
+        }
     }
 
     private fun loadUserDataAndShowWelcome() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // Get user from local database
                 val user = userRepository.getUserFromDb()
-
-                // Create adapter with user data
                 chatAdapter.setUserData(user?.profilePictureUrl, user?.username)
 
-                // Create personalized welcome message if user is available
                 val welcomeMessage = if (!siteName.isNullOrEmpty() && user != null && !user.username.isNullOrEmpty()) {
                     String.format(personalizedWelcomeMessage, user.username, siteName)
                 } else if (!siteName.isNullOrEmpty()) {
@@ -106,24 +172,17 @@ class ChatFragment : Fragment() {
                     defaultWelcomeMessage
                 }
 
-                // Create initial message
                 val initialMessage = ChatMessage(
                     id = UUID.randomUUID().toString(),
                     message = welcomeMessage,
                     sentByUser = false
                 )
 
-                // Add to chat
                 chatMessages.add(initialMessage)
                 chatAdapter.submitList(chatMessages.toList())
-
-                // Scroll to show the message
-                binding.recyclerView.post {
-                    binding.recyclerView.scrollToPosition(chatMessages.size - 1)
-                }
+                scrollToBottom()
 
             } catch (e: Exception) {
-                // If error, just use default welcome message
                 Log.e("ChatFragment", "Error loading user data: ${e.message}")
 
                 val welcomeMessage = if (!siteName.isNullOrEmpty()) {
@@ -140,47 +199,56 @@ class ChatFragment : Fragment() {
 
                 chatMessages.add(initialMessage)
                 chatAdapter.submitList(chatMessages.toList())
-
-                binding.recyclerView.post {
-                    binding.recyclerView.scrollToPosition(chatMessages.size - 1)
-                }
+                scrollToBottom()
             }
         }
     }
 
     private fun adjustBottomNavigationVisibility() {
-        // Find the bottom navigation and ensure it's visible
         val bottomNav = activity?.findViewById<BottomNavigationView>(R.id.bottom_navigation)
         bottomNav?.visibility = View.VISIBLE
-
-        // Input layout already has margin in the XML to prevent overlap
-    }
-
-    private fun setupSiteImage() {
-        // Show site image based on site name if available
-        val imageResId = when {
-            siteName?.contains("eiffel", ignoreCase = true) == true -> R.drawable.eiffel
-            else -> 0
-        }
-
-        if (imageResId != 0) {
-            binding.siteImageView.apply {
-                setImageResource(imageResId)
-                visibility = View.VISIBLE
-            }
-        } else {
-            binding.siteImageView.visibility = View.GONE
-        }
     }
 
     private fun setupRecyclerView() {
         chatAdapter = ChatAdapter()
-        binding.recyclerView.apply {
-            layoutManager = LinearLayoutManager(context).apply {
-                stackFromEnd = true  // To show newest messages at the bottom
+
+        // Set up RecyclerView with LinearLayoutManager
+        val linearLayoutManager = LinearLayoutManager(context)
+        linearLayoutManager.stackFromEnd = true
+
+        // Add padding to the bottom to prevent messages from being hidden behind input
+        val bottomInputHeight = resources.getDimensionPixelSize(R.dimen.chat_input_height)
+        binding.recyclerView.setPadding(
+            binding.recyclerView.paddingLeft,
+            binding.recyclerView.paddingTop,
+            binding.recyclerView.paddingRight,
+            binding.recyclerView.paddingBottom + bottomInputHeight
+        )
+        binding.recyclerView.clipToPadding = false
+
+        binding.recyclerView.layoutManager = linearLayoutManager
+        binding.recyclerView.adapter = chatAdapter
+
+        // Add scroll state change listener to detect when scrolling stops
+        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    checkIfAtBottom()
+                }
             }
-            adapter = chatAdapter
-        }
+        })
+    }
+
+    private fun checkIfAtBottom() {
+        val layoutManager = binding.recyclerView.layoutManager as LinearLayoutManager
+        val lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition()
+        val itemCount = chatAdapter.itemCount
+
+        // If we're not at the bottom, we might want to show a "scroll to bottom" button
+        // You can add this feature in the future if needed
+        val atBottom = lastVisibleItemPosition >= itemCount - 2 // Give a bit of buffer
+        Log.d("ChatFragment", "At bottom: $atBottom, Last visible: $lastVisibleItemPosition, Count: $itemCount")
     }
 
     private fun setupClickListeners() {
@@ -194,45 +262,64 @@ class ChatFragment : Fragment() {
     }
 
     private fun sendMessage(message: String) {
-        // Add user message
         val userMessage = ChatMessage(
             id = UUID.randomUUID().toString(),
             message = message,
             sentByUser = true
         )
         chatMessages.add(userMessage)
-        chatAdapter.submitList(chatMessages.toList())
+        chatAdapter.submitList(ArrayList(chatMessages))
+        scrollToBottomImmediately()
 
-        // Get bot response based on user message
         val botResponse = getHistoricalSiteResponse(message)
 
-        // Split bot response into separate messages by paragraphs or sentences
         binding.root.postDelayed({
             val responseParts = splitIntoParts(botResponse)
 
-            for (part in responseParts) {
+            // Use a standard for loop with index
+            for (i in responseParts.indices) {
+                val part = responseParts[i]
                 val botMessage = ChatMessage(
                     id = UUID.randomUUID().toString(),
                     message = part.trim(),
                     sentByUser = false
                 )
                 chatMessages.add(botMessage)
-                chatAdapter.submitList(chatMessages.toList())
+                chatAdapter.submitList(ArrayList(chatMessages))
 
-                // Scroll to the bottom
-                binding.recyclerView.scrollToPosition(chatMessages.size - 1)
+                // Use immediate scroll for all messages
+                scrollToBottomImmediately()
             }
-        }, 800) // 800ms delay
+        }, 800)
+    }
+
+    // Regular smooth scrolling for normal interactions
+    private fun scrollToBottom() {
+        if (chatAdapter.itemCount > 0) {
+            binding.recyclerView.smoothScrollToPosition(chatAdapter.itemCount - 1)
+        }
+    }
+
+    // Immediate scrolling for when we need to ensure visibility
+    private fun scrollToBottomImmediately() {
+        if (chatAdapter.itemCount > 0) {
+            // First jump to near the bottom
+            val layoutManager = binding.recyclerView.layoutManager as LinearLayoutManager
+            layoutManager.scrollToPositionWithOffset(chatAdapter.itemCount - 1, 0)
+
+            // Then ensure we're fully at the bottom
+            binding.recyclerView.post {
+                binding.recyclerView.scrollBy(0, 1000) // Scroll down by a large amount to ensure bottom
+            }
+        }
     }
 
     private fun splitIntoParts(text: String): List<String> {
-        // Split by paragraphs first
         val paragraphs = text.split("\n\n")
         if (paragraphs.size > 1) {
             return paragraphs
         }
 
-        // If no paragraphs, split by sentences
         val sentences = text.split(". ")
         if (sentences.size > 1) {
             return sentences.map {
@@ -240,36 +327,29 @@ class ChatFragment : Fragment() {
             }
         }
 
-        // If it's a short text, return it as is
         return listOf(text)
     }
 
     private fun getHistoricalSiteResponse(message: String): String {
-        // Convert to lowercase for case-insensitive matching
         val lowerMessage = message.lowercase()
 
-        // Check if the user is asking about a specific site
         for ((key, value) in historicalSiteResponses) {
             if (lowerMessage.contains(key)) {
                 return value
             }
         }
 
-        // Process site-specific questions if we have a site name
         if (!siteName.isNullOrEmpty()) {
             val siteKey = identifySiteKeyFromName(siteName!!)
 
-            // General information or history
             if (lowerMessage.contains("what is") ||
                 lowerMessage.contains("tell me about") ||
                 lowerMessage.contains("history") ||
                 lowerMessage.contains("information")) {
 
-                // Return site-specific information if available
                 historicalSiteResponses[siteKey]?.let { return it }
             }
 
-            // Visiting hours
             if (lowerMessage.contains("hour") ||
                 lowerMessage.contains("visit") ||
                 lowerMessage.contains("open") ||
@@ -278,7 +358,6 @@ class ChatFragment : Fragment() {
                 return "Visiting hours for ${siteName} typically vary by season. Most historical sites are open from 9 AM to 5 PM, with last entry about an hour before closing. Ticket prices range from $10-30 for adults, with discounts for students and seniors. Would you like more specific information?"
             }
 
-            // Tickets and pricing
             if (lowerMessage.contains("ticket") ||
                 lowerMessage.contains("price") ||
                 lowerMessage.contains("cost") ||
@@ -287,7 +366,6 @@ class ChatFragment : Fragment() {
                 return "Ticket prices for ${siteName} range from $10-30 for adults, with discounts for students and seniors. Many sites offer online booking options with potential discounts. Would you like to know about guided tour options?"
             }
 
-            // Architecture
             if (lowerMessage.contains("built") ||
                 lowerMessage.contains("architecture") ||
                 lowerMessage.contains("design") ||
@@ -296,7 +374,6 @@ class ChatFragment : Fragment() {
                 return "The architecture of ${siteName} represents the distinctive style of its period. The construction techniques used were innovative for their time, using locally sourced materials and advanced engineering methods. Would you like to know more specific architectural details?"
             }
 
-            // Facts
             if (lowerMessage.contains("fact") ||
                 lowerMessage.contains("interest") ||
                 lowerMessage.contains("did you know")) {
@@ -304,14 +381,11 @@ class ChatFragment : Fragment() {
                 return "Here's an interesting fact about ${siteName}: Many historical sites were built without modern machinery, using only manual labor and ingenious engineering techniques. The precision achieved in construction often amazes modern architects and engineers."
             }
 
-            // Site-specific response based on site key if available
             historicalSiteResponses[siteKey]?.let { return it }
 
-            // If we don't have specific info about this site
             return "This is ${siteName}, a fascinating historical site. What specific aspect would you like to know about?"
         }
 
-        // General questions about available sites
         if (lowerMessage.contains("what sites") ||
             lowerMessage.contains("which places") ||
             lowerMessage.contains("show me") ||
@@ -319,7 +393,6 @@ class ChatFragment : Fragment() {
             return "I can provide information about: Eiffel Tower, Colosseum, and Taj Mahal. Which one would you like to learn about?"
         }
 
-        // Default response if no match found
         return defaultResponse
     }
 
@@ -337,5 +410,17 @@ class ChatFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    companion object {
+        fun newInstance(siteName: String, siteImageUrl: String?): ChatFragment {
+            val fragment = ChatFragment()
+            val args = Bundle().apply {
+                putString("SITE_NAME_KEY", siteName)
+                putString("SITE_IMAGE_URL_KEY", siteImageUrl)
+            }
+            fragment.arguments = args
+            return fragment
+        }
     }
 }

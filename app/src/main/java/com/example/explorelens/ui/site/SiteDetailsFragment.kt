@@ -451,8 +451,11 @@ class SiteDetailsFragment : Fragment() {
 
     private fun navigateToChatFragment() {
         val siteName = labelTextView.text.toString()
+        val siteImageUrl = SiteDetails?.imageUrl
+
         val bundle = Bundle().apply {
             putString("SITE_NAME_KEY", siteName)
+            putString("SITE_IMAGE_URL_KEY", siteImageUrl)
         }
 
         // Check if we're in AR activity context
@@ -468,9 +471,7 @@ class SiteDetailsFragment : Fragment() {
                 fragmentContainer?.visibility = View.VISIBLE
 
                 // Create the chat fragment with arguments
-                val chatFragment = ChatFragment().apply {
-                    arguments = bundle
-                }
+                val chatFragment = ChatFragment.newInstance(siteName, siteImageUrl)
 
                 // Use the ArActivity to manage the fragment transaction
                 activity.supportFragmentManager.beginTransaction()
