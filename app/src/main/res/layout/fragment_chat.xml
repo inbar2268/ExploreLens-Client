@@ -6,7 +6,6 @@
     android:orientation="vertical"
     android:background="#FFFFFF">
 
-    <!-- Header -->
     <LinearLayout
         android:id="@+id/headerLayout"
         android:layout_width="match_parent"
@@ -46,42 +45,48 @@
         android:layout_height="1dp"
         android:background="#E0E0E0" />
 
-    <!-- Site Image (if available) -->
-    <ImageView
-        android:id="@+id/siteImageView"
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:layout_marginStart="16dp"
+        android:layout_height="0dp"
+        android:layout_weight="0.35"
+        android:layout_marginStart="10dp"
         android:layout_marginTop="8dp"
-        android:layout_marginEnd="16dp"
-        android:contentDescription="Historical site image"
-        android:scaleType="centerCrop"
-        android:visibility="gone" />
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="3dp">
 
-    <!-- Messages RecyclerView with bottom padding to account for navigation bar -->
+        <ImageView
+            android:id="@+id/siteImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="Historical site image"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+    </androidx.cardview.widget.CardView>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_weight="0.55"
         android:clipToPadding="false"
         android:paddingStart="8dp"
         android:paddingTop="8dp"
         android:paddingEnd="8dp"
         android:paddingBottom="16dp" />
 
-    <!-- Divider above input field -->
     <View
         android:id="@+id/messageInputDivider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#E0E0E0" />
 
-    <!-- Input area with bottom margin to avoid overlapping with navigation bar -->
     <LinearLayout
         android:id="@+id/layoutInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_weight="0.1"
         android:background="#FFFFFF"
         android:elevation="8dp"
         android:gravity="center_vertical"
@@ -90,7 +95,7 @@
         android:paddingTop="12dp"
         android:paddingEnd="12dp"
         android:paddingBottom="12dp"
-        android:layout_marginBottom="56dp"> <!-- Add bottom margin for navigation bar -->
+        android:layout_marginBottom="56dp">
 
         <EditText
             android:id="@+id/editTextMessage"
