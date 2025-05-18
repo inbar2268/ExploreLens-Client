@@ -58,7 +58,7 @@
         android:scaleType="centerCrop"
         android:visibility="gone" />
 
-    <!-- Messages RecyclerView - Note it takes up most of the space -->
+    <!-- Messages RecyclerView with bottom padding to account for navigation bar -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
@@ -77,7 +77,7 @@
         android:layout_height="1dp"
         android:background="#E0E0E0" />
 
-    <!-- Input area - With bottom margin to accommodate navigation bar -->
+    <!-- Input area with bottom margin to avoid overlapping with navigation bar -->
     <LinearLayout
         android:id="@+id/layoutInput"
         android:layout_width="match_parent"
@@ -90,7 +90,7 @@
         android:paddingTop="12dp"
         android:paddingEnd="12dp"
         android:paddingBottom="12dp"
-        android:layout_marginBottom="56dp"> <!-- Added bottom margin for bottom navigation -->
+        android:layout_marginBottom="56dp"> <!-- Add bottom margin for navigation bar -->
 
         <EditText
             android:id="@+id/editTextMessage"

@@ -3,45 +3,59 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp">
+    android:paddingStart="16dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="4dp">
 
+    <!-- Bot avatar on the left side -->
     <ImageView
-        android:id="@+id/botAvatar"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:layout_marginStart="8dp"
-        android:background="@drawable/circle_avatar_background"
-        android:padding="8dp"
-        android:src="@drawable/ic_bot_face"
+        android:id="@+id/imageViewBotAvatar"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/circle_background"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_bot_avatar"
+        android:contentDescription="Bot avatar"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:tint="#5AC8FA" />
+        app:layout_constraintTop_toTopOf="@+id/cardViewBotMessage" />
 
-    <TextView
-        android:id="@+id/textViewBotMessage"
-        android:layout_width="0dp"
+    <!-- Bot message card - Aligned to the left/start but after the avatar -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardViewBotMessage"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:layout_marginEnd="64dp"
-        android:background="@drawable/bg_message_bot"
-        android:padding="12dp"
-        android:textColor="#000000"
-        android:textSize="16sp"
-        app:layout_constraintStart_toEndOf="@id/botAvatar"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintWidth_max="wrap"
-        app:layout_constraintWidth_percent="0.75" />
+        app:cardBackgroundColor="#F5F5F5"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="1dp"
+        app:cardUseCompatPadding="true"
+        app:layout_constraintStart_toEndOf="@+id/imageViewBotAvatar"
+        app:layout_constraintTop_toTopOf="parent">
 
+        <TextView
+            android:id="@+id/textViewBotMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="280dp"
+            android:padding="12dp"
+            android:text="Bot message goes here with information about historical sites."
+            android:textColor="#000000"
+            android:textSize="14sp" />
+
+    </androidx.cardview.widget.CardView>
+
+    <!-- Bot message timestamp -->
     <TextView
         android:id="@+id/textViewBotTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="#9E9E9E"
-        android:textSize="12sp"
-        android:visibility="gone"
-        app:layout_constraintStart_toStartOf="@id/textViewBotMessage"
-        app:layout_constraintTop_toBottomOf="@id/textViewBotMessage" />
+        android:layout_marginTop="2dp"
+        android:text="12:34 PM"
+        android:textColor="#757575"
+        android:textSize="10sp"
+        app:layout_constraintStart_toStartOf="@+id/cardViewBotMessage"
+        app:layout_constraintTop_toBottomOf="@+id/cardViewBotMessage" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

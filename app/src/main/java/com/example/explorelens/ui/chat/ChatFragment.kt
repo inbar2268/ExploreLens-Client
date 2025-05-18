@@ -6,12 +6,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.explorelens.R
 import com.example.explorelens.adapters.ChatAdapter
 import com.example.explorelens.databinding.FragmentChatBinding
 import com.example.explorelens.data.model.ChatMessage
+import com.example.explorelens.data.repository.UserRepository
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 class ChatFragment : Fragment() {
@@ -21,6 +24,7 @@ class ChatFragment : Fragment() {
 
     private lateinit var chatAdapter: ChatAdapter
     private val chatMessages = mutableListOf<ChatMessage>()
+    private lateinit var userRepository: UserRepository
 
     // Site name passed from SiteDetailsFragment
     private var siteName: String? = null
@@ -28,6 +32,7 @@ class ChatFragment : Fragment() {
     // Mock data for historical site information
     private val defaultWelcomeMessage = "Welcome to HistoryGuide! I can provide information about historical sites and monuments. What would you like to know about?"
     private val siteSpecificWelcomeMessage = "Welcome to HistoryGuide! I'm your virtual guide for %s. What would you like to know about this historical site?"
+    private val personalizedWelcomeMessage = "Hi %s! Welcome to HistoryGuide. I'm your virtual guide for %s. What would you like to know about this historical site?"
 
     private val historicalSiteResponses = mapOf(
         "eiffel" to "The Eiffel Tower is a world-famous iron structure located in Paris, France. Built by engineer Gustave Eiffel for the 1889 World's Fair, it stands 330 meters tall and was once the tallest man-made structure in the world. Today, it remains one of the most iconic landmarks globally, attracting millions of visitors each year who admire its unique design and panoramic views of Paris.",
@@ -48,6 +53,9 @@ class ChatFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Initialize user repository
+        userRepository = UserRepository(requireActivity().application)
 
         // Get site name from arguments
         siteName = arguments?.getString("SITE_NAME_KEY")
@@ -73,28 +81,71 @@ class ChatFragment : Fragment() {
         setupRecyclerView()
         setupClickListeners()
 
-        // Load initial welcome message
-        val welcomeMessage = if (siteName.isNullOrEmpty()) {
-            defaultWelcomeMessage
-        } else {
-            String.format(siteSpecificWelcomeMessage, siteName)
-        }
-
-        val initialMessage = ChatMessage(
-            id = UUID.randomUUID().toString(),
-            message = welcomeMessage,
-            sentByUser = false
-        )
-        chatMessages.add(initialMessage)
-        chatAdapter.submitList(chatMessages.toList())
-
-        // Scroll to the bottom to show the initial message
-        binding.recyclerView.post {
-            binding.recyclerView.scrollToPosition(chatMessages.size - 1)
-        }
+        // Load user data and then show welcome message
+        loadUserDataAndShowWelcome()
 
         // Ensure the bottom navigation bar is visible but doesn't overlap with the chat input
         adjustBottomNavigationVisibility()
+    }
+
+    private fun loadUserDataAndShowWelcome() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                // Get user from local database
+                val user = userRepository.getUserFromDb()
+
+                // Create adapter with user data
+                chatAdapter.setUserData(user?.profilePictureUrl, user?.username)
+
+                // Create personalized welcome message if user is available
+                val welcomeMessage = if (!siteName.isNullOrEmpty() && user != null && !user.username.isNullOrEmpty()) {
+                    String.format(personalizedWelcomeMessage, user.username, siteName)
+                } else if (!siteName.isNullOrEmpty()) {
+                    String.format(siteSpecificWelcomeMessage, siteName)
+                } else {
+                    defaultWelcomeMessage
+                }
+
+                // Create initial message
+                val initialMessage = ChatMessage(
+                    id = UUID.randomUUID().toString(),
+                    message = welcomeMessage,
+                    sentByUser = false
+                )
+
+                // Add to chat
+                chatMessages.add(initialMessage)
+                chatAdapter.submitList(chatMessages.toList())
+
+                // Scroll to show the message
+                binding.recyclerView.post {
+                    binding.recyclerView.scrollToPosition(chatMessages.size - 1)
+                }
+
+            } catch (e: Exception) {
+                // If error, just use default welcome message
+                Log.e("ChatFragment", "Error loading user data: ${e.message}")
+
+                val welcomeMessage = if (!siteName.isNullOrEmpty()) {
+                    String.format(siteSpecificWelcomeMessage, siteName)
+                } else {
+                    defaultWelcomeMessage
+                }
+
+                val initialMessage = ChatMessage(
+                    id = UUID.randomUUID().toString(),
+                    message = welcomeMessage,
+                    sentByUser = false
+                )
+
+                chatMessages.add(initialMessage)
+                chatAdapter.submitList(chatMessages.toList())
+
+                binding.recyclerView.post {
+                    binding.recyclerView.scrollToPosition(chatMessages.size - 1)
+                }
+            }
+        }
     }
 
     private fun adjustBottomNavigationVisibility() {
