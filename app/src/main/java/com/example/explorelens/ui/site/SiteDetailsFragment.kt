@@ -20,6 +20,7 @@ import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.ArActivity
@@ -32,6 +33,7 @@ import com.example.explorelens.data.model.comments.ReviewWithUser
 import com.example.explorelens.data.repository.ReviewsRepository
 import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.data.repository.UserRepository
+import com.example.explorelens.fragments.ChatFragment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,6 +77,7 @@ class SiteDetailsFragment : Fragment() {
         ratingView = view.findViewById(R.id.ratingView)
         headerBackground = view.findViewById(R.id.headerBackground)
 
+        val askAssistantCard = view.findViewById<CardView>(R.id.askAssistantCard)
         val closeButton = view.findViewById<ImageButton>(R.id.closeButton)
         closeButton.setOnClickListener {
             // Dismiss the fragment
@@ -90,6 +93,9 @@ class SiteDetailsFragment : Fragment() {
 
         ratingContainer.setOnClickListener {
             showRatingDialog()
+        }
+        askAssistantCard.setOnClickListener {
+            navigateToChatFragment()
         }
 
         arguments?.let { args ->
@@ -135,7 +141,10 @@ class SiteDetailsFragment : Fragment() {
                 val syncResult = siteDetailsRepository.syncSiteDetails(siteId)
 
                 if (syncResult.isFailure) {
-                    Log.w("SiteDetailsFragment", "Sync failed: ${syncResult.exceptionOrNull()?.message}")
+                    Log.w(
+                        "SiteDetailsFragment",
+                        "Sync failed: ${syncResult.exceptionOrNull()?.message}"
+                    )
                     // Continue anyway - we might have cached data
                 } else {
                     Log.d("SiteDetailsFragment", "Sync successful")
@@ -143,17 +152,21 @@ class SiteDetailsFragment : Fragment() {
 
                 // Now observe Room data
                 Log.d("SiteDetailsFragment", "Setting up Room observer...")
-                siteDetailsRepository.getSiteDetailsLiveData(siteId).observe(viewLifecycleOwner) { siteDetails ->
-                    loadingIndicator.visibility = View.GONE
+                siteDetailsRepository.getSiteDetailsLiveData(siteId)
+                    .observe(viewLifecycleOwner) { siteDetails ->
+                        loadingIndicator.visibility = View.GONE
 
-                    if (siteDetails != null) {
-                        Log.d("SiteDetailsFragment", "Got site details from Room: ${siteDetails.name}")
-                        handleSiteDetailsSuccess(siteDetails)
-                    } else {
-                        Log.e("SiteDetailsFragment", "No site details found in Room")
-                        showError("Failed to load details")
+                        if (siteDetails != null) {
+                            Log.d(
+                                "SiteDetailsFragment",
+                                "Got site details from Room: ${siteDetails.name}"
+                            )
+                            handleSiteDetailsSuccess(siteDetails)
+                        } else {
+                            Log.e("SiteDetailsFragment", "No site details found in Room")
+                            showError("Failed to load details")
+                        }
                     }
-                }
             } catch (e: Exception) {
                 loadingIndicator.visibility = View.GONE
                 Log.e("SiteDetailsFragment", "Error in fetchSiteDetails: ${e.message}", e)
@@ -433,6 +446,56 @@ class SiteDetailsFragment : Fragment() {
         } else {
             // For regular fragment navigation, use back press behavior
             requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
+    }
+
+    private fun navigateToChatFragment() {
+        val siteName = labelTextView.text.toString()
+        val bundle = Bundle().apply {
+            putString("SITE_NAME_KEY", siteName)
+        }
+
+        // Check if we're in AR activity context
+        val activity = activity
+        if (activity is ArActivity) {
+            try {
+                // Hide the site details container
+                val siteDetailsContainer = activity.findViewById<View>(R.id.siteDetailsContainer)
+                siteDetailsContainer?.visibility = View.GONE
+
+                // Show the fragment container
+                val fragmentContainer = activity.findViewById<View>(R.id.fragment_container)
+                fragmentContainer?.visibility = View.VISIBLE
+
+                // Create the chat fragment with arguments
+                val chatFragment = ChatFragment().apply {
+                    arguments = bundle
+                }
+
+                // Use the ArActivity to manage the fragment transaction
+                activity.supportFragmentManager.beginTransaction()
+                    .replace(R.id.fragment_container, chatFragment)
+                    .addToBackStack("chat")
+                    .commit()
+
+                // Hide the camera button container
+                activity.findViewById<View>(R.id.cameraButtonContainer)?.visibility = View.GONE
+
+            } catch (e: Exception) {
+                Log.e("SiteDetailsFragment", "Error showing ChatFragment in AR: ${e.message}", e)
+                showError("Failed to open chat assistant in AR mode")
+            }
+        } else {
+            // Standard navigation using NavController
+            try {
+                findNavController().navigate(
+                    R.id.action_siteDetailsFragment_to_chatFragment,
+                    bundle
+                )
+            } catch (e: Exception) {
+                Log.e("SiteDetailsFragment", "Error navigating to ChatFragment: ${e.message}", e)
+                showError("Failed to open chat assistant")
+            }
         }
     }
 }

@@ -16,6 +16,7 @@ android {
 
     buildFeatures {
         compose true
+        viewBinding true
     }
     compileSdkVersion 35
     buildToolsVersion "30.0.3"
