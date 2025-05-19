@@ -16,6 +16,7 @@ android {
 
     buildFeatures {
         compose true
+        viewBinding true
     }
     compileSdkVersion 35
     buildToolsVersion "30.0.3"
@@ -34,7 +35,13 @@ android {
         buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty('BASE_URL', 'http://localhost:3000')}\"")
         buildConfigField("String", "WEB_CLIENT_ID", "\"${localProperties.getProperty('WEB_CLIENT_ID', 'NONE')}\"")
         buildConfigField("Boolean", "USE_MOCK_DATA", "${project.properties["USE_MOCK_DATA"] ?: "false"}")
-    }
+        def properties = new Properties()
+        if (localPropertiesFile.exists()) {
+            properties.load(localPropertiesFile.newDataInputStream())
+            buildConfigField "String", "OPENAI_API_KEY", "\"${properties.getProperty('openai.api.key', '')}\""
+        } else {
+            buildConfigField "String", "OPENAI_API_KEY", "\"\""
+        }    }
 
     applicationVariants.all { variant ->
         variant.outputs.each { output ->

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- res/drawable/circle_background.xml -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <solid android:color="#FFFFFF" />
+    android:shape="rectangle">
+    <corners android:radius="20dp" />
+    <solid android:color="#F2F2F2" />
 </shape>
