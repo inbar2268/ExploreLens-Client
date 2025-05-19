@@ -86,6 +86,10 @@ class AppRenderer(
     private val convertFloats = FloatArray(4)
     private val convertFloatsOut = FloatArray(4)
 
+    private var shouldPlaceGeoAnchors = false
+    private var pendingPlaces: List<PointOfInterest>? = null
+
+
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
         Handler(Looper.getMainLooper()).postDelayed({
@@ -143,6 +147,7 @@ class AppRenderer(
 
     override fun onDrawFrame(render: SampleRender) {
         val session = activity.arCoreSessionHelper.sessionCache ?: return
+        val earth = session.earth
         session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.textureId))
         displayRotationHelper.updateSessionIfNeeded(session)
         val frame = try {
@@ -193,6 +198,23 @@ class AppRenderer(
         }
         processObjectResults(frame, session)
         drawAnchors(render, frame)
+
+        if (shouldPlaceGeoAnchors && earth != null && earth.trackingState == TrackingState.TRACKING) {
+            showSnackbar("updateARViewWithPlaces")
+            pendingPlaces?.let {
+                updateARViewWithPlaces(it)
+                shouldPlaceGeoAnchors = false
+                pendingPlaces = null
+            }
+        }
+        else{
+            Log.d("updateARViewWithPlaces", "${shouldPlaceGeoAnchors} && ${earth} ${earth?.trackingState}")
+            Log.d("GeoAR1" ,"arthState: ${earth?.earthState}")
+            Log.d("GeoAR1", "Horizontal accuracy: ${earth?.cameraGeospatialPose?.horizontalAccuracy}")
+            Log.d("GeoAR1", "Altitude accuracy: ${earth?.cameraGeospatialPose?.verticalAccuracy}")
+            Log.d("GeoAR1", "Heading accuracy: ${earth?.cameraGeospatialPose?.headingAccuracy}")
+
+        }
     }
 
     private fun drawAnchors(render: SampleRender, frame: Frame) {
@@ -905,13 +927,18 @@ class AppRenderer(
                 categories
             )
 
+            Log.d("NearbyPlaces", result.toString())
+
             withContext(Dispatchers.Main) {
                 result.onSuccess { places ->
                     Log.d("NearbyPlaces", "Received ${places.size} places")
                     showSnackbar("Received ${places.size} places")
-                    showSnackbar("Received ${places[0].name} , ${places[1].name} places")
+                    //showSnackbar("Received ${places[0].name} , ${places[1].name} places")
                     //updating AR nearbyPlaces anchors when creates
-                    updateARViewWithPlaces(places)
+                    //updateARViewWithPlaces(places)
+                    pendingPlaces = places
+                    shouldPlaceGeoAnchors = true
+
                 }
 
                 result.onFailure { error ->
@@ -923,6 +950,10 @@ class AppRenderer(
     }
 
     private fun updateARViewWithPlaces(places: List<PointOfInterest>) {
+        Log.d(
+            "GeoAR",
+            "updateARViewWithPlaces"
+        )
         val session = activity.arCoreSessionHelper.sessionCache ?: return
         val earth = session.earth ?: return
 
@@ -933,12 +964,36 @@ class AppRenderer(
             return
         }
 
+        Log.d(
+            "GeoAR",
+            "Geospatial API supported"
+        )
         if (earth.trackingState != TrackingState.TRACKING) {
+            Log.d(
+                "GeoAR",
+                "earth.trackingState != TrackingState.TRACKING"
+            )
+            Log.d(
+                "GeoAR",
+                "${earth.trackingState} +  ${TrackingState.TRACKING}"
+            )
+
+
+
             return
         }
 
+        Log.d(
+            "GeoAR",
+            "earth.trackingState"
+        )
+
         val existingLabels = arLabeledAnchors.map { it.siteName }
         val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
+        Log.d(
+            "GeoAR",
+            "Created Anchor at"
+        )
         for (point in places) {
             if (existingLabels.contains(point.name)) continue
 
