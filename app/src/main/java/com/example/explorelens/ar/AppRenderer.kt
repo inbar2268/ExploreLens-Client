@@ -203,6 +203,29 @@ class AppRenderer(
             showSnackbar("updateARViewWithPlaces")
             pendingPlaces?.let {
                 updateARViewWithPlaces(it)
+
+                val targetLat = 33.222
+                val targetLng = 32.111
+//                val targetAltitude = earth.cameraGeospatialPose.altitude - 1.5
+                val targetAltitude = it[0].elevation +10
+                val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
+
+                val anchor =
+                    earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
+                Log.d(
+                    "GeoAR",
+                    "Created Anchor at $targetLat, $targetLng, $targetAltitude for im here"
+                )
+
+                val labeledAnchor = ARLabeledAnchor(
+                    anchor,
+                    "here",
+                    "lalala",
+                    "Rating: 10000"
+                )
+                synchronized(arLabeledAnchors) {
+                    arLabeledAnchors.add(labeledAnchor)
+                }
                 shouldPlaceGeoAnchors = false
                 pendingPlaces = null
             }
