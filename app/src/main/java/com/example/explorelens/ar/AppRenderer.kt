@@ -367,7 +367,7 @@ class AppRenderer(
         // 6. Calculate final world position
         val worldPosition = floatArrayOf(
             snapshotPose.tx() + normalizedDirection[0] * distance,
-            snapshotPose.ty() + normalizedDirection[1] * distance, // No Y correction needed
+            snapshotPose.ty() + normalizedDirection[1] * distance,
             snapshotPose.tz() + normalizedDirection[2] * distance
         )
 
