@@ -238,8 +238,8 @@ class AppRenderer(
             pendingPlaces?.let {
                 updateARViewWithPlaces(it)
 
-                val targetLat = 33.222
-                val targetLng = 32.111
+                val targetLat = 32.142791
+                val targetLng = 34.887523
 //                val targetAltitude = earth.cameraGeospatialPose.altitude - 1.5
                 val targetAltitude = it[0].elevation +10
                 val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
@@ -1126,7 +1126,7 @@ class AppRenderer(
                 cameraPos.longitude,
             )
 //            val fixedBearing = (bearing + 180) % 360
-            val headingQuaternion = calculateHeadingQuaternion(bearing)
+//            val headingQuaternion = calculateHeadingQuaternion(bearing)
 
             // שימוש בגובה מדויק יותר
             val cameraAltitude = earth.cameraGeospatialPose.altitude
