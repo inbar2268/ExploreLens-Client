@@ -12,6 +12,7 @@ data class PointOfInterest(
     @SerializedName("phone_number") val phoneNumber: String,
     @SerializedName("business_status") val businessStatus: String,
     @SerializedName("opening_hours") val openingHours: OpeningHours,
+    @SerializedName("elevation") val elevation: Double,
     )
 
 
