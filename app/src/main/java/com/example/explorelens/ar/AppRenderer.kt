@@ -1115,11 +1115,22 @@ class AppRenderer(
         for (point in places) {
             if (existingLabels.contains(point.name)) continue
 
+            // חישוב כיוון הפנייה - נקודת העיסוק תמיד תפנה לכיוון המשתמש
+            val cameraPos = earth.cameraGeospatialPose
+
+            // חישוב כיוון המבט מהמצלמה לנקודת העניין
+            val bearing = cameraPos.heading
+            val headingQuaternion = calculateHeadingQuaternion(bearing)
+
+            // שימוש בגובה מדויק יותר
+            val cameraAltitude = earth.cameraGeospatialPose.altitude
+            val targetAltitude = cameraAltitude - 0.5  // קצת
+
             val targetLat = point.location.lat
             val targetLng = point.location.lng
-            val elevationFromPlace = point.elevation
-            val baseAltitude = elevationFromPlace ?: earth.cameraGeospatialPose.altitude
-            val targetAltitude = baseAltitude + 10.0
+//            val elevationFromPlace = point.elevation
+//            val baseAltitude = elevationFromPlace ?: earth.cameraGeospatialPose.altitude
+//            val targetAltitude = baseAltitude + 10.0
 
             val anchor =
                 earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
@@ -1139,6 +1150,19 @@ class AppRenderer(
             }
         }
 
+    }
+
+    private fun calculateHeadingQuaternion(heading: Double): FloatArray {
+        // המרת זווית למעלות רדיאן
+        val headingRadians = Math.toRadians(heading)
+
+        // יצירת quaternion לסיבוב סביב ציר ה-Y (למעלה)
+        return floatArrayOf(
+            0f,
+            kotlin.math.sin(headingRadians.toFloat() / 2),
+            0f,
+            kotlin.math.cos(headingRadians.toFloat() / 2)
+        )
     }
 
     private fun createSiteHistoryForDetectedObject(
