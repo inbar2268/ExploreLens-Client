@@ -12,6 +12,7 @@ import com.example.explorelens.data.network.detectionResult.AnalyzedResultApi
 import com.example.explorelens.data.network.site.SiteHistoryApi
 import com.example.explorelens.data.network.siteDetails.SiteDetailsApi
 import com.example.explorelens.data.network.user.UserApi
+import com.example.explorelens.data.network.ChatApi
 import java.util.concurrent.TimeUnit
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
@@ -20,6 +21,7 @@ import javax.net.ssl.*
 object ExploreLensApiClient {
 
     private val BASE_URL = BuildConfig.BASE_URL
+    private const val OPENAI_BASE_URL = "https://api.openai.com/"
     private lateinit var authInterceptor: AuthInterceptor
     private val commonHeadersInterceptor = CommonHeadersInterceptor()
 
@@ -134,5 +136,14 @@ object ExploreLensApiClient {
 
     val nearbyPlacesApi: NearbyPlacesApi by lazy {
         createRetrofitClient(getOkHttpClient(authenticated = true)).create(NearbyPlacesApi::class.java)
+    }
+
+    val chatApi: ChatApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(OPENAI_BASE_URL)
+            .client(OkHttpClient.Builder().build())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ChatApi::class.java)
     }
 }

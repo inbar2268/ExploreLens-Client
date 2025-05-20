@@ -95,6 +95,20 @@
             android:name="DESCRIPTION_KEY"
             app:argType="string"
             app:nullable="true" />
+        <action
+            android:id="@+id/action_siteDetailsFragment_to_chatFragment"
+            app:destination="@id/chatFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/chatFragment"
+        android:name="com.example.explorelens.fragments.ChatFragment"
+        android:label="Chat"
+        tools:layout="@layout/fragment_chat">
+        <argument
+            android:name="SITE_NAME_KEY"
+            app:argType="string"
+            app:nullable="true" />
     </fragment>
 
     <fragment
