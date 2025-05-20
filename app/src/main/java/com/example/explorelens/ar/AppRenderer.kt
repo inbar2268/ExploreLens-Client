@@ -1120,10 +1120,10 @@ class AppRenderer(
 
             // חישוב כיוון המבט מהמצלמה לנקודת העניין
             val bearing = computeBearing(
+                point.location.lat,
+                point.location.lng,
                 cameraPos.latitude,
                 cameraPos.longitude,
-                point.location.lat,
-                point.location.lng
             )
             val fixedBearing = (bearing + 180) % 360
             val headingQuaternion = calculateHeadingQuaternion(fixedBearing)
