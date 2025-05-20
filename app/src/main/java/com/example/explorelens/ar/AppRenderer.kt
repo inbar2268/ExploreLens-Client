@@ -1125,7 +1125,8 @@ class AppRenderer(
                 point.location.lat,
                 point.location.lng
             )
-            val headingQuaternion = calculateHeadingQuaternion(bearing)
+            val fixedBearing = (bearing + 180) % 360
+            val headingQuaternion = calculateHeadingQuaternion(fixedBearing)
 
             // שימוש בגובה מדויק יותר
             val cameraAltitude = earth.cameraGeospatialPose.altitude
