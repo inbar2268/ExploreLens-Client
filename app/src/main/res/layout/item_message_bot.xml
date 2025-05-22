@@ -8,7 +8,7 @@
     android:paddingEnd="8dp"
     android:paddingBottom="4dp">
 
-    <!-- Bot avatar on the left side -->
+    <!-- Bot avatar on the left side - CENTERED vertically with message card -->
     <ImageView
         android:id="@+id/imageViewBotAvatar"
         android:layout_width="32dp"
@@ -19,7 +19,8 @@
         android:src="@drawable/ic_bot_avatar"
         android:contentDescription="Bot avatar"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/cardViewBotMessage" />
+        app:layout_constraintTop_toTopOf="@+id/cardViewBotMessage"
+        app:layout_constraintBottom_toBottomOf="@+id/cardViewBotMessage" />
 
     <!-- Bot message card - Aligned to the left/start but after the avatar -->
     <androidx.cardview.widget.CardView

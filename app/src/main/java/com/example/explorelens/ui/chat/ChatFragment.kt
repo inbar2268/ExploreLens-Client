@@ -9,9 +9,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import com.bumptech.glide.request.RequestOptions
 import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
 import com.example.explorelens.adapters.ChatAdapter
@@ -19,16 +16,10 @@ import com.example.explorelens.databinding.FragmentChatBinding
 import com.example.explorelens.data.model.ChatMessage
 import com.example.explorelens.data.model.chat.ChatCompletionRequest
 import com.example.explorelens.data.repository.ChatRepository
-import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.data.repository.UserRepository
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.launch
 import java.util.UUID
-import android.graphics.drawable.Drawable
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.Target
 
 class ChatFragment : Fragment() {
 
@@ -38,24 +29,16 @@ class ChatFragment : Fragment() {
     private lateinit var chatAdapter: ChatAdapter
     private val chatMessages = mutableListOf<ChatMessage>()
     private lateinit var userRepository: UserRepository
-    private lateinit var siteDetailsRepository: SiteDetailsRepository
     private lateinit var chatRepository: ChatRepository
 
     // Chat history for OpenAI API
     private val chatHistory = mutableListOf<ChatCompletionRequest.Message>()
 
     private var siteName: String? = null
-    private var siteImageUrl: String? = null
 
     private val defaultWelcomeMessage = "Welcome to HistoryGuide! I can provide information about historical sites and monuments. What would you like to know about?"
     private val siteSpecificWelcomeMessage = "Welcome to HistoryGuide! I'm your virtual guide for %s. What would you like to know about this historical site?"
     private val personalizedWelcomeMessage = "Hi %s! Welcome to HistoryGuide. I'm your virtual guide for %s. What would you like to know about this historical site?"
-
-    private val siteImages = mapOf(
-        "eiffel" to R.drawable.eiffel,
-        "colosseum" to R.drawable.eiffel,
-        "taj_mahal" to R.drawable.eiffel
-    )
 
     private val defaultResponse = "I don't have specific information about that aspect of this historical site. Would you like to know about its history, architecture, cultural significance, or interesting facts instead?"
 
@@ -84,9 +67,6 @@ class ChatFragment : Fragment() {
         // Initialize ChatRepository with API key
         chatRepository = ChatRepository(BuildConfig.OPENAI_API_KEY)
 
-        // Pre-set image container height as early as possible
-        _binding?.siteImageView?.layoutParams?.height = resources.getDimensionPixelSize(R.dimen.site_image_height)
-
         return binding.root
     }
 
@@ -94,22 +74,17 @@ class ChatFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         userRepository = UserRepository(requireActivity().application)
-        siteDetailsRepository = SiteDetailsRepository(requireContext())
 
         siteName = arguments?.getString("SITE_NAME_KEY")
-        siteImageUrl = arguments?.getString("SITE_IMAGE_URL_KEY")
 
         Log.d("ChatFragment", "Site name: $siteName")
-        Log.d("ChatFragment", "Site image URL: $siteImageUrl")
 
+        // Set title based on site name
         if (!siteName.isNullOrEmpty()) {
             binding.titleText.text = siteName
         } else {
             binding.titleText.text = "Chat"
         }
-
-        // Fix image size in various ways
-        fixImageContainerSize()
 
         // Keep bottom navigation visible but ensure our input is above it
         adjustInputForBottomNavigation()
@@ -117,37 +92,12 @@ class ChatFragment : Fragment() {
         setupRecyclerView()
         setupClickListeners()
 
-        // Load image after RecyclerView is set up
-        if (!siteImageUrl.isNullOrEmpty()) {
-            loadSiteImage(siteImageUrl)
-        } else {
-            fetchSiteDetails()
-        }
-
         loadUserDataAndShowWelcome()
 
         // Force a layout pass to ensure everything is sized correctly
         view.post {
             binding.root.requestLayout()
         }
-
-        // Add another delayed layout pass for good measure
-        view.postDelayed({
-            binding.root.requestLayout()
-        }, 300)
-    }
-
-    private fun fixImageContainerSize() {
-        // Make sure image view has the right sizing
-        binding.siteImageView.layoutParams.height = resources.getDimensionPixelSize(R.dimen.site_image_height)
-        binding.siteImageView.minimumHeight = resources.getDimensionPixelSize(R.dimen.site_image_height)
-        binding.siteImageView.maxHeight = resources.getDimensionPixelSize(R.dimen.site_image_height)
-
-        // Request layout to apply changes
-        binding.siteImageView.requestLayout()
-
-        // Make sure card view wraps content properly
-        binding.imageCardView.requestLayout()
     }
 
     private fun adjustInputForBottomNavigation() {
@@ -158,163 +108,7 @@ class ChatFragment : Fragment() {
         bottomNav?.visibility = View.VISIBLE
 
         // Make sure navigation is below our input by setting a higher elevation on input
-        binding.editTextLayout.elevation = 10f
-    }
-
-    private fun fetchSiteDetails() {
-        if (!siteName.isNullOrEmpty()) {
-            val siteKey = identifySiteKeyFromName(siteName!!)
-
-            val imageResId = siteImages[siteKey]
-            if (imageResId != null) {
-                binding.siteImageView.apply {
-                    setImageResource(imageResId)
-                    visibility = View.VISIBLE
-                }
-
-                // Make sure the site name is displayed in the label
-                binding.siteImageLabel.text = siteName
-                binding.siteImageLabel.visibility = View.VISIBLE
-
-                // Apply sizing constraints
-                fixImageContainerSize()
-
-            } else {
-                val siteId = siteName?.replace(" ", "")
-                if (!siteId.isNullOrEmpty()) {
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        try {
-                            val result = siteDetailsRepository.syncSiteDetails(siteId)
-                            if (result.isSuccess) {
-                                siteDetailsRepository.getSiteDetailsLiveData(siteId)
-                                    .observe(viewLifecycleOwner) { siteDetails ->
-                                        if (siteDetails != null && !siteDetails.imageUrl.isNullOrEmpty()) {
-                                            siteImageUrl = siteDetails.imageUrl
-                                            loadSiteImage(siteDetails.imageUrl)
-
-                                            // Update label with site name
-                                            binding.siteImageLabel.text = siteName
-                                            binding.siteImageLabel.visibility = View.VISIBLE
-                                        } else {
-                                            binding.siteImageView.visibility = View.GONE
-                                            binding.siteImageLabel.visibility = View.GONE
-                                        }
-                                    }
-                            }
-                        } catch (e: Exception) {
-                            Log.e("ChatFragment", "Error fetching site details: ${e.message}")
-                            binding.siteImageView.visibility = View.GONE
-                            binding.siteImageLabel.visibility = View.GONE
-                        }
-                    }
-                }
-            }
-        } else {
-            binding.siteImageView.visibility = View.GONE
-            binding.siteImageLabel.visibility = View.GONE
-        }
-    }
-
-    private fun loadSiteImage(imageUrl: String?) {
-        if (!imageUrl.isNullOrEmpty()) {
-            try {
-                binding.siteImageView.visibility = View.VISIBLE
-
-                // Make sure site name is displayed in the label (add this line)
-                if (!siteName.isNullOrEmpty()) {
-                    binding.siteImageLabel.text = siteName
-                    binding.siteImageLabel.visibility = View.VISIBLE
-                }
-
-                // Apply fixed height constraints
-                fixImageContainerSize()
-
-                // Create request options with exactly how we want the image to fit
-                val requestOptions = RequestOptions()
-                    .placeholder(R.drawable.eiffel)
-                    .error(R.drawable.eiffel)
-                    .dontTransform()  // Don't apply any automatic transformations
-                    .override(Target.SIZE_ORIGINAL, resources.getDimensionPixelSize(R.dimen.site_image_height))
-                    .fitCenter()      // Try fitCenter instead of centerCrop
-
-                // Load the image with Glide
-                Glide.with(requireContext())
-                    .load(imageUrl)
-                    .transition(DrawableTransitionOptions.withCrossFade(300))
-                    .apply(requestOptions)
-                    .listener(object : RequestListener<Drawable> {
-                        override fun onLoadFailed(
-                            e: GlideException?,
-                            model: Any?,
-                            target: Target<Drawable>,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            // Keep correct height even on failure
-                            fixImageContainerSize()
-
-                            // Make sure site name is still shown even if image fails to load
-                            if (!siteName.isNullOrEmpty()) {
-                                binding.siteImageLabel.text = siteName
-                                binding.siteImageLabel.visibility = View.VISIBLE
-                            }
-                            return false
-                        }
-
-                        override fun onResourceReady(
-                            resource: Drawable,
-                            model: Any,
-                            target: Target<Drawable>,
-                            dataSource: DataSource,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            Log.d("ChatFragment", "Image loaded successfully - fixing size again")
-                            // Force layout updates after image is ready
-                            fixImageContainerSize()
-
-                            // Ensure site name is displayed after image is loaded
-                            if (!siteName.isNullOrEmpty()) {
-                                binding.siteImageLabel.text = siteName
-                                binding.siteImageLabel.visibility = View.VISIBLE
-                            }
-
-                            // Use a delayed post to ensure image scaling is correct
-                            binding.root.post {
-                                fixImageContainerSize()
-                                scrollToBottom()
-                            }
-
-                            // Try one more time with a longer delay
-                            binding.root.postDelayed({
-                                fixImageContainerSize()
-                            }, 100)
-
-                            return false
-                        }
-                    })
-                    .into(binding.siteImageView)
-
-                // Apply a backup sizing fix after the into() call
-                binding.root.postDelayed({
-                    fixImageContainerSize()
-
-                    // One last check to make sure site name is displayed
-                    if (!siteName.isNullOrEmpty()) {
-                        binding.siteImageLabel.text = siteName
-                        binding.siteImageLabel.visibility = View.VISIBLE
-                    }
-                }, 500)
-
-            } catch (e: Exception) {
-                Log.e("ChatFragment", "Error loading image: ${e.message}")
-                binding.siteImageView.visibility = View.GONE
-
-                // Hide the label if there's no image
-                binding.siteImageLabel.visibility = View.GONE
-            }
-        } else {
-            binding.siteImageView.visibility = View.GONE
-            binding.siteImageLabel.visibility = View.GONE
-        }
+        binding.inputContainer.elevation = 10f
     }
 
     private fun loadUserDataAndShowWelcome() {
@@ -588,31 +382,16 @@ class ChatFragment : Fragment() {
         return listOf(text)
     }
 
-    private fun identifySiteKeyFromName(siteName: String): String {
-        val lowerSiteName = siteName.lowercase()
-
-        return when {
-            lowerSiteName.contains("eiffel") -> "eiffel"
-            lowerSiteName.contains("colosseum") -> "colosseum"
-            lowerSiteName.contains("taj") -> "taj_mahal"
-            else -> ""
-        }
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
-
-        // No need to restore bottom navigation as we're not hiding it anymore
-
         _binding = null
     }
 
     companion object {
-        fun newInstance(siteName: String, siteImageUrl: String?): ChatFragment {
+        fun newInstance(siteName: String): ChatFragment {
             val fragment = ChatFragment()
             val args = Bundle().apply {
                 putString("SITE_NAME_KEY", siteName)
-                putString("SITE_IMAGE_URL_KEY", siteImageUrl)
             }
             fragment.arguments = args
             return fragment

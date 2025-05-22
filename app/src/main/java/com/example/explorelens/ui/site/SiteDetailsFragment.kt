@@ -471,7 +471,7 @@ class SiteDetailsFragment : Fragment() {
                 fragmentContainer?.visibility = View.VISIBLE
 
                 // Create the chat fragment with arguments
-                val chatFragment = ChatFragment.newInstance(siteName, siteImageUrl)
+                val chatFragment = ChatFragment.newInstance(siteName)
 
                 // Use the ArActivity to manage the fragment transaction
                 activity.supportFragmentManager.beginTransaction()
