@@ -135,25 +135,47 @@
                         android:layout_height="0dp"
                         android:layout_weight="1" />
 
+                    <!-- TTS Control Container -->
                     <LinearLayout
-                        android:id="@+id/commentsButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:background="@android:color/transparent"
-                        android:clickable="true"
-                        android:focusable="true"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/icon_comments"
+                        <!-- Play/Stop Button -->
+                        <ImageButton
+                            android:id="@+id/playStopButton"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="@drawable/rounded_button_background"
+                            android:contentDescription="Play description"
+                            android:src="@drawable/ic_play"
+                            android:scaleType="centerInside"
                             app:tint="@color/black" />
 
-                    </LinearLayout>
-                </LinearLayout>
+                        <!-- Comments Button -->
+                        <LinearLayout
+                            android:id="@+id/commentsButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@android:color/transparent"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
 
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/icon_comments"
+                                app:tint="@color/black" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/descriptionTextView"

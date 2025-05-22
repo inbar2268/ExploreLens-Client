@@ -5,6 +5,8 @@ import android.app.AlertDialog
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -38,8 +40,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
-class SiteDetailsFragment : Fragment() {
+class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
 
     private lateinit var labelTextView: TextView
     private lateinit var descriptionTextView: TextView
@@ -56,6 +59,22 @@ class SiteDetailsFragment : Fragment() {
     private lateinit var siteDetailsRepository: SiteDetailsRepository
     private lateinit var userRepository: UserRepository
 
+    // Simple Text-to-Speech components
+    private var textToSpeech: TextToSpeech? = null
+    private var isTtsInitialized = false
+    private lateinit var playStopButton: ImageButton
+
+    // Store the text to be spoken
+    private var currentTextToSpeak: String = ""
+
+    // Simple TTS States
+    private enum class TtsState {
+        IDLE,       // Not playing, ready to start
+        PLAYING,    // Currently speaking
+        FINISHED    // Finished speaking
+    }
+
+    private var currentState = TtsState.IDLE
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -68,6 +87,9 @@ class SiteDetailsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Initialize Text-to-Speech
+        textToSpeech = TextToSpeech(requireContext(), this)
+
         // Initialize views
         labelTextView = view.findViewById(R.id.labelTextView)
         descriptionTextView = view.findViewById(R.id.descriptionTextView)
@@ -79,24 +101,16 @@ class SiteDetailsFragment : Fragment() {
 
         val askAssistantCard = view.findViewById<CardView>(R.id.askAssistantCard)
         val closeButton = view.findViewById<ImageButton>(R.id.closeButton)
-        closeButton.setOnClickListener {
-            // Dismiss the fragment
-            dismissSiteDetails()
-        }
-        // Set up comments button click listener
+
+        // Initialize the play/stop button
+        playStopButton = view.findViewById(R.id.playStopButton)
+
+        setupClickListeners(closeButton, askAssistantCard)
+
+        // Set up repositories
         reviewRepository = ReviewsRepository(requireContext())
         siteDetailsRepository = SiteDetailsRepository(requireContext())
         userRepository = UserRepository(requireContext())
-        commentsButton.setOnClickListener {
-            showReviewsDialog()
-        }
-
-        ratingContainer.setOnClickListener {
-            showRatingDialog()
-        }
-        askAssistantCard.setOnClickListener {
-            navigateToChatFragment()
-        }
 
         arguments?.let { args ->
             val label = args.getString("LABEL_KEY", "Unknown")
@@ -121,9 +135,148 @@ class SiteDetailsFragment : Fragment() {
                 fetchSiteDetails(label)
             }
             // Set initial mock rating
-            // In a real app, you would fetch this from the server
             siteRating = SiteRating(label, 0f, 0)
             ratingView.setRating(siteRating?.averageRating ?: 0f)
+        }
+    }
+
+    private fun setupClickListeners(closeButton: ImageButton, askAssistantCard: CardView) {
+        closeButton.setOnClickListener {
+            dismissSiteDetails()
+        }
+
+        // Set up comments button click listener
+        commentsButton.setOnClickListener {
+            showReviewsDialog()
+        }
+
+        ratingContainer.setOnClickListener {
+            showRatingDialog()
+        }
+
+        askAssistantCard.setOnClickListener {
+            navigateToChatFragment()
+        }
+
+        // Set up play/stop button
+        playStopButton.setOnClickListener {
+            handlePlayStop()
+        }
+    }
+
+    // Text-to-Speech initialization
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            val result = textToSpeech?.setLanguage(Locale.US)
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("SiteDetailsFragment", "Language not supported for TTS")
+                ToastHelper.showShortToast(requireContext(), "Text-to-speech language not supported")
+            } else {
+                isTtsInitialized = true
+                // Set speech rate (0.5 = half speed, 1.0 = normal, 2.0 = double speed)
+                textToSpeech?.setSpeechRate(0.8f)
+                // Set pitch (0.5 = lower pitch, 1.0 = normal, 2.0 = higher pitch)
+                textToSpeech?.setPitch(1.0f)
+
+                // Set up utterance progress listener
+                textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {
+                        // Called when TTS starts speaking
+                        activity?.runOnUiThread {
+                            currentState = TtsState.PLAYING
+                            updateButtonState()
+                        }
+                    }
+
+                    override fun onDone(utteranceId: String?) {
+                        // Called when TTS finishes speaking
+                        activity?.runOnUiThread {
+                            currentState = TtsState.FINISHED
+                            updateButtonState()
+                            ToastHelper.showShortToast(requireContext(), "Finished reading")
+                        }
+                    }
+
+                    override fun onError(utteranceId: String?) {
+                        // Called when TTS encounters an error
+                        activity?.runOnUiThread {
+                            currentState = TtsState.IDLE
+                            updateButtonState()
+                            ToastHelper.showShortToast(requireContext(), "Error in text-to-speech")
+                        }
+                    }
+                })
+
+                Log.d("SiteDetailsFragment", "Text-to-Speech initialized successfully")
+                updateButtonState()
+            }
+        } else {
+            Log.e("SiteDetailsFragment", "Text-to-Speech initialization failed")
+            ToastHelper.showShortToast(requireContext(), "Text-to-speech initialization failed")
+        }
+    }
+
+    private fun handlePlayStop() {
+        if (!isTtsInitialized) {
+            ToastHelper.showShortToast(requireContext(), "Text-to-speech not ready")
+            return
+        }
+
+        when (currentState) {
+            TtsState.IDLE, TtsState.FINISHED -> {
+                startSpeaking()
+            }
+            TtsState.PLAYING -> {
+                stopSpeaking()
+            }
+        }
+    }
+
+    private fun startSpeaking() {
+        val description = descriptionTextView.text.toString()
+        val siteName = labelTextView.text.toString()
+
+        if (description.isEmpty()) {
+            ToastHelper.showShortToast(requireContext(), "No description to read")
+            return
+        }
+
+        // Create the text to speak with site name introduction
+        currentTextToSpeak = "Here's information about $siteName. $description"
+
+        textToSpeech?.speak(currentTextToSpeak, TextToSpeech.QUEUE_FLUSH, null, "site_description")
+        currentState = TtsState.PLAYING
+        updateButtonState()
+
+        ToastHelper.showShortToast(requireContext(), "Reading site description...")
+    }
+
+    private fun stopSpeaking() {
+        textToSpeech?.stop()
+        currentState = TtsState.IDLE
+        updateButtonState()
+
+        ToastHelper.showShortToast(requireContext(), "Stopped reading")
+    }
+
+
+    private fun updateButtonState() {
+        when (currentState) {
+            TtsState.IDLE -> {
+                playStopButton.setImageResource(R.drawable.ic_play)
+                playStopButton.contentDescription = "Play description"
+                playStopButton.isEnabled = true
+            }
+            TtsState.PLAYING -> {
+                playStopButton.setImageResource(R.drawable.ic_stop)
+                playStopButton.contentDescription = "Stop reading"
+                playStopButton.isEnabled = true
+            }
+            TtsState.FINISHED -> {
+                playStopButton.setImageResource(R.drawable.ic_play)
+                playStopButton.contentDescription = "Play again"
+                playStopButton.isEnabled = true
+            }
         }
     }
 
@@ -345,7 +498,6 @@ class SiteDetailsFragment : Fragment() {
         }
     }
 
-
     private fun showRatingDialog() {
         context?.let { ctx ->
             // Create and show dialog
@@ -389,8 +541,6 @@ class SiteDetailsFragment : Fragment() {
                             if (newSite != null) {
                                 Log.e("SiteDetailsFragment", " rating: ${newSite.averageRating}")
                                 ratingView.setRating(newSite.averageRating ?: 0f)
-
-//                                updateRatingView(new)
                             }
 
                             dialog.dismiss()
@@ -406,11 +556,9 @@ class SiteDetailsFragment : Fragment() {
                     ToastHelper.showShortToast(ctx, "Please select a rating")
                 }
             }
-
         }
     }
 
-    // Add this method to update the rating display
     private fun updateRatingView(newRating: Float? = null) {
         val currentRating = ratingView.getRating()
         val currentCount = siteRating?.totalRatings ?: 0
@@ -497,6 +645,21 @@ class SiteDetailsFragment : Fragment() {
                 Log.e("SiteDetailsFragment", "Error navigating to ChatFragment: ${e.message}", e)
                 showError("Failed to open chat assistant")
             }
+        }
+    }
+
+    override fun onDestroy() {
+        // Clean up Text-to-Speech
+        textToSpeech?.stop()
+        textToSpeech?.shutdown()
+        super.onDestroy()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop speaking when fragment is paused
+        if (currentState == TtsState.PLAYING) {
+            stopSpeaking()
         }
     }
 }
