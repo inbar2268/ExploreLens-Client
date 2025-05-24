@@ -1149,6 +1149,39 @@ class AppRenderer(
 
             layerManager.addLayerLabel(anchor, placeMap)
         }
+
+        val targetLat = 32.142791
+                val targetLng = 34.887523
+               val targetAltitude = earth.cameraGeospatialPose.altitude - 0.5
+                val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
+
+                val anchor =
+                    earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
+                Log.d(
+                    "GeoAR",
+                    "Created Anchor at $targetLat, $targetLng, $targetAltitude for im here"
+                )
+        val placeMap = mapOf(
+            "place_id" to "111",
+            "name" to "here",
+            "location" to mapOf(
+                "lat" to targetLat,
+                "lng" to targetLng
+            ),
+            "rating" to 4.5,
+            "type" to "hotel",
+            "address" to "aalalalala",
+            "phone_number" to "0524528745",
+            "business_status" to "open",
+            "opening_hours" to {
+                mapOf(
+                    "open_now" to true,
+                    "weekday_text" to "fwfw"
+                )
+            }
+        )
+
+        layerManager.addLayerLabel(anchor, placeMap)
     }
 
 
