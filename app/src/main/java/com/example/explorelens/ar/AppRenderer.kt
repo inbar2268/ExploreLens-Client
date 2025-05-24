@@ -200,35 +200,35 @@ class AppRenderer(
         }
         processObjectResults(frame, session)
         drawAnchors(render, frame)
-        layerManager.drawLayerLabels(render, viewProjectionMatrix, camera.pose, frame)
 
         if (shouldPlaceGeoAnchors && earth != null && earth.trackingState == TrackingState.TRACKING) {
             showSnackbar("updateARViewWithPlaces")
             pendingPlaces?.let {
                 updateARViewWithPlaces(it)
 
-                val targetLat = 32.142791
-                val targetLng = 34.887523
-//                val targetAltitude = earth.cameraGeospatialPose.altitude - 1.5
-                val targetAltitude = it[0].elevation + 10
-                val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
-
-                val anchor =
-                    earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
-                Log.d(
-                    "GeoAR",
-                    "Created Anchor at $targetLat, $targetLng, $targetAltitude for im here"
-                )
-
-                val labeledAnchor = ARLabeledAnchor(
-                    anchor,
-                    "here",
-                    "lalala",
-                    "Rating: 10000"
-                )
-                synchronized(arLabeledAnchors) {
-                    arLabeledAnchors.add(labeledAnchor)
-                }
+//                val targetLat = 32.142791
+//                val targetLng = 34.887523
+////                val targetAltitude = earth.cameraGeospatialPose.altitude - 1.5
+//                val targetAltitude = it[0].elevation + 10
+//                val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
+//
+//                val anchor =
+//                    earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
+//                Log.d(
+//                    "GeoAR",
+//                    "Created Anchor at $targetLat, $targetLng, $targetAltitude for im here"
+//                )
+//
+//                val labeledAnchor = ARLabeledAnchor(
+//                    anchor,
+//                    "here",
+//                    "lalala",
+//                    "Rating: 10000"
+//                )
+//                synchronized(arLabeledAnchors) {
+//                    arLabeledAnchors.add(labeledAnchor)
+//                }
+                layerManager.drawLayerLabels(render, viewProjectionMatrix, camera.pose, frame)
                 shouldPlaceGeoAnchors = false
                 pendingPlaces = null
             }
