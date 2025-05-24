@@ -77,9 +77,12 @@ class ARLayerManager(private val context: Context) {
         cameraPose: Pose,
         frame: Frame
     ) {
+        val MAX_RENDER_DISTANCE = 50f   // מקסימום מרחק במטרים לתווית שרואים
+        val MAX_LABELS = 20             // כמה תוויות מותר להציג בו זמנית
+        var drawnCount = 0
+
         for (label in layerLabels) {
             val anchor = label.anchor
-
             val anchorPose = anchor.pose
 
             val labelPosition = floatArrayOf(
@@ -91,12 +94,25 @@ class ARLayerManager(private val context: Context) {
             val projected = FloatArray(4)
             android.opengl.Matrix.multiplyMV(projected, 0, viewProjectionMatrix, 0, labelPosition, 0)
 
-            val isInFrontOfCamera = projected[2] < 0
+            // 1. התווית צריכה להיות מול המצלמה
+            val isInFront = projected[2] < 0
 
-            if (!isInFrontOfCamera) {
-                continue
-            }
+            // 2. התווית צריכה להיות בתוך גבולות המסך
+            val ndcX = projected[0] / projected[3]
+            val ndcY = projected[1] / projected[3]
+            val isOnScreen = ndcX in -1f..1f && ndcY in -1f..1f
 
+            // 3. חישוב מרחק בין התווית למצלמה
+            val dx = anchorPose.tx() - cameraPose.tx()
+            val dy = anchorPose.ty() - cameraPose.ty()
+            val dz = anchorPose.tz() - cameraPose.tz()
+            val distance = kotlin.math.sqrt(dx * dx + dy * dy + dz * dz)
+
+            // תנאי סינון:
+            if (!isInFront || !isOnScreen || distance > MAX_RENDER_DISTANCE) continue
+            if (drawnCount >= MAX_LABELS) break
+
+            // ציור בפועל
             layerLabelRenderer.draw(
                 render,
                 viewProjectionMatrix,
@@ -104,6 +120,8 @@ class ARLayerManager(private val context: Context) {
                 cameraPose,
                 label.placeInfo
             )
+
+            drawnCount++
         }
     }
 
