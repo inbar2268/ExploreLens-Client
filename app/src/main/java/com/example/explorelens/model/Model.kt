@@ -7,7 +7,6 @@ import com.example.explorelens.model.ARLabeledAnchor
 import java.util.concurrent.Executors
 
 typealias ARLabeledAnchorsCallback = (List<ARLabeledAnchor>) -> Unit
-typealias ARLabeledAnchorCallback = (ARLabeledAnchor) -> Unit
 typealias EmptyCallback = () -> Unit
 
 class Model private constructor() {
@@ -28,6 +27,7 @@ class Model private constructor() {
         }
     }
 
+
     fun addArLabelAnchors(anchors: List<ARLabeledAnchor>, callback: EmptyCallback) {
         executor.execute {
             ARAnchorsManager.addAnchors(anchors)
@@ -36,6 +36,8 @@ class Model private constructor() {
             }
         }
     }
+
+
     fun addArLabelAnchor(anchor: ARLabeledAnchor, callback: EmptyCallback) {
         executor.execute {
             ARAnchorsManager.addAnchor(anchor) // נניח שאת יוצרת פונקציה חדשה addAnchor בתוך ARAnchorsManager

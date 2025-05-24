@@ -1,7 +1,6 @@
 package com.example.explorelens.ar.render
 
 import android.content.Context
-import android.opengl.GLES30
 import android.util.Log
 import com.example.explorelens.common.samplerender.Mesh
 import com.example.explorelens.common.samplerender.SampleRender
@@ -10,7 +9,6 @@ import com.example.explorelens.common.samplerender.VertexBuffer
 import com.google.ar.core.Pose
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.FloatBuffer
 
 /**
  * Renderer for layer labels that manages drawing them in 3D space.
@@ -97,7 +95,7 @@ class LayerLabelRenderer {
         viewProjectionMatrix: FloatArray,
         pose: Pose,
         cameraPose: Pose,
-        placeInfo: Map<String, Any>
+        placeInfo: Map<String, Any?>
     ) {
         Log.d(TAG, "Drawing layer label for: ${placeInfo["name"]}")
 
