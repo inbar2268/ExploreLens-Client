@@ -77,7 +77,7 @@ class ARLayerManager(private val context: Context) {
         cameraPose: Pose,
         frame: Frame
     ) {
-        val MAX_RENDER_DISTANCE = 50f
+        val MAX_RENDER_DISTANCE = 500f
         val MAX_LABELS = 20
         var drawnCount = 0
 
