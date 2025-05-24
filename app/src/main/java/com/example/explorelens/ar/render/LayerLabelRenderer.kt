@@ -2,6 +2,7 @@ package com.example.explorelens.ar.render
 
 import android.content.Context
 import android.util.Log
+import com.example.explorelens.ar.render.LabelRender.Companion
 import com.example.explorelens.common.samplerender.Mesh
 import com.example.explorelens.common.samplerender.SampleRender
 import com.example.explorelens.common.samplerender.Shader
@@ -62,12 +63,7 @@ class LayerLabelRenderer {
         cache = LayerLabelTextureCache(context)
 
         // Create shader with proper blending - using billboard shader like LabelRender
-        shader = Shader.createFromAssets(
-            render,
-            "shaders/billboard_label.vert", // Changed to use billboard shader
-            "shaders/layer_label.frag",     // Keep your custom fragment shader
-            null
-        )
+        shader = Shader.createFromAssets(render, "shaders/billboard_label.vert", "shaders/label.frag", null)
             .setBlend(
                 Shader.BlendFactor.SRC_ALPHA,
                 Shader.BlendFactor.ONE_MINUS_SRC_ALPHA
@@ -75,20 +71,15 @@ class LayerLabelRenderer {
             .setDepthTest(false)
             .setDepthWrite(false)
 
-        // Default color for the texture
+        // Default pure white color for the texture (1.0 alpha for full opacity)
         shader.setVec4("fragColor", floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f))
 
         // Create mesh from vertex buffers
         val vertexBuffers = arrayOf(
-            VertexBuffer(render, 2, NDC_QUAD_COORDS_BUFFER),
-            VertexBuffer(render, 2, SQUARE_TEX_COORDS_BUFFER),
+            VertexBuffer(render, 2, LabelRender.NDC_QUAD_COORDS_BUFFER),
+            VertexBuffer(render, 2, LabelRender.SQUARE_TEX_COORDS_BUFFER),
         )
-        mesh = Mesh(
-            render,
-            Mesh.PrimitiveMode.TRIANGLE_STRIP,
-            null,
-            vertexBuffers
-        )
+        mesh = Mesh(render, Mesh.PrimitiveMode.TRIANGLE_STRIP, null, vertexBuffers)
     }
 
     // Position for the label

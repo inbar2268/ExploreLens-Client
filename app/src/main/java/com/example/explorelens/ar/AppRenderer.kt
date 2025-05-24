@@ -1180,7 +1180,6 @@ class AppRenderer(
                 )
             }
         )
-
         layerManager.addLayerLabel(anchor, placeMap)
     }
 
