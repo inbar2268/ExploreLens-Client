@@ -227,8 +227,7 @@ class AppRenderer(
 //                )
 //                synchronized(arLabeledAnchors) {
 //                    arLabeledAnchors.add(labeledAnchor)
-//                }
-                layerManager.drawLayerLabels(render, viewProjectionMatrix, camera.pose, frame)
+//
                 shouldPlaceGeoAnchors = false
                 pendingPlaces = null
             }
@@ -246,6 +245,8 @@ class AppRenderer(
             Log.d("GeoAR1", "Heading accuracy: ${earth?.cameraGeospatialPose?.headingAccuracy}")
 
         }
+        layerManager.drawLayerLabels(render, viewProjectionMatrix, camera.pose, frame)
+
     }
 
     private fun drawAnchors(render: SampleRender, frame: Frame) {
