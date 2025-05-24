@@ -17,7 +17,10 @@
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyC8cGe6Oj4bi7Y3lXdscEltVWNZ2G4ugSU"/>
+            android:value="AIzaSyBnjpGXpf78W4JIZGio7Fp7s1O7uHFzayw"/>
+        <meta-data
+            android:name="com.google.android.ar.API_KEY"
+            android:value="AIzaSyBnjpGXpf78W4JIZGio7Fp7s1O7uHFzayw" />
         <activity
             android:name="com.example.explorelens.ArActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode"            android:exported="true"
