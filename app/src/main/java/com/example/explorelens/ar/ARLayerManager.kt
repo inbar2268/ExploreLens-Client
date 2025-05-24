@@ -77,8 +77,8 @@ class ARLayerManager(private val context: Context) {
         cameraPose: Pose,
         frame: Frame
     ) {
-        val MAX_RENDER_DISTANCE = 50f   // מקסימום מרחק במטרים לתווית שרואים
-        val MAX_LABELS = 20             // כמה תוויות מותר להציג בו זמנית
+        val MAX_RENDER_DISTANCE = 50f
+        val MAX_LABELS = 20
         var drawnCount = 0
 
         for (label in layerLabels) {
