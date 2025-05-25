@@ -46,8 +46,7 @@ class SettingsFragment : Fragment() {
         }
 
         binding.editProfileRow.setOnClickListener {
-            // Navigate to edit user screen
-            // Example: startActivity(Intent(requireContext(), EditUserActivity::class.java))
+            findNavController().navigate(R.id.action_settingsFragment_to_editProfileFragment)
         }
 
         binding.changePasswordRow.setOnClickListener {
@@ -88,13 +87,25 @@ class SettingsFragment : Fragment() {
         }
 
         dialogBinding.deleteButton.setOnClickListener {
-            // Perform delete account action
-            // Example: viewModel.deleteAccount()
-            ToastHelper.showShortToast(context, "Account deleted");
-            dialog.dismiss()
+            lifecycleScope.launch {
+                try {
+                    val result = userRepository.deleteUser()
+                    result?.onSuccess {
+                        authRepository.logout()
+                        dialog.dismiss()
+                        findNavController().navigate(R.id.action_settingsFragment_to_loginFragment)
+                        ToastHelper.showShortToast(context, "Account deleted")
+                    }
+                    result?.onFailure { exception ->
+                        ToastHelper.showShortToast(context, "Failed to delete account")
+                        dialog.dismiss()
+                    }
+                } catch (e: Exception) {
+                    ToastHelper.showShortToast(context, "Failed to delete account")
+                    dialog.dismiss()
+                }
+            }
         }
-
-        // Set dialog width to match parent
         val window = dialog.window
         window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 

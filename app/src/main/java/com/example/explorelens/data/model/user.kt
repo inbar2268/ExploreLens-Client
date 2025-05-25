@@ -6,3 +6,9 @@ data class UserResponse(
     val email: String,
     val profilePicture: String?
 )
+
+data class UpdateUserRequest(
+    val username: String,
+    val email: String? = null,
+    val profilePicture: String? = null
+)
