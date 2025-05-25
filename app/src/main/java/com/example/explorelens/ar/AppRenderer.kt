@@ -252,25 +252,28 @@ class AppRenderer(
     }
 
     private fun drawAnchors(render: SampleRender, frame: Frame) {
-        val anchorsToRender = ArrayList<ARLabeledAnchor>()
         synchronized(arLabeledAnchors) {
-            anchorsToRender.addAll(arLabeledAnchors)
+            for (arDetectedObject in arLabeledAnchors) {
+                val anchor = arDetectedObject.anchor
+
+                if (anchor.trackingState != TrackingState.TRACKING) {
+                    continue
+                }
+
+                Log.d(TAG, "Anchor tracking state: ${anchor.trackingState}")
+                Log.d(TAG, "Label: ${arDetectedObject.label}")
+                if (anchor.trackingState != TrackingState.TRACKING) continue
+                labelRenderer.draw(
+                    render,
+                    viewProjectionMatrix,
+                    anchor.pose,
+                    lastSnapshotData?.cameraPose ?: frame.camera.pose,
+                    arDetectedObject.label
+                )
+            }
         }
 
-        for (arDetectedObject in anchorsToRender) {
-            val anchor = arDetectedObject.anchor
 
-            Log.d(TAG, "Anchor tracking state: ${anchor.trackingState}")
-            Log.d(TAG, "Label: ${arDetectedObject.label}")
-            if (anchor.trackingState != TrackingState.TRACKING) continue
-            labelRenderer.draw(
-                render,
-                viewProjectionMatrix,
-                anchor.pose,
-                lastSnapshotData?.cameraPose ?: frame.camera.pose,
-                arDetectedObject.label
-            )
-        }
     }
 
     private fun processObjectResults(frame: Frame, session: Session) {
