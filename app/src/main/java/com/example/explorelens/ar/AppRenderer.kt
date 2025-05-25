@@ -86,8 +86,6 @@ class AppRenderer(
 
     private var lastSnapshotData: Snapshot? = null
     var arLabeledAnchors = Collections.synchronizedList(mutableListOf<ARLabeledAnchor>())
-    var GpsLabeledAnchors =
-        Collections.synchronizedList(mutableListOf<ARLayerManager.LayerLabelInfo>())
     private var hasLoadedAnchors = false
     private val convertFloats = FloatArray(4)
     private val convertFloatsOut = FloatArray(4)
@@ -139,8 +137,6 @@ class AppRenderer(
         labelRenderer.onSurfaceCreated(render, activity)
 
         layerManager.onSurfaceCreated(render)
-
-        getNearbyPlacesForAR(listOf("bar", "hotel"))
     }
 
     override fun onSurfaceChanged(render: SampleRender?, width: Int, height: Int) {
@@ -205,29 +201,6 @@ class AppRenderer(
             showSnackbar("updateARViewWithPlaces")
             pendingPlaces?.let {
                 updateARViewWithPlaces(it)
-
-//                val targetLat = 32.142791
-//                val targetLng = 34.887523
-////                val targetAltitude = earth.cameraGeospatialPose.altitude - 1.5
-//                val targetAltitude = it[0].elevation + 10
-//                val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
-//
-//                val anchor =
-//                    earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
-//                Log.d(
-//                    "GeoAR",
-//                    "Created Anchor at $targetLat, $targetLng, $targetAltitude for im here"
-//                )
-//
-//                val labeledAnchor = ARLabeledAnchor(
-//                    anchor,
-//                    "here",
-//                    "lalala",
-//                    "Rating: 10000"
-//                )
-//                synchronized(arLabeledAnchors) {
-//                    arLabeledAnchors.add(labeledAnchor)
-//
                 shouldPlaceGeoAnchors = false
                 pendingPlaces = null
             }
@@ -286,7 +259,6 @@ class AppRenderer(
                 return
             }
             val anchor = fetchAndCreateAnchor(session, snapshotData, obj, frame)
-//            mockLayerAnchor = createLayerLabelAnchor(session, snapshotData, obj, frame)
 
             launch {
                 val currentLocation =
@@ -1125,7 +1097,10 @@ class AppRenderer(
             val headingQuaternion = calculateHeadingQuaternion(correctedHeading)
 
             val anchor = earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
-            Log.d("GeoAR", "Created Anchor at $targetLat, $targetLng, $targetAltitude for ${point.name}")
+            Log.d(
+                "GeoAR",
+                "Created Anchor at $targetLat, $targetLng, $targetAltitude for ${point.name}"
+            )
 
             val placeMap = mapOf(
                 "place_id" to point.id,
@@ -1151,16 +1126,16 @@ class AppRenderer(
         }
 
         val targetLat = 32.142791
-                val targetLng = 34.887523
-               val targetAltitude = earth.cameraGeospatialPose.altitude - 0.5
-                val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
+        val targetLng = 34.887523
+        val targetAltitude = earth.cameraGeospatialPose.altitude - 0.5
+        val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
 
-                val anchor =
-                    earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
-                Log.d(
-                    "GeoAR",
-                    "Created Anchor at $targetLat, $targetLng, $targetAltitude for im here"
-                )
+        val anchor =
+            earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
+        Log.d(
+            "GeoAR",
+            "Created Anchor at $targetLat, $targetLng, $targetAltitude for im here"
+        )
         val placeMap = mapOf(
             "place_id" to "111",
             "name" to "here",
