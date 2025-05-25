@@ -98,6 +98,7 @@ class AppRenderer(
 
     private var lastSnapshotData: Snapshot? = null
     var arLabeledAnchors = Collections.synchronizedList(mutableListOf<ARLabeledAnchor>())
+    private val reusableAnchorList = ArrayList<ARLabeledAnchor>()
     private var hasLoadedAnchors = false
     private val convertFloats = FloatArray(4)
     private val convertFloatsOut = FloatArray(4)
@@ -252,28 +253,26 @@ class AppRenderer(
 
 
     private fun drawAnchors(render: SampleRender, frame: Frame) {
+        reusableAnchorList.clear()
         synchronized(arLabeledAnchors) {
-            for (arDetectedObject in arLabeledAnchors) {
-                val anchor = arDetectedObject.anchor
-
-                if (anchor.trackingState != TrackingState.TRACKING) {
-                    continue
-                }
-
-                Log.d(TAG, "Anchor tracking state: ${anchor.trackingState}")
-                Log.d(TAG, "Label: ${arDetectedObject.label}")
-                if (anchor.trackingState != TrackingState.TRACKING) continue
-                labelRenderer.draw(
-                    render,
-                    viewProjectionMatrix,
-                    anchor.pose,
-                    lastSnapshotData?.cameraPose ?: frame.camera.pose,
-                    arDetectedObject.label
-                )
-            }
+            reusableAnchorList.addAll(arLabeledAnchors)
         }
-
-
+        for (arDetectedObject in arLabeledAnchors) {
+            val anchor = arDetectedObject.anchor
+            if (anchor.trackingState != TrackingState.TRACKING) {
+                continue
+            }
+            Log.d(TAG, "Anchor tracking state: ${anchor.trackingState}")
+            Log.d(TAG, "Label: ${arDetectedObject.label}")
+            if (anchor.trackingState != TrackingState.TRACKING) continue
+            labelRenderer.draw(
+                render,
+                viewProjectionMatrix,
+                anchor.pose,
+                lastSnapshotData?.cameraPose ?: frame.camera.pose,
+                arDetectedObject.label
+            )
+        }
     }
 
     private fun processObjectResults(frame: Frame, session: Session) {
