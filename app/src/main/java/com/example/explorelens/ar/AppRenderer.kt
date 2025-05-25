@@ -953,7 +953,7 @@ class AppRenderer(
     fun getAnalyzedResult(path: String) {
         Log.d("AnalyzeImage", "Starting image analysis")
 
-        launch(Dispatchers.IO) {
+        networkScope.launch {
             val repository = DetectionResultRepository()
             val result = repository.getAnalyzedResult(path)
 
@@ -983,9 +983,8 @@ class AppRenderer(
     fun getNearbyPlacesForAR(categories: List<String>) {
         Log.d("NearbyPlaces", "Fetching nearby places for AR...")
 
-        launch(Dispatchers.IO) {
-            val currentLocation = geoLocationUtils.getSingleCurrentLocation()
-                ?: return@launch
+        networkScope.launch{
+            val currentLocation = getLocationOptimized() ?: return@launch
             geoLocationUtils.updateLocation(currentLocation)
             val repository = NearbyPlacesRepository()
             val result = repository.fetchNearbyPlaces(
@@ -1149,7 +1148,7 @@ class AppRenderer(
         val earth = session.earth ?: return
 
         if (!session.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
-            Handler(Looper.getMainLooper()).post {
+           Handler(Looper.getMainLooper()).post {
                 showSnackbar("Geospatial API not supported")
             }
             return

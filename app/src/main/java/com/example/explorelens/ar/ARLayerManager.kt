@@ -8,6 +8,7 @@ import com.google.ar.core.Frame
 import com.google.ar.core.Pose
 import com.google.ar.core.Anchor
 import com.google.ar.core.Session
+import com.google.ar.core.TrackingState
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -76,51 +77,75 @@ class ARLayerManager(private val context: Context) {
         cameraPose: Pose,
         frame: Frame
     ) {
-        val MAX_RENDER_DISTANCE = 500f
-        val MAX_LABELS = 20
-        var drawnCount = 0
-
+        // Draw each layer label
         for (label in layerLabels) {
             val anchor = label.anchor
-            val anchorPose = anchor.pose
 
-            val labelPosition = floatArrayOf(
-                anchorPose.tx(),
-                anchorPose.ty(),
-                anchorPose.tz(),
-                1f
-            )
-            val projected = FloatArray(4)
-            android.opengl.Matrix.multiplyMV(projected, 0, viewProjectionMatrix, 0, labelPosition, 0)
+            // Only draw labels with tracking anchors
+            if (anchor.trackingState != TrackingState.TRACKING) continue
 
-            val isInFront = projected[2] < 0
-
-            val ndcX = projected[0] / projected[3]
-            val ndcY = projected[1] / projected[3]
-            val isOnScreen = ndcX in -1f..1f && ndcY in -1f..1f
-
-
-            val dx = anchorPose.tx() - cameraPose.tx()
-            val dy = anchorPose.ty() - cameraPose.ty()
-            val dz = anchorPose.tz() - cameraPose.tz()
-            val distance = kotlin.math.sqrt(dx * dx + dy * dy + dz * dz)
-
-
-            if (!isInFront || !isOnScreen || distance > MAX_RENDER_DISTANCE) continue
-            if (drawnCount >= MAX_LABELS) break
-
-
+            // Draw the layer label
             layerLabelRenderer.draw(
                 render,
                 viewProjectionMatrix,
-                anchorPose,
+                anchor.pose,
                 cameraPose,
                 label.placeInfo
             )
-
-            drawnCount++
         }
     }
+
+//    fun drawLayerLabels(
+//        render: SampleRender,
+//        viewProjectionMatrix: FloatArray,
+//        cameraPose: Pose,
+//        frame: Frame
+//    ) {
+//        val MAX_RENDER_DISTANCE = 500f
+//        val MAX_LABELS = 20
+//        var drawnCount = 0
+//
+//        for (label in layerLabels) {
+//            val anchor = label.anchor
+//            val anchorPose = anchor.pose
+//
+//            val labelPosition = floatArrayOf(
+//                anchorPose.tx(),
+//                anchorPose.ty(),
+//                anchorPose.tz(),
+//                1f
+//            )
+//            val projected = FloatArray(4)
+//            android.opengl.Matrix.multiplyMV(projected, 0, viewProjectionMatrix, 0, labelPosition, 0)
+//
+//            val isInFront = projected[2] < 0
+//
+//            val ndcX = projected[0] / projected[3]
+//            val ndcY = projected[1] / projected[3]
+//            val isOnScreen = ndcX in -1f..1f && ndcY in -1f..1f
+//
+//
+//            val dx = anchorPose.tx() - cameraPose.tx()
+//            val dy = anchorPose.ty() - cameraPose.ty()
+//            val dz = anchorPose.tz() - cameraPose.tz()
+//            val distance = kotlin.math.sqrt(dx * dx + dy * dy + dz * dz)
+//
+//
+//            if (!isInFront || !isOnScreen || distance > MAX_RENDER_DISTANCE) continue
+//            if (drawnCount >= MAX_LABELS) break
+//
+//
+//            layerLabelRenderer.draw(
+//                render,
+//                viewProjectionMatrix,
+//                anchorPose,
+//                cameraPose,
+//                label.placeInfo
+//            )
+//
+//            drawnCount++
+//        }
+//    }
 
     fun getExistingPlaceIds(): Set<Any> {
         return layerLabels.mapNotNull { it.placeInfo["place_id"] }.toSet()
