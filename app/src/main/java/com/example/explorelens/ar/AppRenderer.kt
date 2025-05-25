@@ -47,6 +47,8 @@ import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
 import com.example.explorelens.Model
 import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
+import com.example.explorelens.ar.render.LayerLabelRenderer
+import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
 import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import com.example.explorelens.model.ARLabeledAnchor
 import com.example.explorelens.utils.GeoLocationUtils
@@ -62,6 +64,7 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import com.google.ar.core.Config
 
 class AppRenderer(
     val activity: ArActivity,
@@ -87,6 +90,7 @@ class AppRenderer(
     val pointCloudRender = PointCloudRender()
     val labelRenderer = LabelRender()
 
+
     private val layerManager = ARLayerManager(activity)
 
     val viewMatrix = FloatArray(16)
@@ -102,33 +106,8 @@ class AppRenderer(
     private var hasLoadedAnchors = false
     private val convertFloats = FloatArray(4)
     private val convertFloatsOut = FloatArray(4)
-
-    private var mockLayerAnchor: ARLayerManager.LayerLabelInfo? = null
-    private val mockPlaceData = mapOf(
-        "place_id" to "mock-place-2",
-        "name" to "Gym Mock Place",
-        "location" to mapOf(
-            "lat" to 32.42773353018067,
-            "lng" to 34.933969622735574
-        ),
-        "rating" to 4.5,
-        "type" to "gym",
-        "address" to "123 Mock Gym St.",
-        "phone_number" to "000-000-0000",
-        "business_status" to "OPERATIONAL",
-        "opening_hours" to mapOf(
-            "open_now" to true,
-            "weekday_text" to listOf(
-                "Monday: 9:00 AM – 5:00 PM",
-                "Tuesday: 9:00 AM – 5:00 PM",
-                "Wednesday: 9:00 AM – 5:00 PM",
-                "Thursday: 9:00 AM – 5:00 PM",
-                "Friday: 9:00 AM – 5:00 PM",
-                "Saturday: 10:00 AM – 4:00 PM",
-                "Sunday: Closed"
-            )
-        )
-    )
+    private var shouldPlaceGeoAnchors = false
+    private var pendingPlaces: List<PointOfInterest>? = null
 
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
@@ -165,11 +144,13 @@ class AppRenderer(
             hideSnackbar()
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    view.binding.cameraInnerCircle.animate().scaleX(0.85f).scaleY(0.85f).setDuration(100).start()
+                    view.binding.cameraInnerCircle.animate().scaleX(0.85f).scaleY(0.85f)
+                        .setDuration(100).start()
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    view.binding.cameraInnerCircle.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+                    view.binding.cameraInnerCircle.animate().scaleX(1f).scaleY(1f).setDuration(100)
+                        .start()
                 }
             }
             false
@@ -187,15 +168,15 @@ class AppRenderer(
         labelRenderer.onSurfaceCreated(render, activity)
 
         layerManager.onSurfaceCreated(render)
-
-        getNearbyPlacesForAR(listOf("bar", "hotel"))
     }
+
     override fun onSurfaceChanged(render: SampleRender?, width: Int, height: Int) {
         displayRotationHelper.onSurfaceChanged(width, height)
     }
 
     override fun onDrawFrame(render: SampleRender) {
         val session = activity.arCoreSessionHelper.sessionCache ?: return
+        val earth = session.earth
         session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.textureId))
         displayRotationHelper.updateSessionIfNeeded(session)
         val frame = try {
@@ -248,7 +229,29 @@ class AppRenderer(
         processObjectResults(frame, session)
         drawAnchors(render, frame)
 
+        if (shouldPlaceGeoAnchors && earth != null && earth.trackingState == TrackingState.TRACKING) {
+            showSnackbar("updateARViewWithPlaces")
+            pendingPlaces?.let {
+                updateARViewWithPlaces(it)
+                shouldPlaceGeoAnchors = false
+                pendingPlaces = null
+            }
+        } else {
+            Log.d(
+                "updateARViewWithPlaces",
+                "${shouldPlaceGeoAnchors} && ${earth} ${earth?.trackingState}"
+            )
+            Log.d("GeoAR1", "arthState: ${earth?.earthState}")
+            Log.d(
+                "GeoAR1",
+                "Horizontal accuracy: ${earth?.cameraGeospatialPose?.horizontalAccuracy}"
+            )
+            Log.d("GeoAR1", "Altitude accuracy: ${earth?.cameraGeospatialPose?.verticalAccuracy}")
+            Log.d("GeoAR1", "Heading accuracy: ${earth?.cameraGeospatialPose?.headingAccuracy}")
+
+        }
         layerManager.drawLayerLabels(render, viewProjectionMatrix, camera.pose, frame)
+
     }
 
 
@@ -290,7 +293,6 @@ class AppRenderer(
                 return
             }
             val anchor = fetchAndCreateAnchor(session, snapshotData, obj, frame)
-            mockLayerAnchor = createLayerLabelAnchor(session, snapshotData, obj, frame)
 
             launch {
                 val currentLocation =
@@ -395,7 +397,7 @@ class AppRenderer(
         // 6. Calculate final world position
         val worldPosition = floatArrayOf(
             snapshotPose.tx() + normalizedDirection[0] * distance,
-            snapshotPose.ty() + normalizedDirection[1] * distance, // No Y correction needed
+            snapshotPose.ty() + normalizedDirection[1] * distance,
             snapshotPose.tz() + normalizedDirection[2] * distance
         )
 
@@ -794,65 +796,6 @@ class AppRenderer(
         return arLabeledAnchor
     }
 
-    private fun createLayerLabelAnchor(
-        session: Session,
-        snapshotData: Snapshot,
-        obj: ImageAnalyzedResult,
-        frame: Frame
-    ): ARLayerManager.LayerLabelInfo? {
-        val siteInfo = obj.siteInformation
-        val siteId = obj.siteInfoId
-
-        if (!isValidSiteData(siteInfo, siteId)) return null
-
-        // Get the camera pose
-        val cameraPose = snapshotData.cameraPose
-
-        // First create an anchor at the same position
-        val anchor = createAnchor(session, cameraPose, siteInfo!!.x, siteInfo.y, frame)
-            ?: return null
-
-        // Get the anchor's position
-        val anchorPos = anchor.pose.translation
-
-        // Calculate the direction from camera to anchor
-        val dirX = anchorPos[0] - cameraPose.tx()
-        val dirY = anchorPos[1] - cameraPose.ty()
-        val dirZ = anchorPos[2] - cameraPose.tz()
-
-        // Normalize the direction vector
-        val length = kotlin.math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ)
-        val normDirX = dirX / length
-        val normDirY = dirY / length
-        val normDirZ = dirZ / length
-
-        // Calculate right vector (perpendicular to direction and world up)
-        val rightX = -normDirZ
-        val rightY = 0f  // Assuming Y is up in world space
-        val rightZ = normDirX
-
-        // Normalize the right vector
-        val rightLength = kotlin.math.sqrt(rightX * rightX + rightY * rightY + rightZ * rightZ)
-        val normRightX = rightX / rightLength
-        val normRightY = rightY / rightLength
-        val normRightZ = rightZ / rightLength
-
-        // Add an offset to the right (0.5 meters)
-        val offsetDistance = 0.5f
-        val offsetX = anchorPos[0] + normRightX * offsetDistance
-        val offsetY = anchorPos[1] + 0.15f  // Slightly higher
-        val offsetZ = anchorPos[2] + normRightZ * offsetDistance
-
-        // Create a new pose for the offset position
-        val offsetPose = Pose.makeTranslation(offsetX, offsetY, offsetZ)
-
-        // Create a new anchor at the offset position
-        val offsetAnchor = session.createAnchor(offsetPose)
-
-        // Create a layer label at the offset position
-        return layerManager.addLayerLabel(session, offsetAnchor, mockPlaceData)
-    }
-
     private fun fetchAndUpdateSiteDetails(
         anchor: ARLabeledAnchor,
         siteName: String,
@@ -1052,13 +995,15 @@ class AppRenderer(
                 categories
             )
 
+            Log.d("NearbyPlaces", result.toString())
+
             withContext(Dispatchers.Main) {
                 result.onSuccess { places ->
                     Log.d("NearbyPlaces", "Received ${places.size} places")
                     showSnackbar("Received ${places.size} places")
-                    showSnackbar("Received ${places[0].name} , ${places[1].name} places")
-                    //updating AR nearbyPlaces anchors when creates
-                    // updateARViewWithPlaces(places)
+                    pendingPlaces = places
+                    shouldPlaceGeoAnchors = true
+
                 }
 
                 result.onFailure { error ->
@@ -1089,6 +1034,241 @@ class AppRenderer(
         }
 
         return locationCache["current"] // Can return null if no location is in cache
+      
+    }
+//    private fun updateARViewWithPlaces(places: List<PointOfInterest>) {
+//        Log.d(
+//            "GeoAR",
+//            "updateARViewWithPlaces"
+//        )
+//        val session = activity.arCoreSessionHelper.sessionCache ?: return
+//        val earth = session.earth ?: return
+//
+//        if (!session.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
+//            Handler(Looper.getMainLooper()).post {
+//                showSnackbar("Geospatial API not supported")
+//            }
+//            return
+//        }
+//
+//        Log.d(
+//            "GeoAR",
+//            "Geospatial API supported"
+//        )
+//        if (earth.trackingState != TrackingState.TRACKING) {
+//            Log.d(
+//                "GeoAR",
+//                "earth.trackingState != TrackingState.TRACKING"
+//            )
+//            Log.d(
+//                "GeoAR",
+//                "${earth.trackingState} +  ${TrackingState.TRACKING}"
+//            )
+//
+//
+//
+//            return
+//        }
+//
+//        Log.d(
+//            "GeoAR",
+//            "earth.trackingState"
+//        )
+//
+////        val existingLabels = GpsLabeledAnchors.map { it.placeInfo.values }
+//        val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
+//        Log.d(
+//            "GeoAR",
+//            "Created Anchor at"
+//        )
+//        for (point in places) {
+////            if (existingLabels.contains(point.name)) continue
+//
+//            // חישוב כיוון הפנייה - נקודת העיסוק תמיד תפנה לכיוון המשתמש
+//            val cameraPos = earth.cameraGeospatialPose
+//
+//            // חישוב כיוון המבט מהמצלמה לנקודת העניין
+//            val bearing = computeBearing(
+//                point.location.lat,
+//                point.location.lng,
+//                cameraPos.latitude,
+//                cameraPos.longitude,
+//            )
+////            val fixedBearing = (bearing + 180) % 360
+////            val headingQuaternion = calculateHeadingQuaternion(bearing)
+//
+//            val cameraAltitude = earth.cameraGeospatialPose.altitude
+//            val targetAltitude = cameraAltitude - 0.5
+//
+//            val targetLat = point.location.lat
+//            val targetLng = point.location.lng
+////            val elevationFromPlace = point.elevation
+////            val baseAltitude = elevationFromPlace ?: earth.cameraGeospatialPose.altitude
+////            val targetAltitude = baseAltitude + 10.0
+//
+//            val anchor =
+//                earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
+//            Log.d(
+//                "GeoAR",
+//                "Created Anchor at $targetLat, $targetLng, $targetAltitude for ${point.name}"
+//            )
+//            val placeMap = mapOf(
+//                "place_id" to point.id,
+//                "name" to point.name,
+//                "location" to mapOf(
+//                    "lat" to point.location.lat,
+//                    "lng" to point.location.lng
+//                ),
+//                "rating" to point.rating,
+//                "type" to point.type,
+//                "address" to point.address,
+//                "phone_number" to point.phoneNumber,
+//                "business_status" to point.businessStatus,
+//                "opening_hours" to point.openingHours?.let {
+//                    mapOf(
+//                        "open_now" to it.openNow,
+//                        "weekday_text" to it.weekdayText
+//                    )
+//                }
+//            )
+//
+//            val labelInfo = ARLayerManager. LayerLabelInfo(
+//                anchor,
+//                placeMap as Map<String, Any>
+//            )
+//            synchronized(GpsLabeledAnchors) {
+//                GpsLabeledAnchors.add(labelInfo)
+//            }
+//        }
+//
+//    }
+
+    private fun updateARViewWithPlaces(places: List<PointOfInterest>) {
+        Log.d("GeoAR", "updateARViewWithPlaces")
+
+        val session = activity.arCoreSessionHelper.sessionCache ?: return
+        val earth = session.earth ?: return
+
+        if (!session.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
+            Handler(Looper.getMainLooper()).post {
+                showSnackbar("Geospatial API not supported")
+            }
+            return
+        }
+
+        if (earth.trackingState != TrackingState.TRACKING) {
+            Log.d("GeoAR", "earth.trackingState != TrackingState.TRACKING")
+            return
+        }
+
+        val existingPlaceIds = layerManager.getExistingPlaceIds()
+//        val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
+
+        for (point in places) {
+            if (existingPlaceIds.contains(point.id)) continue
+
+            val cameraPose = earth.cameraGeospatialPose
+            val targetAltitude = cameraPose.altitude - 0.5
+            val targetLat = point.location.lat
+            val targetLng = point.location.lng
+            val headingToPoint = computeBearing(
+                cameraPose.latitude,
+                cameraPose.longitude,
+                targetLat,
+                targetLng
+            )
+            val correctedHeading = (headingToPoint + 180) % 360
+            val headingQuaternion = calculateHeadingQuaternion(correctedHeading)
+
+            val anchor = earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
+            Log.d(
+                "GeoAR",
+                "Created Anchor at $targetLat, $targetLng, $targetAltitude for ${point.name}"
+            )
+
+            val placeMap = mapOf(
+                "place_id" to point.id,
+                "name" to point.name,
+                "location" to mapOf(
+                    "lat" to point.location.lat,
+                    "lng" to point.location.lng
+                ),
+                "rating" to point.rating,
+                "type" to point.type,
+                "address" to point.address,
+                "phone_number" to point.phoneNumber,
+                "business_status" to point.businessStatus,
+                "opening_hours" to point.openingHours?.let {
+                    mapOf(
+                        "open_now" to it.openNow,
+                        "weekday_text" to it.weekdayText
+                    )
+                }
+            )
+
+            layerManager.addLayerLabel(anchor, placeMap)
+        }
+
+        val targetLat = 32.142791
+        val targetLng = 34.887523
+        val targetAltitude = earth.cameraGeospatialPose.altitude - 0.5
+        val headingQuaternion = floatArrayOf(0f, 0f, 0f, 1f)
+
+        val anchor =
+            earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
+        Log.d(
+            "GeoAR",
+            "Created Anchor at $targetLat, $targetLng, $targetAltitude for im here"
+        )
+        val placeMap = mapOf(
+            "place_id" to "111",
+            "name" to "here",
+            "location" to mapOf(
+                "lat" to targetLat,
+                "lng" to targetLng
+            ),
+            "rating" to 4.5,
+            "type" to "hotel",
+            "address" to "aalalalala",
+            "phone_number" to "0524528745",
+            "business_status" to "open",
+            "opening_hours" to {
+                mapOf(
+                    "open_now" to true,
+                    "weekday_text" to "fwfw"
+                )
+            }
+        )
+        layerManager.addLayerLabel(anchor, placeMap)
+    }
+
+
+    private fun calculateHeadingQuaternion(heading: Double): FloatArray {
+        val headingRadians = Math.toRadians(heading)
+
+        return floatArrayOf(
+            0f,
+            kotlin.math.sin(headingRadians.toFloat() / 2),
+            0f,
+            kotlin.math.cos(headingRadians.toFloat() / 2)
+        )
+    }
+
+    private fun computeBearing(
+        fromLat: Double, fromLng: Double,
+        toLat: Double, toLng: Double
+    ): Double {
+        val fromLatRad = Math.toRadians(fromLat)
+        val fromLngRad = Math.toRadians(fromLng)
+        val toLatRad = Math.toRadians(toLat)
+        val toLngRad = Math.toRadians(toLng)
+
+        val dLng = toLngRad - fromLngRad
+        val y = Math.sin(dLng) * Math.cos(toLatRad)
+        val x = Math.cos(fromLatRad) * Math.sin(toLatRad) -
+                Math.sin(fromLatRad) * Math.cos(toLatRad) * Math.cos(dLng)
+
+        return (Math.toDegrees(Math.atan2(y, x)) + 360.0) % 360.0
     }
 
     private fun createSiteHistoryForDetectedObject(

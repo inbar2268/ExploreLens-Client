@@ -1,8 +1,8 @@
 package com.example.explorelens.ar.render
 
 import android.content.Context
-import android.opengl.GLES30
 import android.util.Log
+import com.example.explorelens.ar.render.LabelRender.Companion
 import com.example.explorelens.common.samplerender.Mesh
 import com.example.explorelens.common.samplerender.SampleRender
 import com.example.explorelens.common.samplerender.Shader
@@ -10,7 +10,6 @@ import com.example.explorelens.common.samplerender.VertexBuffer
 import com.google.ar.core.Pose
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.FloatBuffer
 
 /**
  * Renderer for layer labels that manages drawing them in 3D space.
@@ -18,6 +17,35 @@ import java.nio.FloatBuffer
 class LayerLabelRenderer {
     companion object {
         private const val TAG = "LayerLabelRenderer"
+        private val COORDS_BUFFER_SIZE = 2 * 4 * 4
+
+        // Default quad coordinates - these will be scaled in the vertex shader (similar to LabelRender)
+        private val NDC_QUAD_COORDS_BUFFER = ByteBuffer.allocateDirect(COORDS_BUFFER_SIZE)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer().apply {
+                put(floatArrayOf(
+                    -1.0f, -0.6f, // Bottom left
+                    1.0f, -0.6f,  // Bottom right
+                    -1.0f, 0.6f,  // Top left
+                    1.0f, 0.6f,   // Top right
+                ))
+                position(0)
+            }
+
+        private val SQUARE_TEX_COORDS_BUFFER = ByteBuffer.allocateDirect(COORDS_BUFFER_SIZE)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer().apply {
+                put(floatArrayOf(
+                    0f, 0f,
+                    1f, 0f,
+                    0f, 1f,
+                    1f, 1f,
+                ))
+                position(0)
+            }
+
+        // Default size of the label in screen space (can be adjusted)
+        private const val DEFAULT_SCREEN_SIZE = 0.15f
     }
 
     private lateinit var context: Context
@@ -25,32 +53,8 @@ class LayerLabelRenderer {
     private lateinit var mesh: Mesh
     private lateinit var shader: Shader
 
-    // Constants for vertex buffer setup
-    private val COORDS_BUFFER_SIZE = 2 * 4 * 4
-
-    // Updated buffer with adjusted ratio for narrower label width
-    private val NDC_QUAD_COORDS_BUFFER = ByteBuffer.allocateDirect(COORDS_BUFFER_SIZE)
-        .order(ByteOrder.nativeOrder())
-        .asFloatBuffer().apply {
-            put(floatArrayOf(
-                -2.0f, -1.5f, // Bottom left - adjusted for narrower width
-                2.0f, -1.5f,  // Bottom right
-                -2.0f, 1.5f,  // Top left
-                2.0f, 1.5f,   // Top right
-            ))
-            position(0)
-        }
-    private val SQUARE_TEX_COORDS_BUFFER = ByteBuffer.allocateDirect(COORDS_BUFFER_SIZE)
-        .order(ByteOrder.nativeOrder())
-        .asFloatBuffer().apply {
-            put(floatArrayOf(
-                0f, 0f,
-                1f, 0f,
-                0f, 1f,
-                1f, 1f,
-            ))
-            position(0)
-        }
+    // Size of label in screen space (proportion of screen height)
+    private var screenSize = DEFAULT_SCREEN_SIZE
 
     fun onSurfaceCreated(render: SampleRender, context: Context) {
         this.context = context
@@ -58,13 +62,8 @@ class LayerLabelRenderer {
         // Initialize the cache
         cache = LayerLabelTextureCache(context)
 
-        // Create shader with proper blending
-        shader = Shader.createFromAssets(
-            render,
-            "shaders/layer_label.vert",
-            "shaders/layer_label.frag",
-            null
-        )
+        // Create shader with proper blending - using billboard shader like LabelRender
+        shader = Shader.createFromAssets(render, "shaders/billboard_label.vert", "shaders/label.frag", null)
             .setBlend(
                 Shader.BlendFactor.SRC_ALPHA,
                 Shader.BlendFactor.ONE_MINUS_SRC_ALPHA
@@ -72,20 +71,15 @@ class LayerLabelRenderer {
             .setDepthTest(false)
             .setDepthWrite(false)
 
-        // Default color for the texture
+        // Default pure white color for the texture (1.0 alpha for full opacity)
         shader.setVec4("fragColor", floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f))
 
         // Create mesh from vertex buffers
         val vertexBuffers = arrayOf(
-            VertexBuffer(render, 2, NDC_QUAD_COORDS_BUFFER),
-            VertexBuffer(render, 2, SQUARE_TEX_COORDS_BUFFER),
+            VertexBuffer(render, 2, LabelRender.NDC_QUAD_COORDS_BUFFER),
+            VertexBuffer(render, 2, LabelRender.SQUARE_TEX_COORDS_BUFFER),
         )
-        mesh = Mesh(
-            render,
-            Mesh.PrimitiveMode.TRIANGLE_STRIP,
-            null,
-            vertexBuffers
-        )
+        mesh = Mesh(render, Mesh.PrimitiveMode.TRIANGLE_STRIP, null, vertexBuffers)
     }
 
     // Position for the label
@@ -97,26 +91,32 @@ class LayerLabelRenderer {
         viewProjectionMatrix: FloatArray,
         pose: Pose,
         cameraPose: Pose,
-        placeInfo: Map<String, Any>
+        placeInfo: Map<String, Any?>
     ) {
         Log.d(TAG, "Drawing layer label for: ${placeInfo["name"]}")
 
         // Set the label origin from the pose
         // Position slightly higher for this label style
         labelOrigin[0] = pose.tx()
-        labelOrigin[1] = pose.ty() + 0.2f // Higher position
+        labelOrigin[1] = pose.ty() + 0.1f  // Offset upward slightly like LabelRender
         labelOrigin[2] = pose.tz()
 
-        // Set shader uniforms
+        // Set shader uniforms - similar to LabelRender
         shader
             .setMat4("u_ViewProjection", viewProjectionMatrix)
             .setVec3("u_LabelOrigin", labelOrigin)
             .setVec3("u_CameraPos", cameraPose.translation)
             .setTexture("uTexture", cache.get(render, placeInfo))
+            .setFloat("u_ScreenSize", screenSize) // Added screen size uniform
 
         // Draw the mesh
         render.draw(mesh, shader)
 
         Log.d(TAG, "Draw completed for layer label: ${placeInfo["name"]}")
+    }
+
+    // Method to set the screen size (as a proportion of screen height)
+    fun setScreenSize(size: Float) {
+        screenSize = size
     }
 }

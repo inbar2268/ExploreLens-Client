@@ -226,7 +226,7 @@ class ArActivityView(
       Log.d(TAG, "Selected Filters (on Apply): $selectedFilters")
 
       // Apply filters to renderer
-      //renderer.applyFilters(selectedFilters)
+      renderer.getNearbyPlacesForAR(selectedFilters.toList())
 
       Toast.makeText(activity,
         "Filters Applied: ${selectedFilters.joinToString(", ")}",

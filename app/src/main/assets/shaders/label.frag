@@ -1,24 +1,33 @@
 #version 300 es
+/*
+ * Copyright 2020 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 precision mediump float;
 
-in vec2 vTexPos;  // Texture coordinates passed from the vertex shader
-uniform sampler2D uTexture;  // Texture sampler
-uniform vec4 fragColor;  // Color for the fragment (for background or effects)
+in vec2 v_TexCoord;
+out vec4 o_FragColor;
 
-layout(location = 0) out vec4 o_FragColor;  // Output color of the fragment
+uniform sampler2D uTexture;  // Text texture
+uniform vec4 fragColor;      // Color to apply to the texture
 
-void main(void) {
-    // Sample the texture using the texture coordinates (flipping Y-axis)
-    vec4 texColor = texture(uTexture, vec2(vTexPos.x, 1.0 - vTexPos.y));
+void main() {
+    // Sample the texture at the given texture coordinates
+    vec4 texColor = texture(uTexture, v_TexCoord);
 
-    // Only output pixels where there's something in the texture (alpha > 0)
-    // This preserves transparency from the texture
-    if (texColor.a < 0.01) {
-        discard;  // Discard fully transparent pixels
-    }
-
-    // Multiply the texture color with the uniform color
-    // This allows controlling the overall opacity via fragColor
+    // Apply the fragment color to the texture
+    // This allows tinting the texture while preserving its alpha channel
     o_FragColor = texColor * fragColor;
 }

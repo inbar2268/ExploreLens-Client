@@ -7,7 +7,6 @@ import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
@@ -116,7 +115,7 @@ class LayerLabelTextureCache(private val context: Context) {
      * Get a texture for a given place info. If that info hasn't been used yet, create a texture for it
      * and cache the result.
      */
-    fun get(render: SampleRender, placeInfo: Map<String, Any>): Texture {
+    fun get(render: SampleRender, placeInfo: Map<String, Any?>): Texture {
         // Create a unique key based on the place info
         val key = "place_${placeInfo["place_id"]}"
 
@@ -125,7 +124,7 @@ class LayerLabelTextureCache(private val context: Context) {
         }
     }
 
-    private fun generateTexture(render: SampleRender, placeInfo: Map<String, Any>): Texture {
+    private fun generateTexture(render: SampleRender, placeInfo: Map<String, Any?>): Texture {
         val texture = Texture(render, Texture.Target.TEXTURE_2D, Texture.WrapMode.CLAMP_TO_EDGE)
 
         val bitmap = generateBitmapFromPlaceInfo(placeInfo)
@@ -206,7 +205,7 @@ class LayerLabelTextureCache(private val context: Context) {
         isAntiAlias = true
     }
 
-    private fun generateBitmapFromPlaceInfo(placeInfo: Map<String, Any>): Bitmap {
+    private fun generateBitmapFromPlaceInfo(placeInfo: Map<String, Any?>): Bitmap {
         Log.d(TAG, "Generating frosted label for: ${placeInfo["name"]}")
 
         // Extract data from place info
