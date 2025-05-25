@@ -295,6 +295,7 @@ class ArActivityView(
     intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
     intent.putExtra("RETURNED_FROM_AR", true)
     activity.startActivity(intent)
+    activity.finish()
   }
 
   /**

@@ -536,6 +536,7 @@ class AppRenderer(
         var path: String? = null;
         try {
             frame.tryAcquireCameraImage()?.use { cameraImage ->
+
                 val cameraId = session.cameraConfig.cameraId
                 val imageRotation = displayRotationHelper.getCameraSensorToDisplayRotation(cameraId)
                 val convertYuv = convertYuv(context, cameraImage)
@@ -590,6 +591,7 @@ class AppRenderer(
         )
         return snapshot
     }
+
 
     fun Frame.tryAcquireCameraImage() = try {
         acquireCameraImage()

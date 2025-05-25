@@ -29,6 +29,7 @@ import com.google.ar.core.CameraConfig
 import com.google.ar.core.CameraConfigFilter
 import com.google.ar.core.Config
 import com.google.ar.core.exceptions.*
+import java.util.EnumSet
 
 /**
  * Main AR activity that handles camera preview, AR rendering, and location-based services
@@ -226,6 +227,7 @@ class ArActivity : AppCompatActivity() {
     Log.d(TAG, "ARCoreSessionLifecycleHelper initialized")
 
     arCoreSessionHelper.exceptionCallback = { exception ->
+
       val message = getARExceptionMessage(exception)
       Log.e(TAG, message, exception)
       ToastHelper.showShortToast(this,message)
@@ -236,7 +238,9 @@ class ArActivity : AppCompatActivity() {
 
       session.configure(
         session.config.apply {
+          updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
           focusMode = Config.FocusMode.AUTO
+          planeFindingMode = Config.PlaneFindingMode.DISABLED
           if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             depthMode = Config.DepthMode.AUTOMATIC
           }
@@ -245,6 +249,7 @@ class ArActivity : AppCompatActivity() {
 
       val filter = CameraConfigFilter(session)
         .setFacingDirection(CameraConfig.FacingDirection.BACK)
+        .setTargetFps(EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_30))
       val configs = session.getSupportedCameraConfigs(filter)
       val sort = compareByDescending<CameraConfig> { it.imageSize.width }
         .thenByDescending { it.imageSize.height }
