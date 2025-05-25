@@ -1,6 +1,7 @@
 package com.example.explorelens.ar
 
 import android.location.Location
+import android.media.Image
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -54,6 +55,13 @@ import com.example.explorelens.data.network.detectionResult.AnalyzedResultApi
 import com.example.explorelens.data.repository.DetectionResultRepository
 import com.example.explorelens.data.repository.NearbyPlacesRepository
 import com.example.explorelens.data.repository.SiteDetailsRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 class AppRenderer(
     val activity: ArActivity,
@@ -64,6 +72,14 @@ class AppRenderer(
     companion object {
         val TAG = "HelloArRenderer"
     }
+
+    private val networkScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val backgroundScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    // Caching for Location
+    private val locationCache = mutableMapOf<String, Location>()
+    private var lastLocationUpdate = 0L
+    private val LOCATION_UPDATE_INTERVAL = 30_000L // 30 seconds
 
     lateinit var view: ArActivityView
     val displayRotationHelper = DisplayRotationHelper(activity)
@@ -122,7 +138,17 @@ class AppRenderer(
     }
 
     override fun onPause(owner: LifecycleOwner) {
+        networkScope.coroutineContext.cancelChildren()
+        backgroundScope.coroutineContext.cancelChildren()
         displayRotationHelper.onPause()
+        super.onPause(owner)
+    }
+
+    override fun onDestroy(owner: LifecycleOwner) {
+        networkScope.cancel()
+        backgroundScope.cancel()
+        locationCache.clear()
+        super.onDestroy(owner)
     }
 
     fun bindView(view: ArActivityView) {
@@ -525,6 +551,7 @@ class AppRenderer(
         return session.createAnchor(anchorPose)
     }
 
+
     private fun takeSnapshot(frame: Frame, session: Session): Snapshot {
         val camera = frame.camera
         val viewMatrix = FloatArray(16)
@@ -536,15 +563,17 @@ class AppRenderer(
         var path: String? = null;
         try {
             frame.tryAcquireCameraImage()?.use { cameraImage ->
+                //backgroundScope.launch {
+                    val cameraId = session.cameraConfig.cameraId
+                    val imageRotation = displayRotationHelper.getCameraSensorToDisplayRotation(cameraId)
+                    val convertYuv = convertYuv(context, cameraImage)
+                    val rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
 
-                val cameraId = session.cameraConfig.cameraId
-                val imageRotation = displayRotationHelper.getCameraSensorToDisplayRotation(cameraId)
-                val convertYuv = convertYuv(context, cameraImage)
-                val rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
+                    val file =
+                        rotatedImage.toFile(context, "snapshot")
 
-                val file = rotatedImage.toFile(context, "snapshot")
-                path = file.absolutePath
-
+                    path = file.absolutePath
+                //}
             }
         } catch (e: NotYetAvailableException) {
             Log.e("takeSnapshot", "No image available yet")
@@ -564,18 +593,20 @@ class AppRenderer(
                         y = 0.5f,
                         siteName = "Colosseum"
                     ),
-                    siteInfoId = "68265e0d600fc819f657deb7",
+                    siteInfoId = "6818fd47b249f52360e546ec",
                 )
 
             launch(Dispatchers.Main) {
-                sleep(2000)
+                delay(2000)
                 serverResult = mockResults
                 view.setScanningActive(false)
             }
         } else {
-            path?.let {
-                Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
-                getAnalyzedResult(it)
+            networkScope.launch {
+                path?.let {
+                    Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
+                    getAnalyzedResult(path!!)
+                }
             }
             launch(Dispatchers.Main) {
                 view.setScanningActive(false)
@@ -825,19 +856,39 @@ class AppRenderer(
         siteId: String
     ) {
         Log.d(TAG, "Fetching site details for ID: $siteId")
-        val context = activity.applicationContext
-        val repository = SiteDetailsRepository(context)
-
-        // Use the callback-based method instead of the suspend method
-        repository.fetchSiteDetails(
-            siteId = siteId,
-            onSuccess = { siteInfo ->
-                updateAnchorWithDetails(anchor, siteName, siteInfo, siteId)
-            },
-            onError = {
-                Log.e(TAG, "Failed to fetch site details")
+        networkScope.launch {
+            val context = activity.applicationContext
+            val repository = SiteDetailsRepository(context)
+            try {
+                val siteInfo: SiteDetails? = suspendCancellableCoroutine { continuation ->
+                    repository.fetchSiteDetails(
+                        siteId = siteId,
+                        onSuccess = { fetchedSiteInfo ->
+                            // When the success callback fires, resume the coroutine with the result
+                            Log.d(TAG, "Repository fetch successful for $siteId")
+                            continuation.resume(fetchedSiteInfo)
+                        },
+                        onError = {
+                            Log.e(TAG, "Repository fetch failed for $siteId")
+                            continuation.resume(null)
+                        }
+                    )
+                }
+                withContext(Dispatchers.Main) {
+                    if (siteInfo != null) {
+                        Log.d(TAG, "Updating UI with site details for $siteId")
+                        updateAnchorWithDetails(anchor, siteName, siteInfo, siteId)
+                    } else {
+                        Log.e(TAG, "No site details received for $siteId (either fetch failed or was null).")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching site details for $siteId: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                }
             }
-        )
+        }
+
     }
 
     private fun isValidSiteData(siteInfo: SiteInformation?, siteId: String?): Boolean {
@@ -1015,17 +1066,36 @@ class AppRenderer(
         }
     }
 
+    private fun getLocationOptimized(): Location? {
+        val currentTime = System.currentTimeMillis()
+
+        if (currentTime - lastLocationUpdate < LOCATION_UPDATE_INTERVAL) {
+            return locationCache["current"]
+        }
+        networkScope.launch {
+            try {
+                val location = geoLocationUtils.getSingleCurrentLocation() // This should be a suspend function or return a Deferred
+                location?.let {
+                    locationCache["current"] = it // Update cache
+                    lastLocationUpdate = currentTime
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Location update failed", e)
+                locationCache.remove("current")
+            }
+        }
+
+        return locationCache["current"] // Can return null if no location is in cache
+    }
+
     private fun createSiteHistoryForDetectedObject(
         result: ImageAnalyzedResult,
         location: Location?
     ) {
-        launch {
-            val currentLocation = geoLocationUtils.getSingleCurrentLocation()
-                ?: return@launch
-
+        networkScope.launch { // Or
+            val currentLocation = getLocationOptimized() ?: return@launch
             geoLocationUtils.updateLocation(currentLocation)
             val geoHash = geoLocationUtils.getGeoHash() ?: ""
-
             siteHistoryViewModel.createSiteHistory(
                 siteInfoId = result.siteInfoId,
                 currentLocation

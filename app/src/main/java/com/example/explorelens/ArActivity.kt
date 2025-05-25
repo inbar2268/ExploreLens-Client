@@ -240,7 +240,7 @@ class ArActivity : AppCompatActivity() {
         session.config.apply {
           updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
           focusMode = Config.FocusMode.AUTO
-          planeFindingMode = Config.PlaneFindingMode.DISABLED
+          //planeFindingMode = Config.PlaneFindingMode.DISABLED
           if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             depthMode = Config.DepthMode.AUTOMATIC
           }
