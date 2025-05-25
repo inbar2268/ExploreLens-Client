@@ -148,18 +148,15 @@ class AppRenderer(
         networkScope.cancel()
         backgroundScope.cancel()
         locationCache.clear()
+        synchronized(arLabeledAnchors) {
+            arLabeledAnchors.forEach { it.anchor.detach() }
+            arLabeledAnchors.clear()
+        }
         super.onDestroy(owner)
     }
 
     fun bindView(view: ArActivityView) {
         this.view = view
-
-
-//        view.snapshotButton.setOnClickListener {
-//            scanButtonWasPressed = true
-//            view.setScanningActive(true)
-//            hideSnackbar()
-//        }
 
         view.binding.cameraButtonContainer.setOnTouchListener { _, event ->
             scanButtonWasPressed = true
@@ -216,7 +213,7 @@ class AppRenderer(
         camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
         Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
 
-        if (scanButtonWasPressed) {
+            if (scanButtonWasPressed) {
             if (camera.trackingState != TrackingState.TRACKING) {
                 view.post {
                     view.setScanningActive(false)
@@ -246,10 +243,13 @@ class AppRenderer(
                 pendingTouchY = null
             }
         }
+
         processObjectResults(frame, session)
         drawAnchors(render, frame)
+
         layerManager.drawLayerLabels(render, viewProjectionMatrix, camera.pose, frame)
     }
+
 
     private fun drawAnchors(render: SampleRender, frame: Frame) {
         synchronized(arLabeledAnchors) {
@@ -564,22 +564,23 @@ class AppRenderer(
         camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
         val context = activity.applicationContext
         var path: String? = null;
-        try {
-            frame.tryAcquireCameraImage()?.use { cameraImage ->
-                //backgroundScope.launch {
+        backgroundScope.launch {
+            try {
+                frame.tryAcquireCameraImage()?.use { cameraImage ->
                     val cameraId = session.cameraConfig.cameraId
                     val imageRotation = displayRotationHelper.getCameraSensorToDisplayRotation(cameraId)
                     val convertYuv = convertYuv(context, cameraImage)
                     val rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
-
-                    val file =
+                    convertYuv.recycle()
+                    val file = withContext(Dispatchers.IO) {
                         rotatedImage.toFile(context, "snapshot")
-
+                    }
+                    rotatedImage.recycle()
                     path = file.absolutePath
-                //}
+                }
+            } catch (e: NotYetAvailableException) {
+                Log.e("takeSnapshot", "No image available yet")
             }
-        } catch (e: NotYetAvailableException) {
-            Log.e("takeSnapshot", "No image available yet")
         }
 
         if (BuildConfig.USE_MOCK_DATA) {
