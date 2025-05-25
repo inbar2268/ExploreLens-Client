@@ -237,18 +237,17 @@ class AppRenderer(
                 pendingPlaces = null
             }
         } else {
-            Log.d(
-                "updateARViewWithPlaces",
-                "${shouldPlaceGeoAnchors} && ${earth} ${earth?.trackingState}"
-            )
-            Log.d("GeoAR1", "arthState: ${earth?.earthState}")
-            Log.d(
-                "GeoAR1",
-                "Horizontal accuracy: ${earth?.cameraGeospatialPose?.horizontalAccuracy}"
-            )
-            Log.d("GeoAR1", "Altitude accuracy: ${earth?.cameraGeospatialPose?.verticalAccuracy}")
-            Log.d("GeoAR1", "Heading accuracy: ${earth?.cameraGeospatialPose?.headingAccuracy}")
-
+//            Log.d(
+//                "updateARViewWithPlaces",
+//                "${shouldPlaceGeoAnchors} && ${earth} ${earth?.trackingState}"
+//            )
+//            Log.d("GeoAR1", "arthState: ${earth?.earthState}")
+//            Log.d(
+//                "GeoAR1",
+//                "Horizontal accuracy: ${earth?.cameraGeospatialPose?.horizontalAccuracy}"
+//            )
+//            Log.d("GeoAR1", "Altitude accuracy: ${earth?.cameraGeospatialPose?.verticalAccuracy}")
+//            Log.d("GeoAR1", "Heading accuracy: ${earth?.cameraGeospatialPose?.headingAccuracy}")
         }
         layerManager.drawLayerLabels(render, viewProjectionMatrix, camera.pose, frame)
 
@@ -999,7 +998,7 @@ class AppRenderer(
 
             withContext(Dispatchers.Main) {
                 result.onSuccess { places ->
-                    Log.d("NearbyPlaces", "Received ${places.size} places")
+                    Log.d("NearbyPlaces", "Received ${places} places")
                     showSnackbar("Received ${places.size} places")
                     pendingPlaces = places
                     shouldPlaceGeoAnchors = true

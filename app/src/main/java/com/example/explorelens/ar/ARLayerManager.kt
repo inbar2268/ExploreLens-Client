@@ -6,7 +6,6 @@ import com.example.explorelens.ar.render.LayerLabelRenderer
 import com.example.explorelens.common.samplerender.SampleRender
 import com.google.ar.core.Frame
 import com.google.ar.core.Pose
-import com.google.ar.core.TrackingState
 import com.google.ar.core.Anchor
 import com.google.ar.core.Session
 import java.util.concurrent.CopyOnWriteArrayList
@@ -77,7 +76,7 @@ class ARLayerManager(private val context: Context) {
         cameraPose: Pose,
         frame: Frame
     ) {
-        val MAX_RENDER_DISTANCE = 200f
+        val MAX_RENDER_DISTANCE = 500f
         val MAX_LABELS = 20
         var drawnCount = 0
 

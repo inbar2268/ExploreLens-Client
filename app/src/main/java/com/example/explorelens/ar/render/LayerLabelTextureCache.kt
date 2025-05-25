@@ -31,7 +31,7 @@ class LayerLabelTextureCache(private val context: Context) {
 
     private val robotoRegular: Typeface? by lazy {
         try {
-            Typeface.createFromAsset(context.assets, "fonts/Roboto-Regular.ttf")
+            Typeface.createFromAsset(context.assets, "fonts/Montserrat-SemiBoldItalic.ttf")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load Roboto-Regular.ttf", e)
             null
@@ -40,7 +40,7 @@ class LayerLabelTextureCache(private val context: Context) {
 
     private val robotoBold: Typeface? by lazy {
         try {
-            Typeface.createFromAsset(context.assets, "fonts/Roboto-Bold.ttf")
+            Typeface.createFromAsset(context.assets, "fonts/Montserrat-SemiBoldItalic.ttf")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load Roboto-Bold.ttf", e)
             null
