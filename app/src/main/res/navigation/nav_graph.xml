@@ -61,6 +61,18 @@
         <action
             android:id="@+id/action_settingsFragment_to_profileFragment"
             app:destination="@+id/profileFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_editProfileFragment"
+            app:destination="@+id/editProfileFragment" />
+    </fragment>
+
+    <fragment android:id="@+id/editProfileFragment"
+        android:name="com.example.explorelens.ui.user.EditProfileFragment"
+        android:label="settings"
+        tools:layout="@layout/fragment_edit_profile">
+        <action
+            android:id="@+id/action_editProfileFragment_to_settingsFragment"
+            app:destination="@+id/settingsFragment" />
     </fragment>
 
     <fragment

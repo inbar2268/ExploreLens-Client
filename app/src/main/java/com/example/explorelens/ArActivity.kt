@@ -29,6 +29,7 @@ import com.google.ar.core.CameraConfig
 import com.google.ar.core.CameraConfigFilter
 import com.google.ar.core.Config
 import com.google.ar.core.exceptions.*
+import java.util.EnumSet
 
 /**
  * Main AR activity that handles camera preview, AR rendering, and location-based services
@@ -235,13 +236,13 @@ class ArActivity : AppCompatActivity() {
             Log.e(TAG, message, exception)
             ToastHelper.showShortToast(this, message)
         }
-
         arCoreSessionHelper.beforeSessionResume = { session ->
             Log.d(TAG, "beforeSessionResume called")
 
             session.configure(
                 session.config.apply {
                     focusMode = Config.FocusMode.AUTO
+                    updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
                     if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
                         depthMode = Config.DepthMode.AUTOMATIC
                     }
@@ -255,6 +256,7 @@ class ArActivity : AppCompatActivity() {
 
             val filter = CameraConfigFilter(session)
                 .setFacingDirection(CameraConfig.FacingDirection.BACK)
+                .setTargetFps(EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_30))
             val configs = session.getSupportedCameraConfigs(filter)
             val sort = compareByDescending<CameraConfig> { it.imageSize.width }
                 .thenByDescending { it.imageSize.height }
@@ -268,7 +270,6 @@ class ArActivity : AppCompatActivity() {
         return when (exception) {
             is UnavailableArcoreNotInstalledException,
             is UnavailableUserDeclinedInstallationException -> "Please install ARCore"
-
             is UnavailableApkTooOldException -> "Please update ARCore"
             is UnavailableSdkTooOldException -> "Please update this app"
             is UnavailableDeviceNotCompatibleException -> "This device does not support AR"

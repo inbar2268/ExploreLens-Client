@@ -5,7 +5,9 @@ import androidx.lifecycle.*
 import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.repository.SiteHistoryRepository
 import com.example.explorelens.utils.GeoLocationUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SiteHistoryViewModel(
     private val repository: SiteHistoryRepository,
@@ -40,11 +42,13 @@ class SiteHistoryViewModel(
     // Create site history entry
     fun createSiteHistory(siteInfoId: String, location: Location?) {
         viewModelScope.launch {
-            // Use the GeoLocationUtils instance to get the geoHash
-            val geoHash = geoLocationUtils.getGeoHash() ?: ""
-            val latitude = location?.latitude ?: 0.0
-            val longitude = location?.longitude ?: 0.0
-            repository.createSiteHistory(siteInfoId, geoHash, latitude, longitude)
+            withContext(Dispatchers.IO) {
+                // Use the GeoLocationUtils instance to get the geoHash
+                val geoHash = geoLocationUtils.getGeoHash() ?: ""
+                val latitude = location?.latitude ?: 0.0
+                val longitude = location?.longitude ?: 0.0
+                repository.createSiteHistory(siteInfoId, geoHash, latitude, longitude)
+            }
         }
     }
 
