@@ -135,23 +135,49 @@
                         android:layout_height="0dp"
                         android:layout_weight="1" />
 
-                    <!-- TTS Control Container -->
+                    <!-- Enhanced TTS Control Container -->
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <!-- Play/Stop Button -->
+                        <!-- Play/Pause Button -->
                         <ImageButton
                             android:id="@+id/playStopButton"
                             android:layout_width="40dp"
                             android:layout_height="40dp"
-                            android:layout_marginEnd="8dp"
+                            android:layout_marginEnd="4dp"
                             android:background="@drawable/rounded_button_background"
                             android:contentDescription="Play description"
                             android:src="@drawable/ic_play"
                             android:scaleType="centerInside"
+                            app:tint="@color/black" />
+
+                        <!-- Stop Button -->
+                        <ImageButton
+                            android:id="@+id/stopButton"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginEnd="4dp"
+                            android:background="@drawable/rounded_button_background"
+                            android:contentDescription="Stop reading"
+                            android:src="@drawable/ic_stop"
+                            android:scaleType="centerInside"
+                            android:visibility="gone"
+                            app:tint="@color/black" />
+
+                        <!-- Restart Button -->
+                        <ImageButton
+                            android:id="@+id/restartButton"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="@drawable/rounded_button_background"
+                            android:contentDescription="Restart reading"
+                            android:src="@drawable/ic_replay"
+                            android:scaleType="centerInside"
+                            android:visibility="gone"
                             app:tint="@color/black" />
 
                         <!-- Comments Button -->
