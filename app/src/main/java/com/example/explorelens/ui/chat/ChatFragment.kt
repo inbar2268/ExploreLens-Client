@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -35,6 +36,10 @@ class ChatFragment : Fragment() {
     private val chatHistory = mutableListOf<ChatCompletionRequest.Message>()
 
     private var siteName: String? = null
+
+    // Keyboard detection variables
+    private var bottomNavigationView: BottomNavigationView? = null
+    private var keyboardListener: ViewTreeObserver.OnGlobalLayoutListener? = null
 
     private val defaultWelcomeMessage = "Welcome to HistoryGuide! I can provide information about historical sites and monuments. What would you like to know about?"
     private val siteSpecificWelcomeMessage = "Welcome to HistoryGuide! I'm your virtual guide for %s. What would you like to know about this historical site?"
@@ -86,8 +91,8 @@ class ChatFragment : Fragment() {
             binding.titleText.text = "Chat"
         }
 
-        // Keep bottom navigation visible but ensure our input is above it
-        adjustInputForBottomNavigation()
+        // Setup keyboard detection and bottom navigation handling
+        setupKeyboardDetection()
 
         setupRecyclerView()
         setupClickListeners()
@@ -100,15 +105,27 @@ class ChatFragment : Fragment() {
         }
     }
 
-    private fun adjustInputForBottomNavigation() {
+    private fun setupKeyboardDetection() {
         // Find the bottom navigation view
-        val bottomNav = activity?.findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        bottomNavigationView = activity?.findViewById<BottomNavigationView>(R.id.bottom_navigation)
 
-        // Make sure navigation stays visible
-        bottomNav?.visibility = View.VISIBLE
+        // Create keyboard detection listener
+        keyboardListener = ViewTreeObserver.OnGlobalLayoutListener {
+            val rootView = binding.root
+            val heightDiff = rootView.rootView.height - rootView.height
 
-        // Make sure navigation is below our input by setting a higher elevation on input
-        binding.inputContainer.elevation = 10f
+            // If height difference is more than 200 pixels, we assume keyboard is shown
+            if (heightDiff > 200) {
+                // Keyboard is shown - hide bottom navigation
+                bottomNavigationView?.visibility = View.GONE
+            } else {
+                // Keyboard is hidden - show bottom navigation
+                bottomNavigationView?.visibility = View.VISIBLE
+            }
+        }
+
+        // Add the listener
+        binding.root.viewTreeObserver.addOnGlobalLayoutListener(keyboardListener)
     }
 
     private fun loadUserDataAndShowWelcome() {
@@ -217,8 +234,8 @@ class ChatFragment : Fragment() {
 
     private fun setupClickListeners() {
         binding.backButton.setOnClickListener {
-            // Use requireActivity().onBackPressed() for older versions of Android
-            // or navigation for newer versions based on your app's setup
+            // Ensure bottom navigation is visible when going back
+            bottomNavigationView?.visibility = View.VISIBLE
             requireActivity().onBackPressed()
         }
 
@@ -384,6 +401,15 @@ class ChatFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+
+        // Remove the keyboard listener to prevent memory leaks
+        keyboardListener?.let {
+            binding.root.viewTreeObserver.removeOnGlobalLayoutListener(it)
+        }
+
+        // Ensure bottom navigation is visible when leaving the fragment
+        bottomNavigationView?.visibility = View.VISIBLE
+
         _binding = null
     }
 
