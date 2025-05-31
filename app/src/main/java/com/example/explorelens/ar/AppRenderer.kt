@@ -47,6 +47,9 @@ import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
 import com.example.explorelens.Model
 import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
+import com.example.explorelens.ar.ArActivityView.Companion
+import com.example.explorelens.ar.render.LayerLabelRenderer
+import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
 import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import com.example.explorelens.model.ARLabeledAnchor
 import com.example.explorelens.utils.GeoLocationUtils
@@ -62,6 +65,7 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import com.google.ar.core.Config
 
 class AppRenderer(
     val activity: ArActivity,
@@ -87,6 +91,7 @@ class AppRenderer(
     val pointCloudRender = PointCloudRender()
     val labelRenderer = LabelRender()
 
+
     private val layerManager = ARLayerManager(activity)
 
     val viewMatrix = FloatArray(16)
@@ -102,33 +107,8 @@ class AppRenderer(
     private var hasLoadedAnchors = false
     private val convertFloats = FloatArray(4)
     private val convertFloatsOut = FloatArray(4)
-
-    private var mockLayerAnchor: ARLayerManager.LayerLabelInfo? = null
-    private val mockPlaceData = mapOf(
-        "place_id" to "mock-place-2",
-        "name" to "Gym Mock Place",
-        "location" to mapOf(
-            "lat" to 32.42773353018067,
-            "lng" to 34.933969622735574
-        ),
-        "rating" to 4.5,
-        "type" to "gym",
-        "address" to "123 Mock Gym St.",
-        "phone_number" to "000-000-0000",
-        "business_status" to "OPERATIONAL",
-        "opening_hours" to mapOf(
-            "open_now" to true,
-            "weekday_text" to listOf(
-                "Monday: 9:00 AM – 5:00 PM",
-                "Tuesday: 9:00 AM – 5:00 PM",
-                "Wednesday: 9:00 AM – 5:00 PM",
-                "Thursday: 9:00 AM – 5:00 PM",
-                "Friday: 9:00 AM – 5:00 PM",
-                "Saturday: 10:00 AM – 4:00 PM",
-                "Sunday: Closed"
-            )
-        )
-    )
+    private var shouldPlaceGeoAnchors = false
+    private var pendingPlaces: List<PointOfInterest>? = null
 
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
@@ -160,16 +140,29 @@ class AppRenderer(
         this.view = view
 
         view.binding.cameraButtonContainer.setOnTouchListener { _, event ->
+            // Prevent multiple simultaneous requests
+            if (!view.binding.cameraButtonContainer.isEnabled) {
+                return@setOnTouchListener false
+            }
+
             scanButtonWasPressed = true
             view.setScanningActive(true)
-            hideSnackbar()
+
+            view.binding.cameraButtonContainer.isEnabled = false
+
+            Handler(Looper.getMainLooper()).postDelayed({
+                view.binding.cameraButtonContainer.isEnabled = true
+            }, 5000)
+
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    view.binding.cameraInnerCircle.animate().scaleX(0.85f).scaleY(0.85f).setDuration(100).start()
+                    view.binding.cameraInnerCircle.animate().scaleX(0.85f).scaleY(0.85f)
+                        .setDuration(100).start()
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    view.binding.cameraInnerCircle.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+                    view.binding.cameraInnerCircle.animate().scaleX(1f).scaleY(1f).setDuration(100)
+                        .start()
                 }
             }
             false
@@ -187,15 +180,15 @@ class AppRenderer(
         labelRenderer.onSurfaceCreated(render, activity)
 
         layerManager.onSurfaceCreated(render)
-
-        getNearbyPlacesForAR(listOf("bar", "hotel"))
     }
+
     override fun onSurfaceChanged(render: SampleRender?, width: Int, height: Int) {
         displayRotationHelper.onSurfaceChanged(width, height)
     }
 
     override fun onDrawFrame(render: SampleRender) {
         val session = activity.arCoreSessionHelper.sessionCache ?: return
+        val earth = session.earth
         session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.textureId))
         displayRotationHelper.updateSessionIfNeeded(session)
         val frame = try {
@@ -248,7 +241,29 @@ class AppRenderer(
         processObjectResults(frame, session)
         drawAnchors(render, frame)
 
+
+        if (shouldPlaceGeoAnchors && earth != null && earth.trackingState == TrackingState.TRACKING) {
+            showSnackbar("updateARViewWithPlaces")
+            pendingPlaces?.let {
+                updateARViewWithPlaces(it)
+                shouldPlaceGeoAnchors = false
+                pendingPlaces = null
+            }
+        } else {
+//            Log.d(
+//                "updateARViewWithPlaces",
+//                "${shouldPlaceGeoAnchors} && ${earth} ${earth?.trackingState}"
+//            )
+//            Log.d("GeoAR1", "arthState: ${earth?.earthState}")
+//            Log.d(
+//                "GeoAR1",
+//                "Horizontal accuracy: ${earth?.cameraGeospatialPose?.horizontalAccuracy}"
+//            )
+//            Log.d("GeoAR1", "Altitude accuracy: ${earth?.cameraGeospatialPose?.verticalAccuracy}")
+//            Log.d("GeoAR1", "Heading accuracy: ${earth?.cameraGeospatialPose?.headingAccuracy}")
+        }
         layerManager.drawLayerLabels(render, viewProjectionMatrix, camera.pose, frame)
+
     }
 
 
@@ -290,7 +305,6 @@ class AppRenderer(
                 return
             }
             val anchor = fetchAndCreateAnchor(session, snapshotData, obj, frame)
-            mockLayerAnchor = createLayerLabelAnchor(session, snapshotData, obj, frame)
 
             launch {
                 val currentLocation =
@@ -395,7 +409,7 @@ class AppRenderer(
         // 6. Calculate final world position
         val worldPosition = floatArrayOf(
             snapshotPose.tx() + normalizedDirection[0] * distance,
-            snapshotPose.ty() + normalizedDirection[1] * distance, // No Y correction needed
+            snapshotPose.ty() + normalizedDirection[1] * distance,
             snapshotPose.tz() + normalizedDirection[2] * distance
         )
 
@@ -562,7 +576,8 @@ class AppRenderer(
         camera.getViewMatrix(viewMatrix, 0)
         camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
         val context = activity.applicationContext
-        var path: String? = null;
+        var path: String? = null
+
         backgroundScope.launch {
             try {
                 frame.tryAcquireCameraImage()?.use { cameraImage ->
@@ -571,33 +586,60 @@ class AppRenderer(
                     val convertYuv = convertYuv(context, cameraImage)
                     val rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
                     convertYuv.recycle()
+
                     val file = withContext(Dispatchers.IO) {
                         rotatedImage.toFile(context, "snapshot")
                     }
                     rotatedImage.recycle()
                     path = file.absolutePath
+
+                    processImageCapture(path)
+                } ?: run {
+                    Log.e("takeSnapshot", "Camera image is null")
+                    launch(Dispatchers.Main) {
+                        view.setScanningActive(false)
+                        showSnackbar("Camera image not available. Please try again.")
+                    }
                 }
             } catch (e: NotYetAvailableException) {
                 Log.e("takeSnapshot", "No image available yet")
+                launch(Dispatchers.Main) {
+                    view.setScanningActive(false)
+                    showSnackbar("Camera image not available. Please try again.")
+                }
+            } catch (e: Exception) {
+                Log.e("takeSnapshot", "Error capturing image", e)
+                launch(Dispatchers.Main) {
+                    view.setScanningActive(false)
+                    showSnackbar("Failed to capture image: ${e.message}")
+                }
             }
         }
 
+        return Snapshot(
+            timestamp = frame.timestamp,
+            cameraPose = camera.pose,
+            viewMatrix = viewMatrix,
+            projectionMatrix = projectionMatrix
+        )
+    }
+
+    private fun processImageCapture(imagePath: String?) {
         if (BuildConfig.USE_MOCK_DATA) {
-            path?.let {
+            imagePath?.let {
                 Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
             }
-            val mockResults =
-                ImageAnalyzedResult(
-                    status = "assume",
-                    description = "Famous site detected in full image.",
-                    siteInformation = SiteInformation(
-                        label = "full-image",
-                        x = 0.5f,
-                        y = 0.5f,
-                        siteName = "Colosseum"
-                    ),
-                    siteInfoId = "6818fd47b249f52360e546ec",
-                )
+            val mockResults = ImageAnalyzedResult(
+                status = "assume",
+                description = "Famous site detected in full image.",
+                siteInformation = SiteInformation(
+                    label = "full-image",
+                    x = 0.5f,
+                    y = 0.5f,
+                    siteName = "Colosseum"
+                ),
+                siteInfoId = "6818fd47b249f52360e546ec",
+            )
 
             launch(Dispatchers.Main) {
                 delay(2000)
@@ -605,27 +647,35 @@ class AppRenderer(
                 view.setScanningActive(false)
             }
         } else {
-            networkScope.launch {
-                path?.let {
-                    Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
-                    getAnalyzedResult(path!!)
+            launch(Dispatchers.Main) {
+                delay(30000)
+                if (view.binding.cameraButtonContainer.isEnabled) {
+                    view.setScanningActive(false)
+                    showSnackbar("Request timed out. Please try again.")
                 }
             }
-            launch(Dispatchers.Main) {
-                view.setScanningActive(false)
+
+            networkScope.launch {
+                try {
+                    imagePath?.let {
+                        Log.d("Snapshot", "Starting network request with path: $it")
+                        getAnalyzedResult(it)
+                    } ?: run {
+                        withContext(Dispatchers.Main) {
+                            view.setScanningActive(false)
+                            showSnackbar("Failed to capture image. Please try again.")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("takeSnapshot", "Network request failed", e)
+                    withContext(Dispatchers.Main) {
+                        view.setScanningActive(false)
+                        showSnackbar("Network error: ${e.message}")
+                    }
+                }
             }
         }
-
-
-        val snapshot = Snapshot(
-            timestamp = frame.timestamp,
-            cameraPose = camera.pose,
-            viewMatrix = viewMatrix,
-            projectionMatrix = projectionMatrix
-        )
-        return snapshot
     }
-
 
     fun Frame.tryAcquireCameraImage() = try {
         acquireCameraImage()
@@ -794,65 +844,6 @@ class AppRenderer(
         return arLabeledAnchor
     }
 
-    private fun createLayerLabelAnchor(
-        session: Session,
-        snapshotData: Snapshot,
-        obj: ImageAnalyzedResult,
-        frame: Frame
-    ): ARLayerManager.LayerLabelInfo? {
-        val siteInfo = obj.siteInformation
-        val siteId = obj.siteInfoId
-
-        if (!isValidSiteData(siteInfo, siteId)) return null
-
-        // Get the camera pose
-        val cameraPose = snapshotData.cameraPose
-
-        // First create an anchor at the same position
-        val anchor = createAnchor(session, cameraPose, siteInfo!!.x, siteInfo.y, frame)
-            ?: return null
-
-        // Get the anchor's position
-        val anchorPos = anchor.pose.translation
-
-        // Calculate the direction from camera to anchor
-        val dirX = anchorPos[0] - cameraPose.tx()
-        val dirY = anchorPos[1] - cameraPose.ty()
-        val dirZ = anchorPos[2] - cameraPose.tz()
-
-        // Normalize the direction vector
-        val length = kotlin.math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ)
-        val normDirX = dirX / length
-        val normDirY = dirY / length
-        val normDirZ = dirZ / length
-
-        // Calculate right vector (perpendicular to direction and world up)
-        val rightX = -normDirZ
-        val rightY = 0f  // Assuming Y is up in world space
-        val rightZ = normDirX
-
-        // Normalize the right vector
-        val rightLength = kotlin.math.sqrt(rightX * rightX + rightY * rightY + rightZ * rightZ)
-        val normRightX = rightX / rightLength
-        val normRightY = rightY / rightLength
-        val normRightZ = rightZ / rightLength
-
-        // Add an offset to the right (0.5 meters)
-        val offsetDistance = 0.5f
-        val offsetX = anchorPos[0] + normRightX * offsetDistance
-        val offsetY = anchorPos[1] + 0.15f  // Slightly higher
-        val offsetZ = anchorPos[2] + normRightZ * offsetDistance
-
-        // Create a new pose for the offset position
-        val offsetPose = Pose.makeTranslation(offsetX, offsetY, offsetZ)
-
-        // Create a new anchor at the offset position
-        val offsetAnchor = session.createAnchor(offsetPose)
-
-        // Create a layer label at the offset position
-        return layerManager.addLayerLabel(session, offsetAnchor, mockPlaceData)
-    }
-
     private fun fetchAndUpdateSiteDetails(
         anchor: ARLabeledAnchor,
         siteName: String,
@@ -1009,30 +1000,44 @@ class AppRenderer(
     }
 
     fun getAnalyzedResult(path: String) {
-        Log.d("AnalyzeImage", "Starting image analysis")
+        Log.d("AnalyzeImage", "Starting image analysis for path: $path")
 
-        launch(Dispatchers.IO) {
-            val repository = DetectionResultRepository()
-            val result = repository.getAnalyzedResult(path)
+        networkScope.launch {
+            try {
+                val repository = DetectionResultRepository()
+                Log.d("AnalyzeImage", "Created repository, calling getAnalyzedResult")
 
-            withContext(Dispatchers.Main) {
-                result.onSuccess { analyzedResult ->
-                    if (analyzedResult.status == "failure") {
-                        Log.d("AnalyzeImage", "No objects detected: ${analyzedResult.description}")
-                        showSnackbar("No objects detected in the image")
-                        serverResult = null
-                    } else {
-                        Log.d(
-                            "AnalyzeImage",
-                            "Site detected: ${analyzedResult.siteInformation?.siteName ?: "Unknown"}"
-                        )
-                        serverResult = analyzedResult
+                val result = repository.getAnalyzedResult(path)
+                Log.d("AnalyzeImage", "Repository call completed with result: $result")
+
+                withContext(Dispatchers.Main) {
+                    view.setScanningActive(false)
+
+                    result.onSuccess { analyzedResult ->
+                        Log.d("AnalyzeImage", "Analysis successful: ${analyzedResult.status}")
+                        if (analyzedResult.status == "failure") {
+                            Log.d("AnalyzeImage", "No objects detected: ${analyzedResult.description}")
+                            showSnackbar("No objects detected in the image")
+                            serverResult = null
+                        } else {
+                            Log.d(
+                                "AnalyzeImage",
+                                "Site detected: ${analyzedResult.siteInformation?.siteName ?: "Unknown"}"
+                            )
+                            serverResult = analyzedResult
+                        }
+                    }
+
+                    result.onFailure { error ->
+                        Log.e("AnalyzeImage", "Analysis failed: ${error.localizedMessage}")
+                        showSnackbar("Error analyzing the image: ${error.message}")
                     }
                 }
-
-                result.onFailure { error ->
-                    Log.e("AnalyzeImage", "Error analyzing image: ${error.localizedMessage}")
-                    showSnackbar("Error analyzing the image: ${error.message}")
+            } catch (e: Exception) {
+                Log.e("AnalyzeImage", "Exception in getAnalyzedResult", e)
+                withContext(Dispatchers.Main) {
+                    view.setScanningActive(false)
+                    showSnackbar("Network request failed: ${e.message}")
                 }
             }
         }
@@ -1040,10 +1045,20 @@ class AppRenderer(
 
     fun getNearbyPlacesForAR(categories: List<String>) {
         Log.d("NearbyPlaces", "Fetching nearby places for AR...")
+        Log.d("NearbyPlaces", "Selected Filters (on Apply): $categories")
 
-        launch(Dispatchers.IO) {
-            val currentLocation = geoLocationUtils.getSingleCurrentLocation()
-                ?: return@launch
+
+
+        networkScope.launch{
+            Log.d("NearbyPlaces", "Fetching inside networckScope..")
+
+
+            val currentLocation = getLocationOptimized()
+            Log.d("NearbyPlaces", "Location result: $currentLocation")
+            if (currentLocation == null) {
+                Log.e("NearbyPlaces", "Location is null! Aborting fetch.")
+                return@launch
+            }
             geoLocationUtils.updateLocation(currentLocation)
             val repository = NearbyPlacesRepository()
             val result = repository.fetchNearbyPlaces(
@@ -1052,13 +1067,15 @@ class AppRenderer(
                 categories
             )
 
+            Log.d("NearbyPlaces", result.toString())
+
             withContext(Dispatchers.Main) {
                 result.onSuccess { places ->
-                    Log.d("NearbyPlaces", "Received ${places.size} places")
+                    Log.d("NearbyPlaces", "Received ${places} places")
                     showSnackbar("Received ${places.size} places")
-                    showSnackbar("Received ${places[0].name} , ${places[1].name} places")
-                    //updating AR nearbyPlaces anchors when creates
-                    // updateARViewWithPlaces(places)
+                    pendingPlaces = places
+                    shouldPlaceGeoAnchors = true
+
                 }
 
                 result.onFailure { error ->
@@ -1069,26 +1086,91 @@ class AppRenderer(
         }
     }
 
-    private fun getLocationOptimized(): Location? {
-        val currentTime = System.currentTimeMillis()
+private suspend fun getLocationOptimized(): Location? {
+    val currentTime = System.currentTimeMillis()
 
-        if (currentTime - lastLocationUpdate < LOCATION_UPDATE_INTERVAL) {
-            return locationCache["current"]
+    if (currentTime - lastLocationUpdate < LOCATION_UPDATE_INTERVAL) {
+        return locationCache["current"]
+    }
+
+    return try {
+        val location = geoLocationUtils.getSingleCurrentLocation()
+        location?.let {
+            locationCache["current"] = it
+            lastLocationUpdate = currentTime
         }
-        networkScope.launch {
-            try {
-                val location = geoLocationUtils.getSingleCurrentLocation() // This should be a suspend function or return a Deferred
-                location?.let {
-                    locationCache["current"] = it // Update cache
-                    lastLocationUpdate = currentTime
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Location update failed", e)
-                locationCache.remove("current")
+        location
+    } catch (e: Exception) {
+        Log.e(TAG, "Location update failed", e)
+        locationCache.remove("current")
+        null
+    }
+}
+
+    private fun updateARViewWithPlaces(places: List<PointOfInterest>) {
+        Log.d("GeoAR", "updateARViewWithPlaces")
+
+        val session = activity.arCoreSessionHelper.sessionCache ?: return
+        val earth = session.earth ?: return
+
+        if (!session.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
+           Handler(Looper.getMainLooper()).post {
+                showSnackbar("Geospatial API not supported")
             }
+            return
         }
 
-        return locationCache["current"] // Can return null if no location is in cache
+        if (earth.trackingState != TrackingState.TRACKING) {
+            Log.d("GeoAR", "earth.trackingState != TrackingState.TRACKING")
+            return
+        }
+
+        val existingPlaceIds = layerManager.getExistingPlaceIds()
+
+        for (point in places) {
+            if (existingPlaceIds.contains(point.id)) continue
+
+            val cameraPose = earth.cameraGeospatialPose
+            val targetAltitude = cameraPose.altitude - 0.5
+            val targetLat = point.location.lat
+            val targetLng = point.location.lng
+            val headingToPoint = computeBearing(
+                cameraPose.latitude,
+                cameraPose.longitude,
+                targetLat,
+                targetLng
+            )
+            val correctedHeading = (headingToPoint + 180) % 360
+            val headingQuaternion = calculateHeadingQuaternion(correctedHeading)
+
+            val anchor = earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
+            Log.d(
+                "GeoAR",
+                "Created Anchor at $targetLat, $targetLng, $targetAltitude for ${point.name}"
+            )
+
+            val placeMap = mapOf(
+                "place_id" to point.id,
+                "name" to point.name,
+                "location" to mapOf(
+                    "lat" to point.location.lat,
+                    "lng" to point.location.lng
+                ),
+                "rating" to point.rating,
+                "type" to point.type,
+                "address" to point.address,
+                "phone_number" to point.phoneNumber,
+                "business_status" to point.businessStatus,
+                "opening_hours" to point.openingHours?.let {
+                    mapOf(
+                        "open_now" to it.openNow,
+                        "weekday_text" to it.weekdayText
+                    )
+                }
+            )
+
+            layerManager.addLayerLabel(anchor, placeMap)
+        }
     }
 
     private fun createSiteHistoryForDetectedObject(

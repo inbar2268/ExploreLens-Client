@@ -3,7 +3,7 @@
 layout(location = 0) in vec2 aPosition;
 layout(location = 1) in vec2 aTexPos;
 
-out vec2 vTexPos;
+out vec2 v_TexCoord; // <--- Changed from vTexPos to v_TexCoord
 
 uniform mat4 u_ViewProjection;
 uniform vec3 u_CameraPos;
@@ -11,7 +11,7 @@ uniform vec3 u_LabelOrigin;
 
 void main() {
     // Pass the texture coordinates to the fragment shader
-    vTexPos = aTexPos;
+    v_TexCoord = aTexPos; // <--- Changed from vTexPos to v_TexCoord
 
     // Calculate the camera-facing direction
     vec3 cameraDirection = normalize(u_CameraPos - u_LabelOrigin);

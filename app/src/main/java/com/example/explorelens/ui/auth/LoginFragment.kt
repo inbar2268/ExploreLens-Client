@@ -40,6 +40,7 @@ class LoginFragment : Fragment() {
     ) { result ->
         Log.d(TAG, "Google Sign-In result received. Code: ${result.resultCode}")
         if (result.resultCode == Activity.RESULT_OK) {
+            Log.d(TAG, "Result OK, intent data: ${result.data}")
             Log.d(TAG, "Result OK, handling sign-in result...")
             googleSignInHelper.processSignInResult(
                 result.data,
