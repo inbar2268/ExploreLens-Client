@@ -47,6 +47,7 @@ import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
 import com.example.explorelens.Model
 import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
+import com.example.explorelens.ar.ArActivityView.Companion
 import com.example.explorelens.ar.render.LayerLabelRenderer
 import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
 import com.example.explorelens.data.model.SiteDetails.SiteDetails
@@ -1044,9 +1045,20 @@ class AppRenderer(
 
     fun getNearbyPlacesForAR(categories: List<String>) {
         Log.d("NearbyPlaces", "Fetching nearby places for AR...")
+        Log.d("NearbyPlaces", "Selected Filters (on Apply): $categories")
+
+
 
         networkScope.launch{
-            val currentLocation = getLocationOptimized() ?: return@launch
+            Log.d("NearbyPlaces", "Fetching inside networckScope..")
+
+
+            val currentLocation = getLocationOptimized()
+            Log.d("NearbyPlaces", "Location result: $currentLocation")
+            if (currentLocation == null) {
+                Log.e("NearbyPlaces", "Location is null! Aborting fetch.")
+                return@launch
+            }
             geoLocationUtils.updateLocation(currentLocation)
             val repository = NearbyPlacesRepository()
             val result = repository.fetchNearbyPlaces(
@@ -1058,7 +1070,6 @@ class AppRenderer(
             Log.d("NearbyPlaces", result.toString())
 
             withContext(Dispatchers.Main) {
-//                shouldPlaceGeoAnchors = true
                 result.onSuccess { places ->
                     Log.d("NearbyPlaces", "Received ${places} places")
                     showSnackbar("Received ${places.size} places")
@@ -1075,28 +1086,26 @@ class AppRenderer(
         }
     }
 
-    private fun getLocationOptimized(): Location? {
-        val currentTime = System.currentTimeMillis()
+private suspend fun getLocationOptimized(): Location? {
+    val currentTime = System.currentTimeMillis()
 
-        if (currentTime - lastLocationUpdate < LOCATION_UPDATE_INTERVAL) {
-            return locationCache["current"]
-        }
-        networkScope.launch {
-            try {
-                val location = geoLocationUtils.getSingleCurrentLocation() // This should be a suspend function or return a Deferred
-                location?.let {
-                    locationCache["current"] = it // Update cache
-                    lastLocationUpdate = currentTime
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Location update failed", e)
-                locationCache.remove("current")
-            }
-        }
-
-        return locationCache["current"] // Can return null if no location is in cache
-      
+    if (currentTime - lastLocationUpdate < LOCATION_UPDATE_INTERVAL) {
+        return locationCache["current"]
     }
+
+    return try {
+        val location = geoLocationUtils.getSingleCurrentLocation()
+        location?.let {
+            locationCache["current"] = it
+            lastLocationUpdate = currentTime
+        }
+        location
+    } catch (e: Exception) {
+        Log.e(TAG, "Location update failed", e)
+        locationCache.remove("current")
+        null
+    }
+}
 
     private fun updateARViewWithPlaces(places: List<PointOfInterest>) {
         Log.d("GeoAR", "updateARViewWithPlaces")

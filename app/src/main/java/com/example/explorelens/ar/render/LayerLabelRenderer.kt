@@ -93,7 +93,7 @@ class LayerLabelRenderer {
         cameraPose: Pose,
         placeInfo: Map<String, Any?>
     ) {
-        Log.d(TAG, "Drawing layer label for: ${placeInfo["name"]}")
+//        Log.d(TAG, "Drawing layer label for: ${placeInfo["name"]}")
 
         // Set the label origin from the pose
         // Position slightly higher for this label style
@@ -112,7 +112,7 @@ class LayerLabelRenderer {
         // Draw the mesh
         render.draw(mesh, shader)
 
-        Log.d(TAG, "Draw completed for layer label: ${placeInfo["name"]}")
+//        Log.d(TAG, "Draw completed for layer label: ${placeInfo["name"]}")
     }
 
     // Method to set the screen size (as a proportion of screen height)
