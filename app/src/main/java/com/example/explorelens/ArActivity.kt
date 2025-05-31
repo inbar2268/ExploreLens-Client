@@ -67,7 +67,7 @@ class ArActivity : AppCompatActivity() {
         FilterOption("cafe", iconResId = R.drawable.ic_cafe),
         FilterOption("bar", iconResId = R.drawable.ic_bar),
         FilterOption("bakery", iconResId = R.drawable.ic_bakery),
-        FilterOption("hotel", iconResId = R.drawable.ic_hotel),
+        FilterOption("lodging", iconResId = R.drawable.ic_hotel),
         FilterOption("pharmacy", iconResId = R.drawable.ic_pharmacy),
         FilterOption("gym", iconResId = R.drawable.ic_gym)
     )
