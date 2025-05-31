@@ -127,6 +127,10 @@ class SiteDetailsRepository(context: Context) {
         }
     }
 
+    fun getSiteDetailsNow(siteId: String): SiteDetailsEntity? {
+        return siteDetailsDao.getSiteDetailsByIdNow(siteId)
+    }
+
     // Callback-based method that syncs first, then uses LiveData
     fun fetchSiteDetailsWithSync(
         siteId: String,

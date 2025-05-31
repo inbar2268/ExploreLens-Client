@@ -17,6 +17,9 @@ interface SiteDetailsDao {
     @Query("SELECT * FROM site_details")
     fun getAllSiteDetails(): LiveData<List<SiteDetailsEntity>>
 
+    @Query("SELECT * FROM site_details WHERE id = :siteId")
+    fun getSiteDetailsByIdNow(siteId: String): SiteDetailsEntity?
+
     @Update
     suspend fun updateSiteDetails(siteDetails: SiteDetailsEntity)
 
