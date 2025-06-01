@@ -1,6 +1,7 @@
 package com.example.explorelens.ui.user
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,6 +17,7 @@ import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.data.db.User
 import com.example.explorelens.data.repository.AuthRepository
 import com.example.explorelens.data.repository.UserRepository
+import com.example.explorelens.data.repository.UserStatisticsRepository
 import com.example.explorelens.databinding.FragmentProfileBinding
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.flow.collectLatest
@@ -40,6 +42,7 @@ class ProfileFragment : Fragment() {
 
     private lateinit var userRepository: UserRepository
     private lateinit var authRepository: AuthRepository
+    private lateinit var userStatisticsRepository: UserStatisticsRepository
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -71,6 +74,7 @@ class ProfileFragment : Fragment() {
         // Initialize repositories
         userRepository = UserRepository(requireActivity().application)
         authRepository = AuthRepository(requireActivity().application)
+        userStatisticsRepository = UserStatisticsRepository(requireContext())
 
         // Initialize user data observer
         setupUserObserver()
@@ -85,6 +89,7 @@ class ProfileFragment : Fragment() {
 
         // Fetch user data when the fragment is created
         fetchUserData()
+        loadUserStatistics()
     }
 
     private fun setupUserObserver() {
@@ -178,6 +183,7 @@ class ProfileFragment : Fragment() {
     private fun setupRefreshListener() {
         binding.swipeRefresh.setOnRefreshListener {
             fetchUserData()
+            loadUserStatistics()
             binding.swipeRefresh.isRefreshing = false
         }
     }
@@ -185,5 +191,48 @@ class ProfileFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    private fun loadUserStatistics() {
+        // Show loading indicator
+        binding.statisticsProgressBar.visibility = View.VISIBLE
+        binding.statisticsContainer.visibility = View.GONE
+
+        lifecycleScope.launch {
+            try {
+                val result = userStatisticsRepository.getCurrentUserStatistics()
+
+                result.fold(
+                    onSuccess = { statistics ->
+                        // Update UI with statistics
+                        binding.percentageValue.text = statistics.percentageVisited
+                        binding.countryValue.text = statistics.countryCount.toString()
+
+                        // Hide loading and show statistics
+                        binding.statisticsProgressBar.visibility = View.GONE
+                        binding.statisticsContainer.visibility = View.VISIBLE
+                    },
+                    onFailure = { error ->
+                        Log.e("ProfileFragment", "Failed to load user statistics", error)
+
+                        // Hide loading indicator
+                        binding.statisticsProgressBar.visibility = View.GONE
+                        binding.statisticsContainer.visibility = View.VISIBLE
+
+                        // Show default values
+                        binding.percentageValue.text = "--"
+                        binding.countryValue.text = "--"
+
+                        ToastHelper.showShortToast(requireContext(), "Failed to load statistics")
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e("ProfileFragment", "Exception loading statistics", e)
+                binding.statisticsProgressBar.visibility = View.GONE
+                binding.statisticsContainer.visibility = View.VISIBLE
+                binding.percentageValue.text = "--"
+                binding.countryValue.text = "--"
+            }
+        }
     }
 }

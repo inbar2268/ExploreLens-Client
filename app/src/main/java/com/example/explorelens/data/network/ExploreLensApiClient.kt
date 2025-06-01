@@ -13,6 +13,7 @@ import com.example.explorelens.data.network.site.SiteHistoryApi
 import com.example.explorelens.data.network.siteDetails.SiteDetailsApi
 import com.example.explorelens.data.network.user.UserApi
 import com.example.explorelens.data.network.ChatApi
+import com.example.explorelens.data.network.user.UserStatisticsApi
 import java.util.concurrent.TimeUnit
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
@@ -145,5 +146,9 @@ object ExploreLensApiClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ChatApi::class.java)
+    }
+
+    val userStatisticsApi: UserStatisticsApi by lazy {
+        createRetrofitClient(getOkHttpClient(authenticated = true)).create(UserStatisticsApi::class.java)
     }
 }
