@@ -36,6 +36,7 @@ class ChatFragment : Fragment() {
     private val chatHistory = mutableListOf<ChatCompletionRequest.Message>()
 
     private var siteName: String? = null
+    private var typingMessageId: String? = null
 
     // Keyboard detection variables
     private var bottomNavigationView: BottomNavigationView? = null
@@ -111,6 +112,9 @@ class ChatFragment : Fragment() {
 
         // Create keyboard detection listener
         keyboardListener = ViewTreeObserver.OnGlobalLayoutListener {
+            // Check if binding is still valid before accessing it
+            if (_binding == null) return@OnGlobalLayoutListener
+
             val rootView = binding.root
             val heightDiff = rootView.rootView.height - rootView.height
 
@@ -248,6 +252,26 @@ class ChatFragment : Fragment() {
         }
     }
 
+    private fun showTypingIndicator() {
+        val typingMessage = ChatMessage.createTypingMessage()
+        typingMessageId = typingMessage.id
+        chatMessages.add(typingMessage)
+        chatAdapter.submitList(ArrayList(chatMessages))
+
+        // Scroll to show typing indicator
+        binding.recyclerView.post {
+            scrollToBottomImmediately()
+        }
+    }
+
+    private fun hideTypingIndicator() {
+        typingMessageId?.let { id ->
+            chatMessages.removeAll { it.id == id }
+            chatAdapter.submitList(ArrayList(chatMessages))
+            typingMessageId = null
+        }
+    }
+
     private fun sendMessage(message: String) {
         // Add user message to UI immediately
         val userMessage = ChatMessage(
@@ -263,8 +287,8 @@ class ChatFragment : Fragment() {
             scrollToBottomImmediately()
         }
 
-        // Show a loading indicator
-        binding.messageLoadingIndicator.visibility = View.VISIBLE
+        // Show typing indicator
+        showTypingIndicator()
 
         // Process with ChatGPT
         viewLifecycleOwner.lifecycleScope.launch {
@@ -284,8 +308,8 @@ class ChatFragment : Fragment() {
                     message
                 )
 
-                // Hide loading indicator
-                binding.messageLoadingIndicator.visibility = View.GONE
+                // Hide typing indicator
+                hideTypingIndicator()
 
                 if (result.isSuccess) {
                     // Get the response text
@@ -335,8 +359,8 @@ class ChatFragment : Fragment() {
                     Log.e("ChatFragment", "Error getting response: ${result.exceptionOrNull()?.message}")
                 }
             } catch (e: Exception) {
-                // Hide loading indicator
-                binding.messageLoadingIndicator.visibility = View.GONE
+                // Hide typing indicator
+                hideTypingIndicator()
 
                 // Show error message
                 val errorMessage = ChatMessage(
@@ -402,13 +426,15 @@ class ChatFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
 
-        // Remove the keyboard listener to prevent memory leaks
+        // Remove the keyboard listener BEFORE setting binding to null
         keyboardListener?.let {
             binding.root.viewTreeObserver.removeOnGlobalLayoutListener(it)
         }
+        keyboardListener = null
 
         // Ensure bottom navigation is visible when leaving the fragment
         bottomNavigationView?.visibility = View.VISIBLE
+        bottomNavigationView = null
 
         _binding = null
     }

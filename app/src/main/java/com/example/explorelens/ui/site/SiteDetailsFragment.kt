@@ -188,7 +188,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
             val result = textToSpeech?.setLanguage(Locale.US)
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.e("SiteDetailsFragment", "Language not supported for TTS")
-                ToastHelper.showShortToast(requireContext(), "Text-to-speech language not supported")
+                // Removed toast message
             } else {
                 isTtsInitialized = true
                 // Set speech rate (0.5 = half speed, 1.0 = normal, 2.0 = double speed)
@@ -234,7 +234,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
                                     currentState = TtsState.FINISHED
                                     currentChunkIndex = 0 // Reset for next time
                                     updateButtonState()
-                                    ToastHelper.showShortToast(requireContext(), "Finished reading")
+                                    // Removed "Finished reading" toast
                                 }
                             } else {
                                 Log.d("SiteDetailsFragment", "TTS done but state is $currentState, not proceeding")
@@ -248,7 +248,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
                             currentState = TtsState.IDLE
                             currentChunkIndex = 0
                             updateButtonState()
-                            ToastHelper.showShortToast(requireContext(), "Error in text-to-speech")
+                            // Removed error toast
                         }
                     }
                 })
@@ -258,14 +258,14 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
             }
         } else {
             Log.e("SiteDetailsFragment", "Text-to-Speech initialization failed")
-            ToastHelper.showShortToast(requireContext(), "Text-to-speech initialization failed")
+            // Removed initialization failed toast
         }
     }
 
     // Enhanced play/pause/resume handler
     private fun handlePlayStop() {
         if (!isTtsInitialized) {
-            ToastHelper.showShortToast(requireContext(), "Text-to-speech not ready")
+            // Removed "not ready" toast
             return
         }
 
@@ -293,7 +293,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
         val siteName = labelTextView.text.toString()
 
         if (description.isEmpty()) {
-            ToastHelper.showShortToast(requireContext(), "No description to read")
+            // Removed "No description to read" toast
             return
         }
 
@@ -315,7 +315,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
         // Start speaking from the first chunk
         speakCurrentChunk()
 
-        ToastHelper.showShortToast(requireContext(), "Reading site description...")
+        // Removed "Reading site description..." toast
     }
 
     // Helper method to split text into very small chunks for better pause/resume
@@ -377,7 +377,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
             // All chunks completed
             currentState = TtsState.FINISHED
             updateButtonState()
-            ToastHelper.showShortToast(requireContext(), "Finished reading")
+            // Removed "Finished reading" toast
         }
     }
 
@@ -387,13 +387,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
         currentState = TtsState.PAUSED
         updateButtonState()
 
-        val progressText = if (totalChunks > 0) {
-            "Paused at ${((currentChunkIndex.toFloat() / totalChunks) * 100).toInt()}%"
-        } else {
-            "Paused"
-        }
-
-        ToastHelper.showShortToast(requireContext(), progressText)
+        // Removed pause progress toast
         Log.d("SiteDetailsFragment", "Paused at chunk $currentChunkIndex of $totalChunks")
     }
 
@@ -413,7 +407,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
         }
 
         Log.d("SiteDetailsFragment", "Resuming from chunk $currentChunkIndex of $totalChunks")
-        ToastHelper.showShortToast(requireContext(), "Resuming reading...")
+        // Removed "Resuming reading..." toast
 
         // Continue from current chunk (don't increment yet)
         speakCurrentChunk()
@@ -428,7 +422,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
         currentTextToSpeak = ""
         updateButtonState()
 
-        ToastHelper.showShortToast(requireContext(), "Stopped reading")
+        // Removed "Stopped reading" toast
     }
 
     // Handle stop button press
@@ -444,7 +438,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
         textToSpeech?.stop()
         currentChunkIndex = 0
         startSpeaking()
-        ToastHelper.showShortToast(requireContext(), "Restarting reading...")
+        // Removed "Restarting reading..." toast
     }
 
     // Enhanced updateButtonState method
@@ -486,7 +480,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
         playStopButton.setOnLongClickListener {
             if (currentState == TtsState.PLAYING || currentState == TtsState.PAUSED) {
                 stopSpeaking()
-                ToastHelper.showShortToast(requireContext(), "Reading reset")
+                // Removed "Reading reset" toast
             }
             true
         }
@@ -812,12 +806,8 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
 
             // Make sure the camera button is visible again
             activity.findViewById<View>(R.id.cameraButtonContainer)?.visibility = View.VISIBLE
-        } else {
-            // For regular fragment navigation, use back press behavior
-            requireActivity().onBackPressedDispatcher.onBackPressed()
         }
     }
-
     private fun navigateToChatFragment() {
         val siteName = labelTextView.text.toString()
         val siteImageUrl = SiteDetails?.imageUrl
