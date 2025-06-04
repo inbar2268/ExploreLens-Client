@@ -42,6 +42,7 @@ class UserStatisticsRepository(context: Context) {
                             countryCount = statisticsResponse.countryCount,
                             continents = statisticsResponse.continents,
                             siteCount = statisticsResponse.siteCount,
+                            countries = statisticsResponse.countries,
                             createdAt = System.currentTimeMillis()
                         )
 

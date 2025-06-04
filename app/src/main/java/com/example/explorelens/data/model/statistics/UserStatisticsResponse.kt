@@ -7,5 +7,6 @@ data class UserStatisticsResponse(
     val continents: List<String>,
     val siteCount: Int,
     val createdAt: String? = null,
+    val countries: List<String>,
     val _id: String? = null
 )

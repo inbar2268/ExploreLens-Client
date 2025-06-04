@@ -636,9 +636,9 @@ class AppRenderer(
                     label = "full-image",
                     x = 0.5f,
                     y = 0.5f,
-                    siteName = "Colosseum"
+                    siteName = "Big Ben"
                 ),
-                siteInfoId = "6817c17ec96f0e5280196da6",
+                siteInfoId = "6818fcadb249f52360e546e9",
             )
 
             launch(Dispatchers.Main) {

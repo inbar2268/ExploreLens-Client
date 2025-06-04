@@ -381,9 +381,15 @@ class ProfileFragment : Fragment() {
                 stroke-width: 0.3; 
                 cursor: pointer;
                 fill: #E0E0E0;
+                transition: all 0.2s ease;
+            }
+            svg path:hover {
+                stroke-width: 1;
+                stroke: #333;
+                filter: brightness(1.1);
             }
             svg path.visited { fill: #4CAF50 !important; }
-            svg path.partially-visited { fill: #81C784 !important; }
+            svg path.unvisited { fill: #E0E0E0 !important; }
             svg { max-width: 100%; height: auto; background: #87CEEB; }
         </style>
     </head>
@@ -393,28 +399,217 @@ class ProfileFragment : Fragment() {
         <script>
             console.log('Map script starting');
             
-            function updateContinentColors(visited, partiallyVisited) {
-                console.log('updateContinentColors called');
+            var countryNameToCode = {
+                'Afghanistan': 'AF', 'Albania': 'AL', 'Algeria': 'DZ', 'Argentina': 'AR',
+                'Armenia': 'AM', 'Australia': 'AU', 'Austria': 'AT', 'Azerbaijan': 'AZ',
+                'Bahrain': 'BH', 'Bangladesh': 'BD', 'Belarus': 'BY', 'Belgium': 'BE',
+                'Bolivia': 'BO', 'Bosnia and Herzegovina': 'BA', 'Brazil': 'BR', 'Bulgaria': 'BG',
+                'Cambodia': 'KH', 'Cameroon': 'CM', 'Canada': 'CA', 'Chile': 'CL',
+                'China': 'CN', 'Colombia': 'CO', 'Croatia': 'HR', 'Cuba': 'CU',
+                'Czech Republic': 'CZ', 'Denmark': 'DK', 'Ecuador': 'EC', 'Egypt': 'EG',
+                'Estonia': 'EE', 'Ethiopia': 'ET', 'Finland': 'FI', 'France': 'FR',
+                'Germany': 'DE', 'Ghana': 'GH', 'Greece': 'GR', 'Hungary': 'HU',
+                'Iceland': 'IS', 'India': 'IN', 'Indonesia': 'ID', 'Iran': 'IR',
+                'Iraq': 'IQ', 'Ireland': 'IE', 'Israel': 'IL', 'Italy': 'IT',
+                'Japan': 'JP', 'Jordan': 'JO', 'Kazakhstan': 'KZ', 'Kenya': 'KE',
+                'South Korea': 'KR', 'Kuwait': 'KW', 'Latvia': 'LV', 'Lebanon': 'LB',
+                'Libya': 'LY', 'Lithuania': 'LT', 'Luxembourg': 'LU', 'Malaysia': 'MY',
+                'Mexico': 'MX', 'Mongolia': 'MN', 'Morocco': 'MA', 'Myanmar': 'MM',
+                'Nepal': 'NP', 'Netherlands': 'NL', 'New Zealand': 'NZ', 'Nigeria': 'NG',
+                'North Korea': 'KP', 'Norway': 'NO', 'Pakistan': 'PK', 'Peru': 'PE',
+                'Philippines': 'PH', 'Poland': 'PL', 'Portugal': 'PT', 'Romania': 'RO',
+                'Russia': 'RU', 'Saudi Arabia': 'SA', 'Serbia': 'RS', 'Singapore': 'SG',
+                'Slovakia': 'SK', 'Slovenia': 'SI', 'South Africa': 'ZA', 'Spain': 'ES',
+                'Sri Lanka': 'LK', 'Sweden': 'SE', 'Switzerland': 'CH', 'Syria': 'SY',
+                'Taiwan': 'TW', 'Thailand': 'TH', 'Turkey': 'TR', 'Ukraine': 'UA',
+                'United Arab Emirates': 'AE', 'United Kingdom': 'GB', 'United States': 'US',
+                'Uruguay': 'UY', 'Venezuela': 'VE', 'Vietnam': 'VN', 'Yemen': 'YE',
+                'Zimbabwe': 'ZW', 'USA': 'US', 'UK': 'GB', 'UAE': 'AE'
+            };
+
+            function findCountryElement(countryName) {
+                console.log('Searching for country:', countryName);
+                
+                var countryCode = countryNameToCode[countryName];
+                console.log('Mapped to code:', countryCode);
+                
+                if (!countryCode) {
+                    console.log('No country code found for:', countryName);
+                    return null;
+                }
+                
+                // Method 1: Try getElementById
+                var element = document.getElementById(countryCode);
+                if (element) {
+                    console.log('Found by getElementById:', countryCode);
+                    return element;
+                }
+                
+                // Method 2: Try lowercase
+                element = document.getElementById(countryCode.toLowerCase());
+                if (element) {
+                    console.log('Found by getElementById (lowercase):', countryCode.toLowerCase());
+                    return element;
+                }
+                
+                // Method 3: Let's see what IDs actually exist
+                console.log('getElementById failed, checking all IDs...');
+                var allPaths = document.querySelectorAll('svg path');
+                var foundIds = [];
+                
+                for (var i = 0; i < allPaths.length; i++) {
+                    var path = allPaths[i];
+                    if (path.id && path.id.length <= 3) {
+                        foundIds.push(path.id);
+                        
+                        // Check if this is our target
+                        if (path.id === countryCode || path.id === countryCode.toLowerCase()) {
+                            console.log('Found target country by manual search:', path.id);
+                            return path;
+                        }
+                    }
+                }
+                
+                console.log('First 20 country IDs found:', foundIds.slice(0, 20).join(', '));
+                console.log('Does', countryCode, 'exist in IDs?', foundIds.includes(countryCode));
+                console.log('Does', countryCode.toLowerCase(), 'exist in IDs?', foundIds.includes(countryCode.toLowerCase()));
+                
+                return null;
+            }
+
+            function debugSVGStructure() {
+                console.log('=== DEBUG: Analyzing SVG Structure ===');
+                var allPaths = document.querySelectorAll('svg path');
+                console.log('Total paths:', allPaths.length);
+                
+                // Find ALL elements with IDs
+                var allIds = [];
+                var allDataIds = [];
+                var allDataNames = [];
+                
+                for (var i = 0; i < allPaths.length; i++) {
+                    var path = allPaths[i];
+                    
+                    if (path.id) {
+                        allIds.push(path.id);
+                    }
+                    
+                    var dataId = path.getAttribute('data-id');
+                    if (dataId) {
+                        allDataIds.push(dataId);
+                    }
+                    
+                    var dataName = path.getAttribute('data-name');
+                    if (dataName) {
+                        allDataNames.push(dataName);
+                    }
+                }
+                
+                console.log('=== ALL IDs FOUND ===');
+                console.log('Total IDs:', allIds.length);
+                console.log('All IDs:', allIds.sort().join(', '));
+                
+                console.log('=== ALL DATA-IDs FOUND ===');
+                console.log('Total data-ids:', allDataIds.length);
+                if (allDataIds.length > 0) {
+                    console.log('All data-ids:', allDataIds.sort().join(', '));
+                }
+                
+                console.log('=== ALL DATA-NAMEs FOUND ===');
+                console.log('Total data-names:', allDataNames.length);
+                if (allDataNames.length > 0) {
+                    console.log('First 20 data-names:', allDataNames.slice(0, 20).join(', '));
+                }
+                
+                // Look for anything that might be Italy
+                console.log('=== SEARCHING FOR ITALY VARIATIONS ===');
+                var italyFound = false;
+                
+                for (var i = 0; i < allPaths.length; i++) {
+                    var path = allPaths[i];
+                    var id = path.id || '';
+                    var dataId = path.getAttribute('data-id') || '';
+                    var dataName = path.getAttribute('data-name') || '';
+                    
+                    if (id.toLowerCase().includes('it') || 
+                        dataId.toLowerCase().includes('it') || 
+                        dataName.toLowerCase().includes('italy')) {
+                        
+                        console.log('POTENTIAL ITALY FOUND at index', i, ':');
+                        console.log('  id:', id);
+                        console.log('  data-id:', dataId);
+                        console.log('  data-name:', dataName);
+                        italyFound = true;
+                    }
+                }
+                
+                if (!italyFound) {
+                    console.log('NO ITALY-LIKE ELEMENTS FOUND');
+                    console.log('Checking for alternative codes...');
+                    
+                    // Check for common Italy alternatives
+                    var alternatives = ['ITA', 'ITALY', 'Italia'];
+                    for (var j = 0; j < alternatives.length; j++) {
+                        var alt = alternatives[j];
+                        var element = document.getElementById(alt);
+                        if (element) {
+                            console.log('FOUND ITALY WITH ALTERNATIVE ID:', alt);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            function updateCountryColors(visitedCountries) {
+                console.log('updateCountryColors called with:', visitedCountries);
                 
                 var allPaths = document.querySelectorAll('svg path');
-                console.log('Found paths:', allPaths.length);
+                console.log('Found', allPaths.length, 'SVG paths');
                 
-                // Reset all
+                // Reset all to gray
                 for (var i = 0; i < allPaths.length; i++) {
-                    allPaths[i].className = '';
+                    allPaths[i].className = 'unvisited';
                     allPaths[i].style.fill = '#E0E0E0';
                 }
                 
-                // Simple test coloring - color first 10 paths green
-                for (var i = 0; i < Math.min(10, allPaths.length); i++) {
-                    allPaths[i].style.fill = '#4CAF50';
+                var coloredCount = 0;
+                
+                // Color visited countries
+                if (visitedCountries && visitedCountries.length > 0) {
+                    for (var i = 0; i < visitedCountries.length; i++) {
+                        var countryName = visitedCountries[i];
+                        console.log('Processing country:', countryName);
+                        
+                        var element = findCountryElement(countryName);
+                        if (element) {
+                            console.log('SUCCESS: Coloring', countryName);
+                            element.className = 'visited';
+                            element.style.fill = '#4CAF50';
+                            coloredCount++;
+                        } else {
+                            console.log('FAILED: Could not find', countryName);
+                        }
+                    }
                 }
                 
-                console.log('Coloring completed');
+                console.log('Coloring completed. Total colored:', coloredCount);
+                return coloredCount;
             }
 
-            window.updateMap = updateContinentColors;
-            console.log('Map script loaded');
+            // Make functions available globally
+            window.updateMap = updateCountryColors;
+            window.updateCountryColors = updateCountryColors;
+            
+            console.log('Map script loaded. updateMap available:', typeof window.updateMap);
+            
+            // Test on load
+            setTimeout(function() {
+                console.log('=== RUNNING DIAGNOSTIC TESTS ===');
+                debugSVGStructure();
+                
+                console.log('=== TESTING ISRAEL COLORING ===');
+                updateCountryColors(['Israel']);
+            }, 1000);
         </script>
     </body>
     </html>
@@ -426,48 +621,41 @@ class ProfileFragment : Fragment() {
             try {
                 kotlinx.coroutines.delay(1000)
 
-                // Debug the map structure first
-               // debugWorldMap()
+                // Get user statistics which now includes countries list
+                val result = userStatisticsRepository.getCurrentUserStatistics()
 
-                // Replace this with your actual continent statistics logic
-                val visitedContinents = listOf("north-america", "europe")
-                val partiallyVisitedContinents = listOf("asia")
+                result.fold(
+                    onSuccess = { statistics ->
+                        // Use the countries list from the server
+                        val visitedCountries = statistics.countries ?: emptyList()
+                        Log.d("ProfileFragment", "Visited countries from server: $visitedCountries")
 
-                updateWorldMapContinents(visitedContinents, partiallyVisitedContinents)
+                        updateWorldMapCountries(visitedCountries)
+                    },
+                    onFailure = { error ->
+                        Log.e("ProfileFragment", "Failed to load user statistics", error)
 
-                // TODO: Replace with your actual data loading
-                // val result = userStatisticsRepository.getUserContinentStatistics()
-                // result.fold(
-                //     onSuccess = { continentStats ->
-                //         val visitedContinents = continentStats
-                //             .filter { it.isFullyVisited }
-                //             .map { it.continentName.lowercase().replace(" ", "-") }
-                //
-                //         val partiallyVisitedContinents = continentStats
-                //             .filter { it.isPartiallyVisited && !it.isFullyVisited }
-                //             .map { it.continentName.lowercase().replace(" ", "-") }
-                //
-                //         updateWorldMapContinents(visitedContinents, partiallyVisitedContinents)
-                //     },
-                //     onFailure = { error ->
-                //         Log.e("ProfileFragment", "Failed to load continent statistics", error)
-                //     }
-                // )
+                        // Fallback to test data
+                        val testCountries = listOf("Spain", "Japan", "Germany")
+                        updateWorldMapCountries(testCountries)
+                    }
+                )
+
             } catch (e: Exception) {
                 Log.e("ProfileFragment", "Exception loading continent statistics", e)
-                updateWorldMapContinents(emptyList(), emptyList())
+                updateWorldMapCountries(emptyList())
             }
         }
     }
 
-    private fun updateWorldMapContinents(
-        visited: List<String>,
-        partiallyVisited: List<String> = emptyList()
-    ) {
-        val visitedList = visited.joinToString("\",\"", "[\"", "\"]")
-        val partiallyVisitedList = partiallyVisited.joinToString("\",\"", "[\"", "\"]")
+    private fun updateWorldMapCountries(visitedCountries: List<String>) {
+        if (visitedCountries.isEmpty()) {
+            Log.d("ProfileFragment", "No countries to display")
+            return
+        }
 
-        val javascript = "updateMap($visitedList, $partiallyVisitedList)"
+        val countriesArray = visitedCountries.joinToString("\",\"", "[\"", "\"]")
+        val javascript = "if(typeof updateMap === 'function') { updateMap($countriesArray); } else { console.log('updateMap not available'); }"
 
         binding.worldMapWebView.post {
             binding.worldMapWebView.evaluateJavascript(javascript) { result ->
@@ -475,4 +663,5 @@ class ProfileFragment : Fragment() {
             }
         }
     }
+
 }
