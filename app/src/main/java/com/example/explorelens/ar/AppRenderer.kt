@@ -638,7 +638,7 @@ class AppRenderer(
                     y = 0.5f,
                     siteName = "Colosseum"
                 ),
-                siteInfoId = "6818fd47b249f52360e546ec",
+                siteInfoId = "6817c17ec96f0e5280196da6",
             )
 
             launch(Dispatchers.Main) {
