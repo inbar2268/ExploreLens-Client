@@ -71,81 +71,108 @@ class ARLayerManager(private val context: Context) {
         layerLabels.clear()
     }
 
+
+
     fun drawLayerLabels(
         render: SampleRender,
         viewProjectionMatrix: FloatArray,
         cameraPose: Pose,
         frame: Frame
     ) {
-        // Draw each layer label
+        val maxDistanceMeters = 50f
+        val fovDegrees = 50f
+
         for (label in layerLabels) {
             val anchor = label.anchor
+            val pose = anchor.pose
 
-            // Only draw labels with tracking anchors
+
             if (anchor.trackingState != TrackingState.TRACKING) continue
 
-            // Draw the layer label
+            val dx = pose.tx() - cameraPose.tx()
+            val dy = pose.ty() - cameraPose.ty()
+            val dz = pose.tz() - cameraPose.tz()
+            val distance = Math.sqrt((dx * dx + dy * dy + dz * dz).toDouble())
+
+            if (distance > maxDistanceMeters) {
+                Log.d("AR-Debug", "⛔️ too far, skipping")
+                continue
+            }
+
+            if (!isInFront(cameraPose, pose)) {
+                Log.d("AR-Debug", "⛔️ behind, skipping")
+                continue
+            }
+
+            if (!isWithinFOV(cameraPose, pose, fovDegrees)) {
+                Log.d("AR-Debug", "⛔️ out of FOV, skipping")
+                continue
+            }
+
             layerLabelRenderer.draw(
                 render,
                 viewProjectionMatrix,
-                anchor.pose,
+                pose,
                 cameraPose,
                 label.placeInfo
             )
         }
     }
 
-//    fun drawLayerLabels(
-//        render: SampleRender,
-//        viewProjectionMatrix: FloatArray,
-//        cameraPose: Pose,
-//        frame: Frame
-//    ) {
-//        val MAX_RENDER_DISTANCE = 500f
-//        val MAX_LABELS = 20
-//        var drawnCount = 0
-//
-//        for (label in layerLabels) {
-//            val anchor = label.anchor
-//            val anchorPose = anchor.pose
-//
-//            val labelPosition = floatArrayOf(
-//                anchorPose.tx(),
-//                anchorPose.ty(),
-//                anchorPose.tz(),
-//                1f
-//            )
-//            val projected = FloatArray(4)
-//            android.opengl.Matrix.multiplyMV(projected, 0, viewProjectionMatrix, 0, labelPosition, 0)
-//
-//            val isInFront = projected[2] < 0
-//
-//            val ndcX = projected[0] / projected[3]
-//            val ndcY = projected[1] / projected[3]
-//            val isOnScreen = ndcX in -1f..1f && ndcY in -1f..1f
-//
-//
-//            val dx = anchorPose.tx() - cameraPose.tx()
-//            val dy = anchorPose.ty() - cameraPose.ty()
-//            val dz = anchorPose.tz() - cameraPose.tz()
-//            val distance = kotlin.math.sqrt(dx * dx + dy * dy + dz * dz)
-//
-//
-//            if (!isInFront || !isOnScreen || distance > MAX_RENDER_DISTANCE) continue
-//            if (drawnCount >= MAX_LABELS) break
-//
-//
-//            layerLabelRenderer.draw(
-//                render,
-//                viewProjectionMatrix,
-//                anchorPose,
-//                cameraPose,
-//                label.placeInfo
-//            )
-//
-//            drawnCount++
-//        }
-//    }
+
+    fun isInFront(cameraPose: Pose, labelPose: Pose): Boolean {
+        val cameraForward = floatArrayOf(
+            -cameraPose.zAxis[0],
+            -cameraPose.zAxis[1],
+            -cameraPose.zAxis[2]
+        )
+        val directionToLabel = floatArrayOf(
+            labelPose.tx() - cameraPose.tx(),
+            labelPose.ty() - cameraPose.ty(),
+            labelPose.tz() - cameraPose.tz()
+        )
+        val dotProduct =
+            cameraForward[0] * directionToLabel[0] +
+                    cameraForward[1] * directionToLabel[1] +
+                    cameraForward[2] * directionToLabel[2]
+        return dotProduct > 0
+    }
+
+    fun isWithinFOV(cameraPose: Pose, labelPose: Pose, fovDegrees: Float): Boolean {
+        val cameraForward = floatArrayOf(
+            -cameraPose.zAxis[0],
+            -cameraPose.zAxis[1],
+            -cameraPose.zAxis[2]
+        )
+        val directionToLabel = floatArrayOf(
+            labelPose.tx() - cameraPose.tx(),
+            labelPose.ty() - cameraPose.ty(),
+            labelPose.tz() - cameraPose.tz()
+        )
+
+        val dotProduct =
+            cameraForward[0] * directionToLabel[0] +
+                    cameraForward[1] * directionToLabel[1] +
+                    cameraForward[2] * directionToLabel[2]
+
+        val normCamera = Math.sqrt(
+            (cameraForward[0] * cameraForward[0] +
+                    cameraForward[1] * cameraForward[1] +
+                    cameraForward[2] * cameraForward[2]).toDouble()
+        )
+
+        val normLabel = Math.sqrt(
+            (directionToLabel[0] * directionToLabel[0] +
+                    directionToLabel[1] * directionToLabel[1] +
+                    directionToLabel[2] * directionToLabel[2]).toDouble()
+        )
+
+        val cosAngle = dotProduct / (normCamera * normLabel)
+        val angleDegrees = Math.toDegrees(Math.acos(cosAngle)).toFloat()
+
+        return angleDegrees < (fovDegrees / 2f)
+    }
+
 
     fun getExistingPlaceIds(): Set<Any> {
         return layerLabels.mapNotNull { it.placeInfo["place_id"] }.toSet()
