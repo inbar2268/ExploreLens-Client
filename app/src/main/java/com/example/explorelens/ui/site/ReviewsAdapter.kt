@@ -6,9 +6,9 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.explorelens.R
 import com.example.explorelens.data.model.comments.ReviewWithUser
-import com.squareup.picasso.Picasso
 
 /**
  * Adapter for displaying reviews in a RecyclerView
@@ -33,16 +33,18 @@ class ReviewsAdapter(private val reviewsWithUser: List<ReviewWithUser>) :
         holder.username.text = reviewWithUser.user?.username ?: reviewWithUser.review.user
         holder.reviewText.text = reviewWithUser.review.content
 
+
         val profilePicUrl = reviewWithUser.user?.profilePictureUrl
-                if (!profilePicUrl.isNullOrEmpty()) {
-                    Picasso.get()
-                        .load(profilePicUrl)
-                        .placeholder(R.drawable.avatar_placeholder)
-                        .error(R.drawable.avatar_placeholder)
-                        .into(holder.profilePic)
-                } else {
-                    holder.profilePic.setImageResource(R.drawable.avatar_placeholder)
-                }
+        if (!profilePicUrl.isNullOrEmpty()) {
+            Glide.with(holder.profilePic.context)
+                .load(profilePicUrl)
+                .placeholder(R.drawable.avatar_placeholder)
+                .error(R.drawable.avatar_placeholder)
+                .into(holder.profilePic)
+        } else {
+            holder.profilePic.setImageResource(R.drawable.avatar_placeholder)
+        }
+
 
         // Add date display if needed
         // If you have a date TextView in your item_review layout:

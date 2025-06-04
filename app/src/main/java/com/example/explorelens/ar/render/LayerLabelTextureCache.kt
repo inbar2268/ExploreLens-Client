@@ -211,7 +211,7 @@ class LayerLabelTextureCache(private val context: Context) {
         // Extract data from place info
         val name = placeInfo["name"] as? String ?: "Unknown Place"
         val type = placeInfo["type"] as? String ?: "unknown"
-        val rating = placeInfo["rating"] as? Double ?: 0.0
+        val rating = placeInfo["rating"] as? Float ?: 0.0
         val phoneNumber = placeInfo["phone_number"] as? String ?: "No phone"
 
         // Extract opening hours
