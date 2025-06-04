@@ -164,7 +164,7 @@
                         android:id="@+id/percentageCard"
                         android:layout_width="0dp"
                         android:layout_height="150dp"
-                        android:layout_marginEnd="8dp"
+                        android:layout_marginEnd="4dp"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="4dp"
                         app:layout_constraintEnd_toStartOf="@+id/countryCard"
@@ -189,23 +189,40 @@
                                 android:layout_height="match_parent"
                                 android:background="@drawable/gradient_overlay" />
 
-                            <!-- Percentage Text positioned at top right -->
-                            <TextView
-                                android:id="@+id/percentageValue"
+                            <!-- Percentage Text positioned at bottom center (like countries) -->
+                            <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_alignParentTop="true"
-                                android:layout_alignParentEnd="true"
-                                android:layout_marginTop="16dp"
-                                android:layout_marginEnd="16dp"
-                                android:text="--"
-                                android:textColor="#FFFFFF"
-                                android:textSize="24sp"
-                                android:textStyle="bold"
-                                android:shadowColor="#000000"
-                                android:shadowDx="1"
-                                android:shadowDy="1"
-                                android:shadowRadius="3" />
+                                android:layout_alignParentBottom="true"
+                                android:layout_centerHorizontal="true"
+                                android:layout_marginBottom="16dp"
+                                android:orientation="vertical"
+                                android:gravity="center">
+
+                                <TextView
+                                    android:id="@+id/percentageValue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="--"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="28sp"
+                                    android:textStyle="bold"
+                                    android:shadowColor="#000000"
+                                    android:shadowDx="1"
+                                    android:shadowDy="1"
+                                    android:shadowRadius="3" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="of the world"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="12sp"
+                                    android:shadowColor="#000000"
+                                    android:shadowDx="1"
+                                    android:shadowDy="1"
+                                    android:shadowRadius="2" />
+                            </LinearLayout>
                         </RelativeLayout>
                     </androidx.cardview.widget.CardView>
 
@@ -214,7 +231,7 @@
                         android:id="@+id/countryCard"
                         android:layout_width="0dp"
                         android:layout_height="150dp"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="4dp"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="4dp"
                         app:layout_constraintEnd_toEndOf="parent"
@@ -277,6 +294,95 @@
                     </androidx.cardview.widget.CardView>
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
+                <!-- Add this to your fragment_profile.xml after the statisticsContainer -->
+
+                <!-- World Map Section -->
+                <TextView
+                    android:id="@+id/worldMapLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="32dp"
+                    android:text="Continents Explored"
+                    android:textColor="#000000"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/statisticsContainer" />
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/worldMapCard"
+                    android:layout_width="0dp"
+                    android:layout_height="200dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginEnd="16dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="4dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/worldMapLabel">
+
+                    <WebView
+                        android:id="@+id/worldMapWebView"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+                </androidx.cardview.widget.CardView>
+
+                <!-- Legend -->
+                <LinearLayout
+                    android:id="@+id/mapLegend"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/worldMapCard">
+
+                    <!-- Visited Legend -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:layout_width="12dp"
+                            android:layout_height="12dp"
+                            android:background="@color/continent_visited" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="Visited"
+                            android:textColor="#666666"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Unvisited Legend -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:layout_width="12dp"
+                            android:layout_height="12dp"
+                            android:background="@color/continent_unvisited" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="Not visited"
+                            android:textColor="#666666"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
                 <!-- Loading indicator for statistics -->
                 <ProgressBar
                     android:id="@+id/statisticsProgressBar"
