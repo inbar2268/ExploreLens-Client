@@ -100,6 +100,8 @@ class SiteHistoryFragment : Fragment() {
 
             binding.emptyStateView.visibility =
                 if (filteredList.isEmpty()) View.VISIBLE else View.GONE
+
+            binding.emptyTextView.text= if (allSites.isEmpty())  "You haven't visited any sites yet" else "You haven't visited matching sites yet"
             binding.recyclerViewHistory.visibility =
                 if (filteredList.isEmpty()) View.GONE else View.VISIBLE
         }
