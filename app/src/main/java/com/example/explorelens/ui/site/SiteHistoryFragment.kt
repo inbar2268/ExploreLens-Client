@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -41,6 +42,9 @@ class SiteHistoryFragment : Fragment() {
     private lateinit var adapter: SiteHistoryAdapter
     private lateinit var authTokenManager: AuthTokenManager
     private lateinit var userRepository: UserRepository
+    private var allSites: List<SiteHistory> = emptyList()
+    private lateinit var siteDetailsRepository: SiteDetailsRepository
+
 
     private var isSyncing = false
 
@@ -66,7 +70,43 @@ class SiteHistoryFragment : Fragment() {
         syncAndObserveData()
         fetchSiteHistoryFromServer(getCurrentUserId())
         setupSwipeToRefresh()
+
+        binding.searchBar.doOnTextChanged { text, start, before, count ->
+            val query = text.toString().trim()
+            filterSiteList(query)
+            binding.clearSearchButton.visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
+        }
+        binding.clearSearchButton.setOnClickListener {
+            binding.searchBar.setText("")
+        }
+        siteDetailsRepository = SiteDetailsRepository(requireContext())
+
     }
+
+    private fun filterSiteList(query: String) {
+        lifecycleScope.launch {
+            val filteredList = withContext(Dispatchers.IO) {
+                if (query.isEmpty()) {
+                    allSites
+                } else {
+                    allSites.filter { site ->
+                        val siteDetails = siteDetailsRepository.getSiteDetailsNow(site.siteInfoId)
+                        siteDetails?.name?.contains(query, ignoreCase = true) == true
+                    }
+                }
+            }
+
+            adapter.submitList(filteredList)
+
+            binding.emptyStateView.visibility =
+                if (filteredList.isEmpty()) View.VISIBLE else View.GONE
+
+            binding.emptyTextView.text= if (allSites.isEmpty())  "You haven't visited any sites yet" else "You haven't visited matching sites yet"
+            binding.recyclerViewHistory.visibility =
+                if (filteredList.isEmpty()) View.GONE else View.VISIBLE
+        }
+    }
+
 
     private fun setupViewModel() {
         val siteRepository = SiteHistoryRepository(requireContext())
@@ -77,6 +117,8 @@ class SiteHistoryFragment : Fragment() {
             SiteHistoryViewModel.Factory(siteRepository, geoLocationUtils)
         )[SiteHistoryViewModel::class.java]
     }
+
+
 
     private fun setupRecyclerView() {
         val siteRepository = SiteDetailsRepository(requireContext())
@@ -116,6 +158,7 @@ class SiteHistoryFragment : Fragment() {
             } else {
                 binding.emptyStateView.visibility = View.GONE
                 binding.recyclerViewHistory.visibility = View.VISIBLE
+                allSites = uniqueSites
                 adapter.submitList(uniqueSites)
             }
         }

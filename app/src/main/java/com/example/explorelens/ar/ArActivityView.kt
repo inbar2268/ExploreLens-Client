@@ -221,17 +221,13 @@ class ArActivityView(
 
     // Apply button
     binding.applyButtonSideSheet.setOnClickListener {
+      val newSelectedFilters = adapter.getCurrentChoices()
       selectedFilters.clear()
-      selectedFilters.addAll(adapter.getCurrentChoices())
+      selectedFilters.addAll(newSelectedFilters)
       Log.d(TAG, "Selected Filters (on Apply): $selectedFilters")
 
       // Apply filters to renderer
-      //renderer.applyFilters(selectedFilters)
-
-      Toast.makeText(activity,
-        "Filters Applied: ${selectedFilters.joinToString(", ")}",
-        Toast.LENGTH_SHORT
-      ).show()
+      renderer.getNearbyPlacesForAR(newSelectedFilters.toList())
 
       dialog.dismiss()
     }
@@ -295,6 +291,7 @@ class ArActivityView(
     intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
     intent.putExtra("RETURNED_FROM_AR", true)
     activity.startActivity(intent)
+    activity.finish()
   }
 
   /**

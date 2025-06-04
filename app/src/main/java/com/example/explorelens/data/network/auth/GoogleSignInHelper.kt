@@ -58,11 +58,14 @@ class GoogleSignInHelper(private val fragment: Fragment, private val authReposit
         try {
             val account = completedTask.getResult(ApiException::class.java)
             val idToken = account.idToken
+            Log.d(TAG, "Google account: email=${account.email}, id=${account.id}, idToken=${idToken}")
             if (idToken != null) {
                 onSuccessListener(idToken)
             } else {
+                Log.e(TAG, "ID token is null – check if WEB_CLIENT_ID is correct")
                 ToastHelper.showShortToast(fragment.context, "Google Sign-In failed: No ID token");
             }
+
         } catch (e: ApiException) {
             Log.w(TAG, "Google sign in failed", e)
             ToastHelper.showShortToast(fragment.context, "Google Sign-In failed: ${e.statusCode}");
@@ -124,6 +127,8 @@ class GoogleSignInHelper(private val fragment: Fragment, private val authReposit
                     val errorPrefix = if (isRegistration) "Google registration" else "Google login"
                     Log.e(TAG, "$errorPrefix failed: ${result.exceptionOrNull()?.message}")
                     ToastHelper.showShortToast(fragment.context, "$errorPrefix failed: ${result.exceptionOrNull()?.message}");
+                    val exception = result.exceptionOrNull()
+                    Log.e(TAG, "Google sign-in failed: ${exception?.message}", exception)
                 }
             }
         }
