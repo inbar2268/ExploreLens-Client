@@ -636,9 +636,9 @@ class AppRenderer(
                     label = "full-image",
                     x = 0.5f,
                     y = 0.5f,
-                    siteName = "Colosseum"
+                    siteName = "Big Ben"
                 ),
-                siteInfoId = "6818fd47b249f52360e546ec",
+                siteInfoId = "6818fcadb249f52360e546e9",
             )
 
             launch(Dispatchers.Main) {
@@ -793,7 +793,7 @@ class AppRenderer(
                 val dZ = closestPointZ - anchorPos[2]
                 val perpendicularDistance = sqrt(dX * dX + dY * dY + dZ * dZ)
 
-                val touchThreshold = 1f
+                val touchThreshold = 0.7f
 
                 if (dotProduct > 0 && perpendicularDistance < touchThreshold) {
                     if (distanceToAnchor < closestDistance) {

@@ -41,4 +41,8 @@
   <color name="gray">#F5F5F5</color>
   <color name="light_gray">#FCFCFC</color>
 
+  <color name="continent_visited">#4CAF50</color>
+  <color name="continent_partially_visited">#81C784</color>
+  <color name="continent_unvisited">#E0E0E0</color>
+
 </resources>
