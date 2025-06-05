@@ -1168,7 +1168,10 @@ private suspend fun getLocationOptimized(): Location? {
                     )
                 }
             )
-
+            Log.d(
+                "GeoAR",
+                "Created Anchor at ${point.rating}"
+            )
             layerManager.addLayerLabel(anchor, placeMap)
         }
     }

@@ -12,7 +12,8 @@ data class ChatMessage(
     val id: String = UUID.randomUUID().toString(),
     val message: String,
     val sentByUser: Boolean,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val isTyping: Boolean = false // New property for typing indicator
 ) {
     /**
      * Returns the formatted time of the message
@@ -20,5 +21,19 @@ data class ChatMessage(
     fun getFormattedTime(): String {
         val sdf = SimpleDateFormat("h:mm a", Locale.getDefault())
         return sdf.format(Date(timestamp))
+    }
+
+    companion object {
+        /**
+         * Creates a typing indicator message
+         */
+        fun createTypingMessage(): ChatMessage {
+            return ChatMessage(
+                id = "typing_${System.currentTimeMillis()}",
+                message = "",
+                sentByUser = false,
+                isTyping = true
+            )
+        }
     }
 }

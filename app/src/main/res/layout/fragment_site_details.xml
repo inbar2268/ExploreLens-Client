@@ -135,25 +135,73 @@
                         android:layout_height="0dp"
                         android:layout_weight="1" />
 
+                    <!-- Enhanced TTS Control Container -->
                     <LinearLayout
-                        android:id="@+id/commentsButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:background="@android:color/transparent"
-                        android:clickable="true"
-                        android:focusable="true"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/icon_comments"
+                        <!-- Play/Pause Button -->
+                        <ImageButton
+                            android:id="@+id/playStopButton"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="4dp"
+                            android:background="@drawable/rounded_button_background"
+                            android:contentDescription="Play description"
+                            android:src="@drawable/ic_play"
+                            android:scaleType="centerInside"
                             app:tint="@color/black" />
 
-                    </LinearLayout>
-                </LinearLayout>
+                        <!-- Stop Button -->
+                        <ImageButton
+                            android:id="@+id/stopButton"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginEnd="4dp"
+                            android:background="@drawable/rounded_button_background"
+                            android:contentDescription="Stop reading"
+                            android:src="@drawable/ic_stop"
+                            android:scaleType="centerInside"
+                            android:visibility="gone"
+                            app:tint="@color/black" />
 
+                        <!-- Restart Button -->
+                        <ImageButton
+                            android:id="@+id/restartButton"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="@drawable/rounded_button_background"
+                            android:contentDescription="Restart reading"
+                            android:src="@drawable/ic_replay"
+                            android:scaleType="centerInside"
+                            android:visibility="gone"
+                            app:tint="@color/black" />
+
+                        <!-- Comments Button -->
+                        <LinearLayout
+                            android:id="@+id/commentsButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@android:color/transparent"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/icon_comments"
+                                app:tint="@color/black" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/descriptionTextView"
