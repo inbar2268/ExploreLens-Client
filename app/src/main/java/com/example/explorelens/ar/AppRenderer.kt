@@ -636,7 +636,7 @@ class AppRenderer(
                     label = "full-image",
                     x = 0.5f,
                     y = 0.5f,
-                    siteName = "Big Ben"
+                    siteName = "big ben"
                 ),
                 siteInfoId = "6818fcadb249f52360e546e9",
             )
