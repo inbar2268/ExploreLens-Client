@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <com.google.android.gms.maps.MapView
         android:id="@+id/mapView"
@@ -9,4 +10,16 @@
         android:layout_height="match_parent"
         android:contentDescription="Interactive map showing nearby landmarks" />
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/satelliteToggleFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:contentDescription="Toggle satellite view"
+        app:srcCompat="@drawable/ic_satellite"
+        app:fabSize="mini"
+        app:elevation="6dp"
+        app:backgroundTint="@color/white"
+        app:tint="@color/primary" />
 </FrameLayout>
