@@ -66,37 +66,103 @@ class UserStatisticsRepository(context: Context) {
         }
     }
 
-    // Get current user's statistics
+    // Get current user's statistics - ALWAYS syncs with server
     suspend fun getCurrentUserStatistics(): Result<UserStatistics> {
         val userId = tokenManager.getUserId()
         return if (userId != null) {
-            // Try to get from local database first
-            val localStats = userStatisticsDao.getUserStatisticsSync(userId)
-            if (localStats != null) {
-                // Check if data is recent (less than 1 hour old)
-                val oneHourAgo = System.currentTimeMillis() - (60 * 60 * 1000)
-                if (localStats.createdAt > oneHourAgo) {
-                    Log.d(TAG, "Using cached statistics")
+            Log.d(TAG, "Always syncing statistics with server for userId: $userId")
+
+            try {
+                // Always fetch fresh data from server first
+                val serverResult = fetchAndCacheUserStatistics(userId)
+
+                if (serverResult.isSuccess) {
+                    Log.d(TAG, "Successfully synced with server")
+                    serverResult
+                } else {
+                    // If server fetch fails, fall back to cached data as last resort
+                    Log.w(TAG, "Server sync failed, attempting to use cached data as fallback")
+                    val localStats = withContext(Dispatchers.IO) {
+                        userStatisticsDao.getUserStatisticsSync(userId)
+                    }
+
+                    if (localStats != null) {
+                        Log.w(TAG, "Using cached statistics as fallback (last updated: ${localStats.createdAt})")
+                        Result.success(localStats)
+                    } else {
+                        Log.e(TAG, "No cached data available and server sync failed")
+                        serverResult // Return the original failure
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception during sync, trying cached data", e)
+
+                // If there's an exception, try cached data
+                val localStats = withContext(Dispatchers.IO) {
+                    userStatisticsDao.getUserStatisticsSync(userId)
+                }
+
+                if (localStats != null) {
+                    Log.w(TAG, "Using cached statistics due to sync exception")
                     Result.success(localStats)
                 } else {
-                    // Data is old, fetch new data
-                    Log.d(TAG, "Cached data is old, fetching new statistics")
-                    fetchAndCacheUserStatistics(userId)
+                    Log.e(TAG, "No cached data available and sync failed with exception")
+                    Result.failure(e)
                 }
-            } else {
-                // No local data, fetch from server
-                Log.d(TAG, "No cached data, fetching from server")
-                fetchAndCacheUserStatistics(userId)
+            }
+        } else {
+            Log.e(TAG, "User ID not found in token manager")
+            Result.failure(Exception("User ID not found"))
+        }
+    }
+
+    // Alternative method for getting cached statistics only (useful for offline scenarios)
+    suspend fun getCachedUserStatistics(): Result<UserStatistics> {
+        val userId = tokenManager.getUserId()
+        return if (userId != null) {
+            withContext(Dispatchers.IO) {
+                val localStats = userStatisticsDao.getUserStatisticsSync(userId)
+                if (localStats != null) {
+                    Log.d(TAG, "Retrieved cached statistics")
+                    Result.success(localStats)
+                } else {
+                    Log.w(TAG, "No cached statistics found")
+                    Result.failure(Exception("No cached statistics available"))
+                }
             }
         } else {
             Result.failure(Exception("User ID not found"))
         }
     }
 
+    // Force refresh statistics (same as getCurrentUserStatistics but more explicit)
+    suspend fun refreshUserStatistics(): Result<UserStatistics> {
+        Log.d(TAG, "Force refreshing user statistics")
+        return getCurrentUserStatistics()
+    }
+
     // Clear user statistics
     suspend fun clearUserStatistics(userId: String) {
         withContext(Dispatchers.IO) {
+            Log.d(TAG, "Clearing cached statistics for userId: $userId")
             userStatisticsDao.deleteUserStatisticsByUserId(userId)
+        }
+    }
+
+    // Check if cached data exists and when it was last updated
+    suspend fun getCachedDataInfo(): Pair<Boolean, Long?> {
+        val userId = tokenManager.getUserId()
+        return if (userId != null) {
+            withContext(Dispatchers.IO) {
+                val localStats = userStatisticsDao.getUserStatisticsSync(userId)
+                if (localStats != null) {
+                    Pair(true, localStats.createdAt)
+                } else {
+                    Pair(false, null)
+                }
+            }
+        } else {
+            Pair(false, null)
         }
     }
 }
