@@ -793,7 +793,7 @@ class AppRenderer(
                 val dZ = closestPointZ - anchorPos[2]
                 val perpendicularDistance = sqrt(dX * dX + dY * dY + dZ * dZ)
 
-                val touchThreshold = 0.7f
+                val touchThreshold = 1f
 
                 if (dotProduct > 0 && perpendicularDistance < touchThreshold) {
                     if (distanceToAnchor < closestDistance) {
