@@ -636,9 +636,9 @@ class AppRenderer(
                     label = "full-image",
                     x = 0.5f,
                     y = 0.5f,
-                    siteName = "Big Ben"
+                    siteName = "Taj Mahal"
                 ),
-                siteInfoId = "6818fcadb249f52360e546e9",
+                siteInfoId = "6841af37f6b22de2987fc7ca",
             )
 
             launch(Dispatchers.Main) {

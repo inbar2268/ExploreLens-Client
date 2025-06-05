@@ -331,6 +331,11 @@ class ProfileFragment : Fragment() {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
+            settings.builtInZoomControls = true
+            settings.displayZoomControls = false // Hide default zoom controls
+            settings.setSupportZoom(true)
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = true
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 WebView.setWebContentsDebuggingEnabled(true)
@@ -419,8 +424,93 @@ class ProfileFragment : Fragment() {
     <html>
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
         <style>
-            body { margin: 0; padding: 4px; background: #f0f8ff; }
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body { 
+                margin: 0; 
+                padding: 0;
+                background: #f0f8ff;
+                overflow: hidden;
+                border-radius: 12px;
+                user-select: none;
+                -webkit-user-select: none;
+                -webkit-touch-callout: none;
+            }
+            
+            .map-container {
+                width: 100%;
+                height: 100vh;
+                border-radius: 12px;
+                overflow: hidden;
+                background: #87CEEB;
+                position: relative;
+            }
+            
+            .zoom-controls {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                display: flex;
+                flex-direction: column;
+                z-index: 100;
+                gap: 5px;
+            }
+            
+            .zoom-btn {
+                width: 40px;
+                height: 40px;
+                background: rgba(255, 255, 255, 0.9);
+                border: 1px solid #ccc;
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                font-size: 18px;
+                font-weight: bold;
+                color: #333;
+                transition: all 0.2s ease;
+                user-select: none;
+                -webkit-user-select: none;
+            }
+            
+            .zoom-btn:hover {
+                background: rgba(255, 255, 255, 1);
+                transform: scale(1.05);
+            }
+            
+            .zoom-btn:active {
+                transform: scale(0.95);
+            }
+            
+            .map-content {
+                width: 100%;
+                height: 100%;
+                transition: transform 0.3s ease;
+                transform-origin: center center;
+            }
+            
+            svg { 
+                width: 100%;
+                height: 100%;
+                max-width: none;
+                max-height: none;
+                border-radius: 12px;
+                background: #87CEEB;
+                cursor: grab;
+                touch-action: none;
+            }
+            
+            svg:active {
+                cursor: grabbing;
+            }
+            
             svg path { 
                 stroke: #fff; 
                 stroke-width: 0.3; 
@@ -428,141 +518,422 @@ class ProfileFragment : Fragment() {
                 fill: #E0E0E0;
                 transition: all 0.2s ease;
             }
+            
             svg path:hover {
                 stroke-width: 1;
                 stroke: #333;
                 filter: brightness(1.1);
             }
-            svg path.visited { fill: #4CAF50 !important; }
-            svg path.unvisited { fill: #E0E0E0 !important; }
-            svg { max-width: 100%; height: auto; background: #87CEEB; }
+            
+            svg path.visited { 
+                fill: #4CAF50 !important; 
+            }
+            
+            svg path.unvisited { 
+                fill: #E0E0E0 !important; 
+            }
+            
+            @media (max-width: 768px) {
+                svg path {
+                    stroke-width: 0.25;
+                }
+                
+                svg path:hover {
+                    stroke-width: 0.8;
+                }
+                
+                .zoom-btn {
+                    width: 35px;
+                    height: 35px;
+                    font-size: 16px;
+                }
+            }
         </style>
     </head>
     <body>
-        <div>$svgContent</div>
+        <div class="map-container">
+            <div class="zoom-controls">
+                <div class="zoom-btn" id="zoomIn">+</div>
+                <div class="zoom-btn" id="zoomOut">−</div>
+                <div class="zoom-btn" id="zoomReset">⌂</div>
+            </div>
+            
+            <div class="map-content" id="mapContent">
+                $svgContent
+            </div>
+        </div>
         
         <script>
-            console.log('Map script starting');
+            // Global variables
+            var currentZoom = 1;
+            var minZoom = 0.5;
+            var maxZoom = 3;
+            var zoomStep = 0.3;
+            var mapContent = null;
+            var isDragging = false;
+            var startX = 0;
+            var startY = 0;
+            var translateX = 0;
+            var translateY = 0;
             
+            // Touch gesture variables
+            var initialDistance = 0;
+            var initialZoom = 1;
+            var isZooming = false;
+            var lastTouchTime = 0;
+            var touchStartTime = 0;
+            
+            // Country mapping
             var countryNameToCode = {
-                'Afghanistan': 'AF', 'Albania': 'AL', 'Algeria': 'DZ', 'Argentina': 'AR',
-                'Armenia': 'AM', 'Australia': 'AU', 'Austria': 'AT', 'Azerbaijan': 'AZ',
-                'Bahrain': 'BH', 'Bangladesh': 'BD', 'Belarus': 'BY', 'Belgium': 'BE',
-                'Bolivia': 'BO', 'Bosnia and Herzegovina': 'BA', 'Brazil': 'BR', 'Bulgaria': 'BG',
-                'Cambodia': 'KH', 'Cameroon': 'CM', 'Canada': 'CA', 'Chile': 'CL',
-                'China': 'CN', 'Colombia': 'CO', 'Croatia': 'HR', 'Cuba': 'CU',
-                'Czech Republic': 'CZ', 'Denmark': 'DK', 'Ecuador': 'EC', 'Egypt': 'EG',
-                'Estonia': 'EE', 'Ethiopia': 'ET', 'Finland': 'FI', 'France': 'FR',
-                'Germany': 'DE', 'Ghana': 'GH', 'Greece': 'GR', 'Hungary': 'HU',
-                'Iceland': 'IS', 'India': 'IN', 'Indonesia': 'ID', 'Iran': 'IR',
-                'Iraq': 'IQ', 'Ireland': 'IE', 'Israel': 'IL', 'Italy': 'IT',
-                'Japan': 'JP', 'Jordan': 'JO', 'Kazakhstan': 'KZ', 'Kenya': 'KE',
-                'South Korea': 'KR', 'Kuwait': 'KW', 'Latvia': 'LV', 'Lebanon': 'LB',
-                'Libya': 'LY', 'Lithuania': 'LT', 'Luxembourg': 'LU', 'Malaysia': 'MY',
-                'Mexico': 'MX', 'Mongolia': 'MN', 'Morocco': 'MA', 'Myanmar': 'MM',
-                'Nepal': 'NP', 'Netherlands': 'NL', 'New Zealand': 'NZ', 'Nigeria': 'NG',
-                'North Korea': 'KP', 'Norway': 'NO', 'Pakistan': 'PK', 'Peru': 'PE',
-                'Philippines': 'PH', 'Poland': 'PL', 'Portugal': 'PT', 'Romania': 'RO',
-                'Russia': 'RU', 'Saudi Arabia': 'SA', 'Serbia': 'RS', 'Singapore': 'SG',
-                'Slovakia': 'SK', 'Slovenia': 'SI', 'South Africa': 'ZA', 'Spain': 'ES',
-                'Sri Lanka': 'LK', 'Sweden': 'SE', 'Switzerland': 'CH', 'Syria': 'SY',
-                'Taiwan': 'TW', 'Thailand': 'TH', 'Turkey': 'TR', 'Ukraine': 'UA',
-                'United Arab Emirates': 'AE', 'United Kingdom': 'GB', 'United States': 'US',
-                'Uruguay': 'UY', 'Venezuela': 'VE', 'Vietnam': 'VN', 'Yemen': 'YE',
-                'Zimbabwe': 'ZW', 'USA': 'US', 'UK': 'GB', 'UAE': 'AE'
+                'Afghanistan': 'AF', 'Albania': 'AL', 'Algeria': 'DZ', 'Anguilla': 'AI', 
+                'Armenia': 'AM', 'Aruba': 'AW', 'Austria': 'AT', 'Bahrain': 'BH', 
+                'Bangladesh': 'BD', 'Barbados': 'BB', 'Belarus': 'BY', 'Belgium': 'BE', 
+                'Belize': 'BZ', 'Benin': 'BJ', 'Bermuda': 'BM', 'Bhutan': 'BT', 
+                'Bolivia': 'BO', 'Bosnia and Herzegovina': 'BA', 'Botswana': 'BW', 
+                'Brazil': 'BR', 'British Virgin Islands': 'VG', 'Brunei Darussalam': 'BN', 
+                'Bulgaria': 'BG', 'Burkina Faso': 'BF', 'Burundi': 'BI', 'Cambodia': 'KH', 
+                'Cameroon': 'CM', 'Central African Republic': 'CF', 'Chad': 'TD', 
+                'Colombia': 'CO', 'Costa Rica': 'CR', 'Croatia': 'HR', 'Cuba': 'CU', 
+                'Curaçao': 'CW', 'Czech Republic': 'CZ', 'Côte d\'Ivoire': 'CI', 
+                'Dem. Rep. Korea': 'KP', 'Democratic Republic of the Congo': 'CD', 
+                'Djibouti': 'DJ', 'Dominica': 'DM', 'Dominican Republic': 'DO', 
+                'Ecuador': 'EC', 'Egypt': 'EG', 'El Salvador': 'SV', 'Equatorial Guinea': 'GQ', 
+                'Eritrea': 'ER', 'Estonia': 'EE', 'Ethiopia': 'ET', 'Finland': 'FI', 
+                'French Guiana': 'GF', 'Gabon': 'GA', 'Georgia': 'GE', 'Germany': 'DE', 
+                'Ghana': 'GH', 'Greenland': 'GL', 'Grenada': 'GD', 'Guam': 'GU', 
+                'Guatemala': 'GT', 'Guinea': 'GN', 'Guinea-Bissau': 'GW', 'Guyana': 'GY', 
+                'Haiti': 'HT', 'Honduras': 'HN', 'Hungary': 'HU', 'Iceland': 'IS', 
+                'India': 'IN', 'Iran': 'IR', 'Iraq': 'IQ', 'Ireland': 'IE', 'Israel': 'IL', 
+                'Jamaica': 'JM', 'Jordan': 'JO', 'Kazakhstan': 'KZ', 'Kenya': 'KE', 
+                'Kosovo': 'XK', 'Kuwait': 'KW', 'Kyrgyzstan': 'KG', 'Lao PDR': 'LA', 
+                'Latvia': 'LV', 'Lebanon': 'LB', 'Lesotho': 'LS', 'Liberia': 'LR', 
+                'Libya': 'LY', 'Lithuania': 'LT', 'Luxembourg': 'LU', 'Macedonia': 'MK', 
+                'Madagascar': 'MG', 'Malawi': 'MW', 'Maldives': 'MV', 'Mali': 'ML', 
+                'Marshall Islands': 'MH', 'Martinique': 'MQ', 'Mauritania': 'MR', 
+                'Mayotte': 'YT', 'Mexico': 'MX', 'Moldova': 'MD', 'Mongolia': 'MN', 
+                'Montenegro': 'ME', 'Montserrat': 'MS', 'Morocco': 'MA', 'Mozambique': 'MZ', 
+                'Myanmar': 'MM', 'Namibia': 'NA', 'Nauru': 'NR', 'Nepal': 'NP', 
+                'Netherlands': 'NL', 'Nicaragua': 'NI', 'Niger': 'NE', 'Nigeria': 'NG', 
+                'Pakistan': 'PK', 'Palau': 'PW', 'Palestine': 'PS', 'Panama': 'PA', 
+                'Paraguay': 'PY', 'Peru': 'PE', 'Poland': 'PL', 'Portugal': 'PT', 
+                'Qatar': 'QA', 'Republic of Congo': 'CG', 'Republic of Korea': 'KR', 
+                'Reunion': 'RE', 'Romania': 'RO', 'Rwanda': 'RW', 'Saint Lucia': 'LC', 
+                'Saint Vincent and the Grenadines': 'VC', 'Saint-Barthélemy': 'BL', 
+                'Saint-Martin': 'MF', 'Saudi Arabia': 'SA', 'Senegal': 'SN', 'Serbia': 'RS', 
+                'Sierra Leone': 'SL', 'Sint Maarten': 'SX', 'Slovakia': 'SK', 'Slovenia': 'SI', 
+                'Somalia': 'SO', 'South Africa': 'ZA', 'South Sudan': 'SS', 'Spain': 'ES', 
+                'Sri Lanka': 'LK', 'Sudan': 'SD', 'Suriname': 'SR', 'Swaziland': 'SZ', 
+                'Sweden': 'SE', 'Switzerland': 'CH', 'Syria': 'SY', 'Taiwan': 'TW', 
+                'Tajikistan': 'TJ', 'Tanzania': 'TZ', 'Thailand': 'TH', 'The Gambia': 'GM', 
+                'Timor-Leste': 'TL', 'Togo': 'TG', 'Tunisia': 'TN', 'Turkmenistan': 'TM', 
+                'Tuvalu': 'TV', 'Uganda': 'UG', 'Ukraine': 'UA', 'United Arab Emirates': 'AE', 
+                'Uruguay': 'UY', 'Uzbekistan': 'UZ', 'Venezuela': 'VE', 'Vietnam': 'VN', 
+                'Western Sahara': 'EH', 'Yemen': 'YE', 'Zambia': 'ZM', 'Zimbabwe': 'ZW',
+                
+                // Countries not available in this SVG
+                'UK': null, 'United Kingdom': null, 'Great Britain': null, 'Britain': null,
+                'USA': null, 'United States': null, 'America': null,
+                'South Korea': 'KR', 'North Korea': 'KP',
+                'Russia': null, 'China': null, 'France': null, 'Italy': null,
+                'Japan': null, 'Australia': null, 'Canada': null, 'Turkey': null,
+                'Argentina': null, 'Chile': null, 'Norway': null, 'Denmark': null,
+                'New Zealand': null, 'Singapore': null, 'Malaysia': null, 'Indonesia': null,
+                'Philippines': null, 'Gambia': 'GM'
             };
 
+            // Helper functions for touch gestures
+            function getTouchDistance(touch1, touch2) {
+                var dx = touch1.clientX - touch2.clientX;
+                var dy = touch1.clientY - touch2.clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
             function findCountryElement(countryName) {
-                console.log('Searching for country:', countryName);
-                
                 var countryCode = countryNameToCode[countryName];
-                console.log('Mapped to code:', countryCode);
                 
-                if (!countryCode) {
-                    console.log('No country code found for:', countryName);
+                if (countryCode === null) {
+                    console.log('⚠ Country not available in this SVG map:', countryName);
                     return null;
                 }
                 
-                // Method 1: Try getElementById
+                if (!countryCode) {
+                    console.log('No country code mapping found for:', countryName);
+                    return null;
+                }
+                
                 var element = document.getElementById(countryCode);
                 if (element) {
-                    console.log('Found by getElementById:', countryCode);
+                    console.log('✓ Found country element:', countryCode);
                     return element;
                 }
                 
-                // Method 2: Try lowercase
                 element = document.getElementById(countryCode.toLowerCase());
                 if (element) {
-                    console.log('Found by getElementById (lowercase):', countryCode.toLowerCase());
+                    console.log('✓ Found country element (lowercase):', countryCode.toLowerCase());
                     return element;
                 }
                 
-                // Method 3: Let's see what IDs actually exist
-                console.log('getElementById failed, checking all IDs...');
-                var allPaths = document.querySelectorAll('svg path');
-                var foundIds = [];
-                
-                for (var i = 0; i < allPaths.length; i++) {
-                    var path = allPaths[i];
-                    if (path.id && path.id.length <= 3) {
-                        foundIds.push(path.id);
-                        
-                        // Check if this is our target
-                        if (path.id === countryCode || path.id === countryCode.toLowerCase()) {
-                            console.log('Found target country by manual search:', path.id);
-                            return path;
-                        }
-                    }
-                }
-                
-                console.log('First 20 country IDs found:', foundIds.slice(0, 20).join(', '));
-                console.log('Does', countryCode, 'exist in IDs?', foundIds.includes(countryCode));
-                console.log('Does', countryCode.toLowerCase(), 'exist in IDs?', foundIds.includes(countryCode.toLowerCase()));
-                
+                console.log('✗ Country code exists but element not found:', countryName, 'Code:', countryCode);
                 return null;
             }
 
             function updateCountryColors(visitedCountries) {
-                console.log('updateCountryColors called with:', visitedCountries);
+                console.log('Updating map with countries:', visitedCountries);
                 
                 var allPaths = document.querySelectorAll('svg path');
-                console.log('Found', allPaths.length, 'SVG paths');
+                console.log('Total map elements:', allPaths.length);
                 
-                // Reset all to gray
+                // Reset all countries
                 for (var i = 0; i < allPaths.length; i++) {
-                    allPaths[i].className = 'unvisited';
-                    allPaths[i].style.fill = '#E0E0E0';
+                    var path = allPaths[i];
+                    path.classList.remove('visited');
+                    path.classList.add('unvisited');
                 }
                 
                 var coloredCount = 0;
+                var notAvailableCount = 0;
                 
-                // Color visited countries
                 if (visitedCountries && visitedCountries.length > 0) {
                     for (var i = 0; i < visitedCountries.length; i++) {
                         var countryName = visitedCountries[i];
-                        console.log('Processing country:', countryName);
-                        
                         var element = findCountryElement(countryName);
+                        
                         if (element) {
-                            console.log('SUCCESS: Coloring', countryName);
-                            element.className = 'visited';
-                            element.style.fill = '#4CAF50';
+                            console.log('✓ Coloring country:', countryName);
+                            element.classList.remove('unvisited');
+                            element.classList.add('visited');
                             coloredCount++;
                         } else {
-                            console.log('FAILED: Could not find', countryName);
+                            var countryCode = countryNameToCode[countryName];
+                            if (countryCode === null) {
+                                notAvailableCount++;
+                            }
                         }
                     }
                 }
                 
-                console.log('Coloring completed. Total colored:', coloredCount);
+                console.log('Map update complete. Colored:', coloredCount, '| Not available:', notAvailableCount);
                 return coloredCount;
             }
 
-            // Make functions available globally
+            function zoom(delta) {
+                var newZoom = currentZoom + delta;
+                if (newZoom >= minZoom && newZoom <= maxZoom) {
+                    currentZoom = newZoom;
+                    updateTransform();
+                    console.log('Zoomed to:', currentZoom);
+                }
+            }
+
+            function resetZoom() {
+                currentZoom = 1;
+                translateX = 0;
+                translateY = 0;
+                updateTransform();
+                console.log('Zoom reset');
+            }
+
+            function updateTransform() {
+                if (mapContent) {
+                    mapContent.style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + currentZoom + ')';
+                }
+            }
+
+            function setupZoomControls() {
+                var zoomInBtn = document.getElementById('zoomIn');
+                var zoomOutBtn = document.getElementById('zoomOut');
+                var zoomResetBtn = document.getElementById('zoomReset');
+                
+                if (zoomInBtn) {
+                    zoomInBtn.onclick = function() { zoom(zoomStep); };
+                }
+                
+                if (zoomOutBtn) {
+                    zoomOutBtn.onclick = function() { zoom(-zoomStep); };
+                }
+                
+                if (zoomResetBtn) {
+                    zoomResetBtn.onclick = function() { resetZoom(); };
+                }
+                
+                console.log('✓ Zoom controls initialized');
+            }
+
+            function setupTouchControls() {
+                var container = document.querySelector('.map-container');
+                if (!container) return;
+                
+                container.ontouchstart = function(e) {
+                    touchStartTime = new Date().getTime();
+                    
+                    if (e.touches.length === 1) {
+                        // Single touch - pan
+                        if (!isZooming) {
+                            isDragging = true;
+                            var touch = e.touches[0];
+                            startX = touch.clientX - translateX;
+                            startY = touch.clientY - translateY;
+                        }
+                        e.preventDefault();
+                    } else if (e.touches.length === 2) {
+                        // Two touches - pinch zoom
+                        isDragging = false;
+                        isZooming = true;
+                        
+                        var touch1 = e.touches[0];
+                        var touch2 = e.touches[1];
+                        
+                        initialDistance = getTouchDistance(touch1, touch2);
+                        initialZoom = currentZoom;
+                        
+                        console.log('Pinch zoom started');
+                        e.preventDefault();
+                    }
+                };
+                
+                container.ontouchmove = function(e) {
+                    if (e.touches.length === 1 && isDragging && !isZooming) {
+                        // Single touch pan
+                        var touch = e.touches[0];
+                        translateX = touch.clientX - startX;
+                        translateY = touch.clientY - startY;
+                        updateTransform();
+                        e.preventDefault();
+                    } else if (e.touches.length === 2 && isZooming) {
+                        // Two finger pinch zoom
+                        var touch1 = e.touches[0];
+                        var touch2 = e.touches[1];
+                        
+                        var currentDistance = getTouchDistance(touch1, touch2);
+                        var scaleChange = currentDistance / initialDistance;
+                        var newZoom = initialZoom * scaleChange;
+                        
+                        // Apply zoom with limits
+                        if (newZoom >= minZoom && newZoom <= maxZoom) {
+                            currentZoom = newZoom;
+                            updateTransform();
+                        }
+                        
+                        e.preventDefault();
+                    }
+                };
+                
+                container.ontouchend = function(e) {
+                    var touchEndTime = new Date().getTime();
+                    var touchDuration = touchEndTime - touchStartTime;
+                    
+                    if (e.touches.length === 0) {
+                        // All touches ended
+                        var wasQuickTap = touchDuration < 200 && !isDragging && !isZooming;
+                        
+                        isDragging = false;
+                        isZooming = false;
+                        
+                        // Double tap to reset zoom (quick successive taps)
+                        if (wasQuickTap && touchEndTime - lastTouchTime < 400) {
+                            resetZoom();
+                            console.log('Double tap zoom reset');
+                        }
+                        
+                        lastTouchTime = touchEndTime;
+                    } else if (e.touches.length === 1) {
+                        // One touch remaining, switch back to pan mode
+                        isZooming = false;
+                        if (!isDragging) {
+                            isDragging = true;
+                            var touch = e.touches[0];
+                            startX = touch.clientX - translateX;
+                            startY = touch.clientY - translateY;
+                        }
+                    }
+                    
+                    e.preventDefault();
+                };
+                
+                console.log('✓ Touch controls initialized (pinch-to-zoom enabled)');
+            }
+
+            function setupMouseControls() {
+                var svg = document.querySelector('svg');
+                if (!svg) return;
+                
+                // Mouse drag for desktop
+                svg.onmousedown = function(e) {
+                    isDragging = true;
+                    startX = e.clientX - translateX;
+                    startY = e.clientY - translateY;
+                    svg.style.cursor = 'grabbing';
+                    e.preventDefault();
+                };
+                
+                document.onmousemove = function(e) {
+                    if (!isDragging) return;
+                    translateX = e.clientX - startX;
+                    translateY = e.clientY - startY;
+                    updateTransform();
+                    e.preventDefault();
+                };
+                
+                document.onmouseup = function() {
+                    if (isDragging) {
+                        isDragging = false;
+                        svg.style.cursor = 'grab';
+                    }
+                };
+                
+                // Mouse wheel zoom
+                svg.onwheel = function(e) {
+                    e.preventDefault();
+                    var delta = e.deltaY > 0 ? -zoomStep : zoomStep;
+                    zoom(delta);
+                };
+                
+                console.log('✓ Mouse controls initialized');
+            }
+
+            function initializeMap() {
+                console.log('Initializing map...');
+                
+                mapContent = document.getElementById('mapContent');
+                
+                setupZoomControls();
+                setupTouchControls();
+                setupMouseControls();
+                
+                // Add country click listeners
+                var allPaths = document.querySelectorAll('svg path');
+                for (var i = 0; i < allPaths.length; i++) {
+                    allPaths[i].onclick = function(e) {
+                        if (isDragging || isZooming) {
+                            e.preventDefault();
+                            return;
+                        }
+                        
+                        var countryId = this.id || 'Unknown';
+                        console.log('Country clicked:', countryId);
+                        
+                        if (window.Android && window.Android.onContinentClicked) {
+                            window.Android.onContinentClicked(countryId);
+                        }
+                    };
+                }
+                
+                console.log('✓ Map initialization complete');
+            }
+
+            // Make functions globally available
             window.updateMap = updateCountryColors;
             window.updateCountryColors = updateCountryColors;
+            window.initializeMap = initializeMap;
             
-            console.log('Map script loaded. updateMap available:', typeof window.updateMap);
+            // Initialize when ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeMap);
+            } else {
+                initializeMap();
+            }
+            
+            console.log('✓ Map script loaded successfully');
         </script>
     </body>
     </html>
