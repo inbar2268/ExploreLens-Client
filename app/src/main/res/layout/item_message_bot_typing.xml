@@ -22,7 +22,7 @@
         app:layout_constraintTop_toTopOf="@+id/cardViewBotMessage"
         app:layout_constraintBottom_toBottomOf="@+id/cardViewBotMessage" />
 
-    <!-- Bot message card - Aligned to the left/start but after the avatar -->
+    <!-- Bot typing message card - Aligned to the left/start but after the avatar -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cardViewBotMessage"
         android:layout_width="wrap_content"
@@ -35,27 +35,54 @@
         app:layout_constraintStart_toEndOf="@+id/imageViewBotAvatar"
         app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:id="@+id/textViewBotMessage"
+        <!-- Three Dots Animation Container -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxWidth="280dp"
-            android:padding="12dp"
-            android:text="Bot message goes here with information about historical sites."
-            android:textColor="#000000"
-            android:textSize="14sp" />
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="12dp">
+
+            <View
+                android:id="@+id/dot1"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:layout_marginEnd="4dp"
+                android:alpha="0.3"
+                android:background="@drawable/typing_dot_shape" />
+
+            <View
+                android:id="@+id/dot2"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:layout_marginEnd="4dp"
+                android:alpha="0.3"
+                android:background="@drawable/typing_dot_shape" />
+
+            <View
+                android:id="@+id/dot3"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:alpha="0.3"
+                android:background="@drawable/typing_dot_shape" />
+
+        </LinearLayout>
 
     </androidx.cardview.widget.CardView>
 
-    <!-- Bot message timestamp -->
+    <!-- Bot message timestamp (hidden for typing indicator) -->
     <TextView
         android:id="@+id/textViewBotTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:text="12:34 PM"
+        android:text=""
         android:textColor="#757575"
         android:textSize="10sp"
+        android:visibility="gone"
         app:layout_constraintStart_toStartOf="@+id/cardViewBotMessage"
         app:layout_constraintTop_toBottomOf="@+id/cardViewBotMessage" />
 
