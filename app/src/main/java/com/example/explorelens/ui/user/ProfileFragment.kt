@@ -49,6 +49,10 @@ class ProfileFragment : Fragment() {
     private lateinit var authRepository: AuthRepository
     private lateinit var userStatisticsRepository: UserStatisticsRepository
 
+    // Track loading states separately
+    private var isLoadingStatistics = false
+    private var isLoadingMapData = false
+
     // Continent to country mapping for accurate coloring
     private val continentCountries = mapOf(
         "north-america" to listOf(
@@ -103,7 +107,8 @@ class ProfileFragment : Fragment() {
                 if (currentDestinationId != R.id.profileFragment) {
                     navController.popBackStack(R.id.profileFragment, false)
                 } else {
-                    fetchUserData()
+                    // Refresh data when user taps profile tab again
+                    refreshAllData()
                 }
             }
         }
@@ -131,7 +136,19 @@ class ProfileFragment : Fragment() {
         // Setup the world map
         setupWorldMap()
 
-        // Fetch user data when the fragment is created
+        // Load all data when the fragment is created
+        loadInitialData()
+    }
+
+    private fun loadInitialData() {
+        Log.d("ProfileFragment", "Loading initial data")
+        fetchUserData()
+        loadUserStatistics()
+        loadContinentData()
+    }
+
+    private fun refreshAllData() {
+        Log.d("ProfileFragment", "Refreshing all data")
         fetchUserData()
         loadUserStatistics()
         loadContinentData()
@@ -227,9 +244,15 @@ class ProfileFragment : Fragment() {
 
     private fun setupRefreshListener() {
         binding.swipeRefresh.setOnRefreshListener {
-            fetchUserData()
-            loadUserStatistics()
-            loadContinentData()
+            Log.d("ProfileFragment", "Pull-to-refresh triggered")
+            refreshAllData()
+            // Don't set isRefreshing to false immediately - let the loading finish
+        }
+    }
+
+    private fun updateSwipeRefreshState() {
+        // Only hide refresh indicator when both statistics and map data are done loading
+        if (!isLoadingStatistics && !isLoadingMapData) {
             binding.swipeRefresh.isRefreshing = false
         }
     }
@@ -240,16 +263,27 @@ class ProfileFragment : Fragment() {
     }
 
     private fun loadUserStatistics() {
+        if (isLoadingStatistics) {
+            Log.d("ProfileFragment", "Statistics already loading, skipping...")
+            return
+        }
+
+        isLoadingStatistics = true
+        Log.d("ProfileFragment", "Starting to load user statistics (always syncing with server)")
+
         // Show loading indicator
         binding.statisticsProgressBar.visibility = View.VISIBLE
         binding.statisticsContainer.visibility = View.GONE
 
         lifecycleScope.launch {
             try {
+                // This now always syncs with server first thanks to the updated repository
                 val result = userStatisticsRepository.getCurrentUserStatistics()
 
                 result.fold(
                     onSuccess = { statistics ->
+                        Log.d("ProfileFragment", "Successfully loaded statistics: ${statistics.countryCount} countries, ${statistics.percentageVisited}% visited")
+
                         // Update UI with statistics
                         binding.percentageValue.text = statistics.percentageVisited
                         binding.countryValue.text = statistics.countryCount.toString()
@@ -269,7 +303,13 @@ class ProfileFragment : Fragment() {
                         binding.percentageValue.text = "--"
                         binding.countryValue.text = "--"
 
-                        ToastHelper.showShortToast(requireContext(), "Failed to load statistics")
+                        // Show different messages based on error type
+                        val errorMessage = when {
+                            error.message?.contains("User ID not found") == true -> "Please log in again"
+                            error.message?.contains("network") == true || error.message?.contains("internet") == true -> "Check your internet connection"
+                            else -> "Failed to load statistics"
+                        }
+                        ToastHelper.showShortToast(requireContext(), errorMessage)
                     }
                 )
             } catch (e: Exception) {
@@ -278,6 +318,10 @@ class ProfileFragment : Fragment() {
                 binding.statisticsContainer.visibility = View.VISIBLE
                 binding.percentageValue.text = "--"
                 binding.countryValue.text = "--"
+                ToastHelper.showShortToast(requireContext(), "Error loading statistics")
+            } finally {
+                isLoadingStatistics = false
+                updateSwipeRefreshState()
             }
         }
     }
@@ -298,6 +342,7 @@ class ProfileFragment : Fragment() {
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    Log.d("ProfileFragment", "WebView page finished loading")
                     // Map is ready, load continent data
                     loadContinentData()
                 }
@@ -477,89 +522,6 @@ class ProfileFragment : Fragment() {
                 return null;
             }
 
-            function debugSVGStructure() {
-                console.log('=== DEBUG: Analyzing SVG Structure ===');
-                var allPaths = document.querySelectorAll('svg path');
-                console.log('Total paths:', allPaths.length);
-                
-                // Find ALL elements with IDs
-                var allIds = [];
-                var allDataIds = [];
-                var allDataNames = [];
-                
-                for (var i = 0; i < allPaths.length; i++) {
-                    var path = allPaths[i];
-                    
-                    if (path.id) {
-                        allIds.push(path.id);
-                    }
-                    
-                    var dataId = path.getAttribute('data-id');
-                    if (dataId) {
-                        allDataIds.push(dataId);
-                    }
-                    
-                    var dataName = path.getAttribute('data-name');
-                    if (dataName) {
-                        allDataNames.push(dataName);
-                    }
-                }
-                
-                console.log('=== ALL IDs FOUND ===');
-                console.log('Total IDs:', allIds.length);
-                console.log('All IDs:', allIds.sort().join(', '));
-                
-                console.log('=== ALL DATA-IDs FOUND ===');
-                console.log('Total data-ids:', allDataIds.length);
-                if (allDataIds.length > 0) {
-                    console.log('All data-ids:', allDataIds.sort().join(', '));
-                }
-                
-                console.log('=== ALL DATA-NAMEs FOUND ===');
-                console.log('Total data-names:', allDataNames.length);
-                if (allDataNames.length > 0) {
-                    console.log('First 20 data-names:', allDataNames.slice(0, 20).join(', '));
-                }
-                
-                // Look for anything that might be Italy
-                console.log('=== SEARCHING FOR ITALY VARIATIONS ===');
-                var italyFound = false;
-                
-                for (var i = 0; i < allPaths.length; i++) {
-                    var path = allPaths[i];
-                    var id = path.id || '';
-                    var dataId = path.getAttribute('data-id') || '';
-                    var dataName = path.getAttribute('data-name') || '';
-                    
-                    if (id.toLowerCase().includes('it') || 
-                        dataId.toLowerCase().includes('it') || 
-                        dataName.toLowerCase().includes('italy')) {
-                        
-                        console.log('POTENTIAL ITALY FOUND at index', i, ':');
-                        console.log('  id:', id);
-                        console.log('  data-id:', dataId);
-                        console.log('  data-name:', dataName);
-                        italyFound = true;
-                    }
-                }
-                
-                if (!italyFound) {
-                    console.log('NO ITALY-LIKE ELEMENTS FOUND');
-                    console.log('Checking for alternative codes...');
-                    
-                    // Check for common Italy alternatives
-                    var alternatives = ['ITA', 'ITALY', 'Italia'];
-                    for (var j = 0; j < alternatives.length; j++) {
-                        var alt = alternatives[j];
-                        var element = document.getElementById(alt);
-                        if (element) {
-                            console.log('FOUND ITALY WITH ALTERNATIVE ID:', alt);
-                            break;
-                        }
-                    }
-                }
-            }
-
             function updateCountryColors(visitedCountries) {
                 console.log('updateCountryColors called with:', visitedCountries);
                 
@@ -601,15 +563,6 @@ class ProfileFragment : Fragment() {
             window.updateCountryColors = updateCountryColors;
             
             console.log('Map script loaded. updateMap available:', typeof window.updateMap);
-            
-            // Test on load
-            setTimeout(function() {
-                console.log('=== RUNNING DIAGNOSTIC TESTS ===');
-                debugSVGStructure();
-                
-                console.log('=== TESTING ISRAEL COLORING ===');
-                updateCountryColors(['Israel']);
-            }, 1000);
         </script>
     </body>
     </html>
@@ -617,40 +570,66 @@ class ProfileFragment : Fragment() {
     }
 
     private fun loadContinentData() {
+        if (isLoadingMapData) {
+            Log.d("ProfileFragment", "Map data already loading, skipping...")
+            return
+        }
+
+        isLoadingMapData = true
+        Log.d("ProfileFragment", "Starting to load continent data (always syncing with server)")
+
         lifecycleScope.launch {
             try {
-                kotlinx.coroutines.delay(1000)
+                kotlinx.coroutines.delay(1000) // Allow WebView to fully load
 
-                // Get user statistics which now includes countries list
+                // This now always syncs with server first thanks to the updated repository
                 val result = userStatisticsRepository.getCurrentUserStatistics()
 
                 result.fold(
                     onSuccess = { statistics ->
-                        // Use the countries list from the server
+                        // Use the actual countries list from the server
                         val visitedCountries = statistics.countries ?: emptyList()
-                        Log.d("ProfileFragment", "Visited countries from server: $visitedCountries")
+                        Log.d("ProfileFragment", "Loaded ${visitedCountries.size} visited countries from server: $visitedCountries")
 
                         updateWorldMapCountries(visitedCountries)
                     },
                     onFailure = { error ->
-                        Log.e("ProfileFragment", "Failed to load user statistics", error)
+                        Log.e("ProfileFragment", "Failed to load user statistics for map", error)
 
-                        // Fallback to test data
-                        val testCountries = listOf("Spain", "Japan", "Germany")
-                        updateWorldMapCountries(testCountries)
+                        // Check if we have cached data as fallback
+                        try {
+                            val cachedResult = userStatisticsRepository.getCachedUserStatistics()
+                            cachedResult.fold(
+                                onSuccess = { cachedStats ->
+                                    Log.w("ProfileFragment", "Using cached data for map")
+                                    val cachedCountries = cachedStats.countries ?: emptyList()
+                                    updateWorldMapCountries(cachedCountries)
+                                },
+                                onFailure = {
+                                    Log.w("ProfileFragment", "No cached data available, using empty map")
+                                    updateWorldMapCountries(emptyList())
+                                }
+                            )
+                        } catch (e: Exception) {
+                            Log.e("ProfileFragment", "Error loading cached data", e)
+                            updateWorldMapCountries(emptyList())
+                        }
                     }
                 )
 
             } catch (e: Exception) {
                 Log.e("ProfileFragment", "Exception loading continent statistics", e)
                 updateWorldMapCountries(emptyList())
+            } finally {
+                isLoadingMapData = false
+                updateSwipeRefreshState()
             }
         }
     }
 
     private fun updateWorldMapCountries(visitedCountries: List<String>) {
         if (visitedCountries.isEmpty()) {
-            Log.d("ProfileFragment", "No countries to display")
+            Log.d("ProfileFragment", "No countries to display on map")
             return
         }
 
@@ -659,7 +638,7 @@ class ProfileFragment : Fragment() {
 
         binding.worldMapWebView.post {
             binding.worldMapWebView.evaluateJavascript(javascript) { result ->
-                Log.d("ProfileFragment", "Map update result: $result")
+                Log.d("ProfileFragment", "Map update completed. Countries colored: $result")
             }
         }
     }
