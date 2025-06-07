@@ -68,6 +68,7 @@ import kotlin.coroutines.resume
 import com.google.ar.core.Config
 import com.example.explorelens.ar.components.AnchorManager
 import com.example.explorelens.ar.components.ARTouchInteractionManager
+import com.example.explorelens.ar.components.SnapshotManager
 
 class AppRenderer(
     val activity: ArActivity,
@@ -114,6 +115,7 @@ class AppRenderer(
 
     private lateinit var anchorManager: AnchorManager
     private lateinit var arTouchInteractionManager: ARTouchInteractionManager
+    private lateinit var snapshotManager: SnapshotManager
 
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
@@ -142,6 +144,27 @@ class AppRenderer(
         this.view = view
         anchorManager = AnchorManager(activity, view, networkScope)
         arTouchInteractionManager = ARTouchInteractionManager(activity, view, anchorManager)
+        snapshotManager = SnapshotManager(
+            activity.applicationContext,
+            view,
+            displayRotationHelper,
+            networkScope,
+            backgroundScope
+        )
+
+        snapshotManager.setCallback(object : SnapshotManager.SnapshotCallback {
+            override fun onSnapshotResult(result: ImageAnalyzedResult?) {
+                serverResult = result
+            }
+
+            override fun onSnapshotError(message: String) {
+                showSnackbar(message)
+            }
+
+            override fun showSnackbar(message: String) {
+                this@AppRenderer.showSnackbar(message)
+            }
+        })
 
         arTouchInteractionManager.setTouchInteractionListener(object : ARTouchInteractionManager.TouchInteractionListener {
             override fun onScanButtonPressed() {
@@ -195,7 +218,7 @@ class AppRenderer(
                     showSnackbar("Please wait for AR to initialize. Move your device around to scan the environment.")
                 }
             } else {
-                lastSnapshotData = takeSnapshot(frame, session)
+                lastSnapshotData = snapshotManager.takeSnapshot(frame, session)
                 anchorManager.initialize()
             }
             arTouchInteractionManager.resetScanButton()
@@ -295,128 +318,12 @@ class AppRenderer(
         }
     }
 
-    private fun takeSnapshot(frame: Frame, session: Session): Snapshot {
-        val camera = frame.camera
-        val viewMatrix = FloatArray(16)
-        val projectionMatrix = FloatArray(16)
-
-        camera.getViewMatrix(viewMatrix, 0)
-        camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
-        val context = activity.applicationContext
-        var path: String? = null
-
-        backgroundScope.launch {
-            try {
-                frame.tryAcquireCameraImage()?.use { cameraImage ->
-                    val cameraId = session.cameraConfig.cameraId
-                    val imageRotation = displayRotationHelper.getCameraSensorToDisplayRotation(cameraId)
-                    val convertYuv = convertYuv(context, cameraImage)
-                    val rotatedImage = ImageUtils.rotateBitmap(convertYuv, imageRotation)
-                    convertYuv.recycle()
-
-                    val file = withContext(Dispatchers.IO) {
-                        rotatedImage.toFile(context, "snapshot")
-                    }
-                    rotatedImage.recycle()
-                    path = file.absolutePath
-
-                    processImageCapture(path)
-                } ?: run {
-                    Log.e("takeSnapshot", "Camera image is null")
-                    launch(Dispatchers.Main) {
-                        view.setScanningActive(false)
-                        showSnackbar("Camera image not available. Please try again.")
-                    }
-                }
-            } catch (e: NotYetAvailableException) {
-                Log.e("takeSnapshot", "No image available yet")
-                launch(Dispatchers.Main) {
-                    view.setScanningActive(false)
-                    showSnackbar("Camera image not available. Please try again.")
-                }
-            } catch (e: Exception) {
-                Log.e("takeSnapshot", "Error capturing image", e)
-                launch(Dispatchers.Main) {
-                    view.setScanningActive(false)
-                    showSnackbar("Failed to capture image: ${e.message}")
-                }
-            }
-        }
-
-        return Snapshot(
-            timestamp = frame.timestamp,
-            cameraPose = camera.pose,
-            viewMatrix = viewMatrix,
-            projectionMatrix = projectionMatrix
-        )
-    }
-
-    private fun processImageCapture(imagePath: String?) {
-        if (BuildConfig.USE_MOCK_DATA) {
-            imagePath?.let {
-                Log.d("Snapshot", "Calling getAnalyzedResult with path: $it")
-            }
-            val mockResults = ImageAnalyzedResult(
-                status = "assume",
-                description = "Famous site detected in full image.",
-                siteInformation = SiteInformation(
-                    label = "full-image",
-                    x = 0.5f,
-                    y = 0.5f,
-                    siteName = "Colosseum"
-                ),
-                siteInfoId = "6818fd47b249f52360e546ec",
-            )
-
-            launch(Dispatchers.Main) {
-                delay(2000)
-                serverResult = mockResults
-                view.setScanningActive(false)
-            }
-        } else {
-            launch(Dispatchers.Main) {
-                delay(30000)
-                if (view.binding.cameraButtonContainer.isEnabled) {
-                    view.setScanningActive(false)
-                    showSnackbar("Request timed out. Please try again.")
-                }
-            }
-
-            networkScope.launch {
-                try {
-                    imagePath?.let {
-                        Log.d("Snapshot", "Starting network request with path: $it")
-                        getAnalyzedResult(it)
-                    } ?: run {
-                        withContext(Dispatchers.Main) {
-                            view.setScanningActive(false)
-                            showSnackbar("Failed to capture image. Please try again.")
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("takeSnapshot", "Network request failed", e)
-                    withContext(Dispatchers.Main) {
-                        view.setScanningActive(false)
-                        showSnackbar("Network error: ${e.message}")
-                    }
-                }
-            }
-        }
-    }
-
-    fun Frame.tryAcquireCameraImage() = try {
-        acquireCameraImage()
-    } catch (e: NotYetAvailableException) {
-        null
-    } catch (e: Throwable) {
-        throw e
-    }
-
 
     private fun showSnackbar(message: String): Unit =
         view.snackbarHelper.showError(activity, message)
 
-    private fun hideSnackbar() = activity.view.snackbarHelper.hide(activity)
+    private fun hideSnackbar() =
+        activity.view.snackbarHelper.hide(activity)
 
 //    private var pendingTouchX: Float? = null
 //    private var pendingTouchY: Float? = null
@@ -425,55 +332,9 @@ class AppRenderer(
         arTouchInteractionManager.handleTouch(x, y)
     }
 
-    fun getAnalyzedResult(path: String) {
-        Log.d("AnalyzeImage", "Starting image analysis for path: $path")
-
-        networkScope.launch {
-            try {
-                val repository = DetectionResultRepository()
-                Log.d("AnalyzeImage", "Created repository, calling getAnalyzedResult")
-
-                val result = repository.getAnalyzedResult(path)
-                Log.d("AnalyzeImage", "Repository call completed with result: $result")
-
-                withContext(Dispatchers.Main) {
-                    view.setScanningActive(false)
-
-                    result.onSuccess { analyzedResult ->
-                        Log.d("AnalyzeImage", "Analysis successful: ${analyzedResult.status}")
-                        if (analyzedResult.status == "failure") {
-                            Log.d("AnalyzeImage", "No objects detected: ${analyzedResult.description}")
-                            showSnackbar("No objects detected in the image")
-                            serverResult = null
-                        } else {
-                            Log.d(
-                                "AnalyzeImage",
-                                "Site detected: ${analyzedResult.siteInformation?.siteName ?: "Unknown"}"
-                            )
-                            serverResult = analyzedResult
-                        }
-                    }
-
-                    result.onFailure { error ->
-                        Log.e("AnalyzeImage", "Analysis failed: ${error.localizedMessage}")
-                        showSnackbar("Error analyzing the image: ${error.message}")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("AnalyzeImage", "Exception in getAnalyzedResult", e)
-                withContext(Dispatchers.Main) {
-                    view.setScanningActive(false)
-                    showSnackbar("Network request failed: ${e.message}")
-                }
-            }
-        }
-    }
-
     fun getNearbyPlacesForAR(categories: List<String>) {
         Log.d("NearbyPlaces", "Fetching nearby places for AR...")
         Log.d("NearbyPlaces", "Selected Filters (on Apply): $categories")
-
-
 
         networkScope.launch{
             Log.d("NearbyPlaces", "Fetching inside networckScope..")
