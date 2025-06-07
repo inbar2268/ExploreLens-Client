@@ -66,6 +66,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import com.google.ar.core.Config
+import com.example.explorelens.ar.components.AnchorManager
+import com.example.explorelens.ar.components.ARTouchInteractionManager
 
 class AppRenderer(
     val activity: ArActivity,
@@ -99,23 +101,26 @@ class AppRenderer(
     val viewProjectionMatrix = FloatArray(16)
 
     var serverResult: ImageAnalyzedResult? = null
-    var scanButtonWasPressed = false
+//    var scanButtonWasPressed = false
 
     private var lastSnapshotData: Snapshot? = null
-    var arLabeledAnchors = Collections.synchronizedList(mutableListOf<ARLabeledAnchor>())
-    private val reusableAnchorList = ArrayList<ARLabeledAnchor>()
-    private var hasLoadedAnchors = false
-    private val convertFloats = FloatArray(4)
-    private val convertFloatsOut = FloatArray(4)
+//    var arLabeledAnchors = Collections.synchronizedList(mutableListOf<ARLabeledAnchor>())
+//    private val reusableAnchorList = ArrayList<ARLabeledAnchor>()
+//    private var hasLoadedAnchors = false
+//    private val convertFloats = FloatArray(4)
+//    private val convertFloatsOut = FloatArray(4)
     private var shouldPlaceGeoAnchors = false
     private var pendingPlaces: List<PointOfInterest>? = null
+
+    private lateinit var anchorManager: AnchorManager
+    private lateinit var arTouchInteractionManager: ARTouchInteractionManager
 
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
         Handler(Looper.getMainLooper()).postDelayed({
 
         }, 1000)
-        Log.e(TAG, "anchors amount: ${arLabeledAnchors.size}")
+        Log.e(TAG, "anchors amount: ${anchorManager.arLabeledAnchors.size}")
     }
 
     override fun onPause(owner: LifecycleOwner) {
@@ -129,44 +134,23 @@ class AppRenderer(
         networkScope.cancel()
         backgroundScope.cancel()
         locationCache.clear()
-        synchronized(arLabeledAnchors) {
-            arLabeledAnchors.forEach { it.anchor.detach() }
-            arLabeledAnchors.clear()
-        }
+        anchorManager.clear()
         super.onDestroy(owner)
     }
 
     fun bindView(view: ArActivityView) {
         this.view = view
+        anchorManager = AnchorManager(activity, view, networkScope)
+        arTouchInteractionManager = ARTouchInteractionManager(activity, view, anchorManager)
 
-        view.binding.cameraButtonContainer.setOnTouchListener { _, event ->
-            // Prevent multiple simultaneous requests
-            if (!view.binding.cameraButtonContainer.isEnabled) {
-                return@setOnTouchListener false
+        arTouchInteractionManager.setTouchInteractionListener(object : ARTouchInteractionManager.TouchInteractionListener {
+            override fun onScanButtonPressed() {
             }
 
-            scanButtonWasPressed = true
-            view.setScanningActive(true)
-
-            view.binding.cameraButtonContainer.isEnabled = false
-
-            Handler(Looper.getMainLooper()).postDelayed({
-                view.binding.cameraButtonContainer.isEnabled = true
-            }, 5000)
-
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    view.binding.cameraInnerCircle.animate().scaleX(0.85f).scaleY(0.85f)
-                        .setDuration(100).start()
-                }
-
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    view.binding.cameraInnerCircle.animate().scaleX(1f).scaleY(1f).setDuration(100)
-                        .start()
-                }
+            override fun onAnchorClicked(anchor: ARLabeledAnchor) {
             }
-            false
-        }
+        })
+        arTouchInteractionManager.setupCameraButton()
     }
 
 
@@ -175,10 +159,7 @@ class AppRenderer(
             setUseDepthVisualization(render, false)
         }
         pointCloudRender.onSurfaceCreated(render)
-
-        // Pass the activity context to labelRenderer
         labelRenderer.onSurfaceCreated(render, activity)
-
         layerManager.onSurfaceCreated(render)
     }
 
@@ -207,7 +188,7 @@ class AppRenderer(
         camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
         Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
 
-            if (scanButtonWasPressed) {
+            if (arTouchInteractionManager.scanButtonWasPressed) {
             if (camera.trackingState != TrackingState.TRACKING) {
                 view.post {
                     view.setScanningActive(false)
@@ -215,13 +196,11 @@ class AppRenderer(
                 }
             } else {
                 lastSnapshotData = takeSnapshot(frame, session)
-                if (!hasLoadedAnchors) {
-                    getAllAnchors()
-                    hasLoadedAnchors = true
-                }
+                anchorManager.initialize()
             }
-            scanButtonWasPressed = false
+            arTouchInteractionManager.resetScanButton()
         }
+
         if (camera.trackingState != TrackingState.TRACKING) {
             Log.w(TAG, "Camera is not tracking.")
             return
@@ -229,14 +208,8 @@ class AppRenderer(
         frame.acquirePointCloud().use { pointCloud ->
             pointCloudRender.drawPointCloud(render, pointCloud, viewProjectionMatrix)
         }
-        pendingTouchX?.let { x ->
-            pendingTouchY?.let { y ->
-                processTouchInGLThread(x, y, frame, session)
-                // Clear the pending touch
-                pendingTouchX = null
-                pendingTouchY = null
-            }
-        }
+
+        arTouchInteractionManager.processPendingTouch(frame, session)
 
         processObjectResults(frame, session)
         drawAnchors(render, frame)
@@ -249,18 +222,6 @@ class AppRenderer(
                 shouldPlaceGeoAnchors = false
                 pendingPlaces = null
             }
-        } else {
-//            Log.d(
-//                "updateARViewWithPlaces",
-//                "${shouldPlaceGeoAnchors} && ${earth} ${earth?.trackingState}"
-//            )
-//            Log.d("GeoAR1", "arthState: ${earth?.earthState}")
-//            Log.d(
-//                "GeoAR1",
-//                "Horizontal accuracy: ${earth?.cameraGeospatialPose?.horizontalAccuracy}"
-//            )
-//            Log.d("GeoAR1", "Altitude accuracy: ${earth?.cameraGeospatialPose?.verticalAccuracy}")
-//            Log.d("GeoAR1", "Heading accuracy: ${earth?.cameraGeospatialPose?.headingAccuracy}")
         }
         layerManager.drawLayerLabels(render, viewProjectionMatrix, camera.pose, frame)
 
@@ -268,11 +229,9 @@ class AppRenderer(
 
 
     private fun drawAnchors(render: SampleRender, frame: Frame) {
-        reusableAnchorList.clear()
-        synchronized(arLabeledAnchors) {
-            reusableAnchorList.addAll(arLabeledAnchors)
-        }
-        for (arDetectedObject in arLabeledAnchors) {
+
+        val anchorsToDraw = anchorManager.getAnchorsForRendering()
+        for (arDetectedObject in anchorsToDraw) {
             val anchor = arDetectedObject.anchor
             if (anchor.trackingState != TrackingState.TRACKING) {
                 continue
@@ -304,19 +263,19 @@ class AppRenderer(
                 }
                 return
             }
-            val anchor = fetchAndCreateAnchor(session, snapshotData, obj, frame)
+            val anchor = anchorManager.createAnchorFromAnalyzedResult(session, snapshotData, obj, frame)
 
             launch {
                 val currentLocation =
                     geoLocationUtils.getSingleCurrentLocation() // Await the result
                 if (anchor != null) {
-                    addAnchorToDatabase(anchor)
+                    anchorManager.addAnchor(anchor)
                 }
                 createSiteHistoryForDetectedObject(obj, currentLocation) // Pass the location
             }
 
             if (anchor != null) {
-                addAnchorToDatabase(anchor)
+                anchorManager.addAnchor(anchor)
             }
 
             view.post {
@@ -335,238 +294,6 @@ class AppRenderer(
             }
         }
     }
-
-    private fun placeLabelAccurateWithSnapshot(
-        session: Session,
-        snapshotPose: Pose,
-        labelX: Float, // Normalized 0-1
-        labelY: Float, // Normalized 0-1
-        frame: Frame
-    ): Anchor? {
-        // Log input coordinates
-        Log.d(TAG, "Input coordinates (normalized): x=$labelX, y=$labelY")
-        Log.d(
-            TAG,
-            "Snapshot pose: tx=${snapshotPose.tx()}, ty=${snapshotPose.ty()}, tz=${snapshotPose.tz()}"
-        )
-
-        // 1. Calculate the direction vector in camera space
-        // Convert normalized coordinates (0-1) to view space (-1 to 1)
-        val viewportX = (labelX * 2.0f) - 1.0f
-        val viewportY = -((labelY * 2.0f) - 1.0f) // Negate because Y is flipped
-
-        // Direction vector in camera space (z is negative because camera looks down negative z-axis)
-        val directionVector = floatArrayOf(viewportX, viewportY, -1.0f)
-
-        // 2. Transform direction vector to world space using snapshot pose
-        val worldDirection = snapshotPose.transformPoint(directionVector)
-
-        // 3. Normalize the direction vector
-        val magnitude = sqrt(
-            worldDirection[0] * worldDirection[0] +
-                    worldDirection[1] * worldDirection[1] +
-                    worldDirection[2] * worldDirection[2]
-        )
-
-        val normalizedDirection = floatArrayOf(
-            worldDirection[0] / magnitude,
-            worldDirection[1] / magnitude,
-            worldDirection[2] / magnitude
-        )
-
-        // 4. Convert the input coordinates to view coordinates for the hit test
-        // Convert normalized coordinates to image pixel coordinates
-        val imageWidth = frame.camera.imageIntrinsics.imageDimensions[0].toFloat()
-        val imageHeight = frame.camera.imageIntrinsics.imageDimensions[1].toFloat()
-
-        val pixelX = labelX * imageWidth
-        val pixelY = labelY * imageHeight
-
-        // Convert to view coordinates
-        convertFloats[0] = pixelX
-        convertFloats[1] = pixelY
-        frame.transformCoordinates2d(
-            Coordinates2d.IMAGE_PIXELS,
-            convertFloats,
-            Coordinates2d.VIEW,
-            convertFloatsOut
-        )
-
-        // 5. Perform a hit test at the actual input coordinates (not center)
-        val hits = frame.hitTest(convertFloatsOut[0], convertFloatsOut[1])
-
-        // Default distance if no hit is found
-        var distance = 2.0f
-
-        if (hits.isNotEmpty()) {
-            val hitResult = hits.first()
-            distance = hitResult.distance
-            Log.d(TAG, "Hit test succeeded: distance=$distance")
-        } else {
-            Log.d(TAG, "Hit test failed, using default distance: $distance")
-        }
-
-        // 6. Calculate final world position
-        val worldPosition = floatArrayOf(
-            snapshotPose.tx() + normalizedDirection[0] * distance,
-            snapshotPose.ty() + normalizedDirection[1] * distance,
-            snapshotPose.tz() + normalizedDirection[2] * distance
-        )
-
-        // 7. Create anchor with final position
-        val anchorPose = Pose.makeTranslation(
-            worldPosition[0],
-            worldPosition[1],
-            worldPosition[2]
-        )
-
-        Log.d(
-            TAG,
-            "Created anchor at: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}"
-        )
-
-        return session.createAnchor(anchorPose)
-    }
-
-    private fun placeLabelRelativeToSnapshot(
-        session: Session,
-        snapshotPose: Pose,
-        labelX: Float, // Normalized 0-1
-        labelY: Float, // Normalized 0-1
-        frame: Frame
-    ): Anchor? {
-        // Log input coordinates
-        Log.d(TAG, "Input coordinates (normalized): x=$labelX, y=$labelY")
-        Log.d(
-            TAG,
-            "Snapshot pose: tx=${snapshotPose.tx()}, ty=${snapshotPose.ty()}, tz=${snapshotPose.tz()}"
-        )
-
-        // 1. Calculate the direction vector in camera space
-        // Convert normalized coordinates (0-1) to view space (-1 to 1)
-        val viewportX = (labelX * 2.0f) - 1.0f
-        val viewportY = -((labelY * 2.0f) - 1.0f) // Negate because Y is flipped
-
-        // Direction vector in camera space (z is negative because camera looks down negative z-axis)
-        val directionVector = floatArrayOf(viewportX, viewportY, -1.0f)
-
-        // 2. Transform direction vector to world space using snapshot pose
-        // Use Pose.transformPoint() which is available in ARCore
-        val worldDirection = snapshotPose.transformPoint(directionVector)
-
-        // 3. Normalize the direction vector
-        val magnitude = sqrt(
-            worldDirection[0] * worldDirection[0] +
-                    worldDirection[1] * worldDirection[1] +
-                    worldDirection[2] * worldDirection[2]
-        )
-
-        val normalizedDirection = floatArrayOf(
-            worldDirection[0] / magnitude,
-            worldDirection[1] / magnitude,
-            worldDirection[2] / magnitude
-        )
-
-        // 4. Perform a hit test using the current frame to find a suitable depth
-        val centerX = frame.camera.imageIntrinsics.imageDimensions[0] / 2f
-        val centerY = frame.camera.imageIntrinsics.imageDimensions[1] / 2f
-
-        // Convert to view coordinates for hit test
-        convertFloats[0] = centerX
-        convertFloats[1] = centerY
-        frame.transformCoordinates2d(
-            Coordinates2d.IMAGE_PIXELS,
-            convertFloats,
-            Coordinates2d.VIEW,
-            convertFloatsOut
-        )
-
-        val hits = frame.hitTest(convertFloatsOut[0], convertFloatsOut[1])
-
-        // Default distance if no hit is found
-        var distance = 2.0f
-
-        if (hits.isNotEmpty()) {
-            val hitResult = hits.first()
-            distance = hitResult.distance
-            Log.d(TAG, "Hit test succeeded: distance=$distance")
-        } else {
-            Log.d(TAG, "Hit test failed, using default distance: $distance")
-        }
-
-        // 5. Calculate final world position
-        val worldPosition = floatArrayOf(
-            snapshotPose.tx() + normalizedDirection[0] * distance,
-            snapshotPose.ty() + normalizedDirection[1] * distance, // Lower by 20cm
-            snapshotPose.tz() + normalizedDirection[2] * distance
-        )
-
-        // 6. Create anchor with final position
-        val anchorPose = Pose.makeTranslation(
-            worldPosition[0],
-            worldPosition[1],
-            worldPosition[2]
-        )
-
-        Log.d(
-            TAG,
-            "Created anchor at: tx=${anchorPose.tx()}, ty=${anchorPose.ty()}, tz=${anchorPose.tz()}"
-        )
-
-        return session.createAnchor(anchorPose)
-    }
-
-    private fun placeLabelNotRelativeToSnapshot(
-        session: Session,
-        snapshotPose: Pose,
-        labelX: Float,
-        labelY: Float,
-        frame: Frame
-    ): Anchor? {
-        // Convert normalized coordinates (0.5, 0.5) to image pixel coordinates
-        val imageWidth = frame.camera.imageIntrinsics.imageDimensions[0].toFloat()
-        val imageHeight = frame.camera.imageIntrinsics.imageDimensions[1].toFloat()
-
-        // If server is sending  (0-1), convert to pixels
-        val pixelX = if (labelX <= 1.0f) labelX * imageWidth else labelX
-        val pixelY = if (labelY <= 1.0f) labelY * imageHeight else labelY
-
-        // Now convert to view coordinates
-        convertFloats[0] = pixelX
-        convertFloats[1] = pixelY
-        frame.transformCoordinates2d(
-            Coordinates2d.IMAGE_PIXELS,
-            convertFloats,
-            Coordinates2d.VIEW,
-            convertFloatsOut
-        )
-
-        // Hit test at the converted view coordinates
-        val hits = frame.hitTest(convertFloatsOut[0], convertFloatsOut[1])
-        val hitResult = hits.firstOrNull() ?: return null
-
-        // Get the hit pose and distance
-        val hitPose = hitResult.hitPose
-        val hitDistance = hitResult.distance
-
-        // Use the hit pose directly but with a Y-adjustment
-        val worldPosition = floatArrayOf(
-            hitPose.tx(),
-            hitPose.ty(),
-            hitPose.tz()
-        )
-
-        // Create the anchor with the adjusted position
-        val anchorPose = Pose.makeTranslation(worldPosition[0], worldPosition[1], worldPosition[2])
-
-        Log.d(
-            TAG,
-            "Created anchor at x=${anchorPose.tx()}, y=${anchorPose.ty()}, z=${anchorPose.tz()} from normalized (${labelX}, ${labelY})"
-        )
-
-        return session.createAnchor(anchorPose)
-    }
-
 
     private fun takeSnapshot(frame: Frame, session: Session): Snapshot {
         val camera = frame.camera
@@ -691,312 +418,11 @@ class AppRenderer(
 
     private fun hideSnackbar() = activity.view.snackbarHelper.hide(activity)
 
-    private var pendingTouchX: Float? = null
-    private var pendingTouchY: Float? = null
+//    private var pendingTouchX: Float? = null
+//    private var pendingTouchY: Float? = null
 
     fun handleTouch(x: Float, y: Float) {
-        // Just store the coordinates for later processing
-        Log.d(TAG, "Touch received at x=$x, y=$y")
-        pendingTouchX = x
-        pendingTouchY = y
-    }
-
-    private fun distanceBetween(pose1: Pose, pose2: Pose): Float {
-        val dx = pose1.tx() - pose2.tx()
-        val dy = pose1.ty() - pose2.ty()
-        val dz = pose1.tz() - pose2.tz()
-        return sqrt(dx * dx + dy * dy + dz * dz)
-    }
-
-    private fun processTouchInGLThread(x: Float, y: Float, frame: Frame, session: Session) {
-        val camera = frame.camera
-
-        if (camera.trackingState != TrackingState.TRACKING) {
-            Log.w(TAG, "Camera is not tracking.")
-            return
-        }
-
-        try {
-            // Get camera position and forward direction
-            val cameraPose = camera.pose
-            val cameraPos = cameraPose.translation
-            val forward = cameraPose.zAxis
-
-            // Normalize forward direction (pointing out of the camera)
-            val forwardNorm = floatArrayOf(-forward[0], -forward[1], -forward[2])
-
-            // Find all visible anchors within a generous detection cone
-            var closestAnchor: ARLabeledAnchor? = null
-            var closestDistance = Float.MAX_VALUE
-
-            // Log camera and touch information
-            Log.d(TAG, "Camera position: ${cameraPos.contentToString()}")
-            Log.d(TAG, "Touch coordinates: $x, $y")
-
-            // Create a hit ray from the touch coordinates
-            val hitResults = frame.hitTest(x, y)
-
-            // Calculate ray direction from touch
-            val ray = if (hitResults.isNotEmpty()) {
-                val hitPos = hitResults.first().hitPose.translation
-                val rayX = hitPos[0] - cameraPos[0]
-                val rayY = hitPos[1] - cameraPos[1]
-                val rayZ = hitPos[2] - cameraPos[2]
-
-                val rayLength = sqrt(rayX * rayX + rayY * rayY + rayZ * rayZ)
-                if (rayLength > 0) {
-                    floatArrayOf(rayX / rayLength, rayY / rayLength, rayZ / rayLength)
-                } else {
-                    forwardNorm
-                }
-            } else {
-                // Fallback to camera forward direction if no hit
-                forwardNorm
-            }
-
-            // Log ray direction
-            Log.d(TAG, "Ray direction: ${ray.contentToString()}")
-
-            val anchorsToCheck = ArrayList<ARLabeledAnchor>()
-            synchronized(arLabeledAnchors) {
-                anchorsToCheck.addAll(arLabeledAnchors)
-            }
-
-            // Examine each anchor to find the closest one to our touch ray
-            for (anchor in anchorsToCheck) {
-                val anchorPose = anchor.anchor.pose
-                val anchorPos = anchorPose.translation  // FIXED: use anchorPose not anchorPos
-
-                // Vector from camera to anchor
-                val toAnchorX = anchorPos[0] - cameraPos[0]
-                val toAnchorY = anchorPos[1] - cameraPos[1]
-                val toAnchorZ = anchorPos[2] - cameraPos[2]
-
-                val distanceToAnchor =
-                    sqrt(toAnchorX * toAnchorX + toAnchorY * toAnchorY + toAnchorZ * toAnchorZ)
-
-                // Calculate dot product to determine if anchor is in front of camera
-                val dotProduct = toAnchorX * ray[0] + toAnchorY * ray[1] + toAnchorZ * ray[2]
-
-                // Distance from ray to anchor (using vector rejection formula)
-                val projection = dotProduct / distanceToAnchor
-                val projectionDistance = distanceToAnchor * projection
-
-                // Calculate the closest point on the ray
-                val closestPointX = cameraPos[0] + ray[0] * projectionDistance
-                val closestPointY = cameraPos[1] + ray[1] * projectionDistance
-                val closestPointZ = cameraPos[2] + ray[2] * projectionDistance
-
-                // Distance from this point to the anchor
-                val dX = closestPointX - anchorPos[0]
-                val dY = closestPointY - anchorPos[1]
-                val dZ = closestPointZ - anchorPos[2]
-                val perpendicularDistance = sqrt(dX * dX + dY * dY + dZ * dZ)
-
-                val touchThreshold = 0.2f
-
-                if (dotProduct > 0 && perpendicularDistance < touchThreshold) {
-                    if (distanceToAnchor < closestDistance) {
-                        closestAnchor = anchor
-                        closestDistance = distanceToAnchor
-                    }
-                }
-
-                Log.d(
-                    TAG, "Anchor ${anchor.label}: distance=${distanceToAnchor}, " +
-                            "perpendicular=${perpendicularDistance}, dot=${dotProduct}"
-                )
-            }
-
-            // If we found an anchor, handle the click
-            if (closestAnchor != null) {
-                Log.d(TAG, "Selected anchor: ${closestAnchor.label} at distance ${closestDistance}")
-                handleAnchorClick(closestAnchor)
-            } else {
-                Log.d(TAG, "No anchor selected")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error processing touch", e)
-        }
-    }
-
-    private fun fetchAndCreateAnchor(
-        session: Session,
-        snapshotData: Snapshot,
-        obj: ImageAnalyzedResult,
-        frame: Frame
-    ): ARLabeledAnchor? {
-        val siteInfo = obj.siteInformation
-        val siteId = obj.siteInfoId
-
-        if (!isValidSiteData(siteInfo, siteId)) return null
-
-        val anchor = createAnchor(session, snapshotData.cameraPose, siteInfo!!.x, siteInfo.y, frame)
-            ?: return null
-
-        val initialLabel = "${siteInfo.siteName}||Loading..."
-        val arLabeledAnchor = ARLabeledAnchor(anchor, initialLabel, siteInfo.siteName).apply {
-            this.siteId = siteId
-        }
-
-        fetchAndUpdateSiteDetails(arLabeledAnchor, siteInfo.siteName, siteId)
-
-        return arLabeledAnchor
-    }
-
-    private fun fetchAndUpdateSiteDetails(
-        anchor: ARLabeledAnchor,
-        siteName: String,
-        siteId: String
-    ) {
-        Log.d(TAG, "Fetching site details for ID: $siteId")
-        networkScope.launch {
-            val context = activity.applicationContext
-            val repository = SiteDetailsRepository(context)
-            try {
-                val siteInfo: SiteDetails? = suspendCancellableCoroutine { continuation ->
-                    repository.fetchSiteDetails(
-                        siteId = siteId,
-                        onSuccess = { fetchedSiteInfo ->
-                            // When the success callback fires, resume the coroutine with the result
-                            Log.d(TAG, "Repository fetch successful for $siteId")
-                            continuation.resume(fetchedSiteInfo)
-                        },
-                        onError = {
-                            Log.e(TAG, "Repository fetch failed for $siteId")
-                            continuation.resume(null)
-                        }
-                    )
-                }
-                withContext(Dispatchers.Main) {
-                    if (siteInfo != null) {
-                        Log.d(TAG, "Updating UI with site details for $siteId")
-                        updateAnchorWithDetails(anchor, siteName, siteInfo, siteId)
-                    } else {
-                        Log.e(TAG, "No site details received for $siteId (either fetch failed or was null).")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error fetching site details for $siteId: ${e.message}", e)
-                withContext(Dispatchers.Main) {
-                }
-            }
-        }
-
-    }
-
-    private fun isValidSiteData(siteInfo: SiteInformation?, siteId: String?): Boolean {
-        if (siteInfo?.x == null || siteInfo.y == null || siteInfo.siteName == null || siteId.isNullOrBlank()) {
-            Log.e(TAG, "Missing location data or site name/id")
-            return false
-        }
-        return true
-    }
-
-    private fun createAnchor(
-        session: Session,
-        cameraPose: Pose,
-        atX: Float,
-        atY: Float,
-        frame: Frame
-    ): Anchor? {
-        return placeLabelAccurateWithSnapshot(session, cameraPose, atX, atY, frame).also {
-            if (it == null) {
-                Log.e(TAG, "Failed to place anchor")
-            }
-        }
-    }
-
-    private fun updateAnchorWithDetails(
-        oldAnchor: ARLabeledAnchor,
-        siteName: String,
-        siteInfo: SiteDetails,
-        siteId: String
-    ) {
-        val previewText = extractPreviewText(siteInfo.description)
-        val newLabelText = "$siteName||$previewText"
-
-        Log.d(TAG, "Updated label with description: $newLabelText")
-
-        synchronized(arLabeledAnchors) {
-            val index = arLabeledAnchors.indexOf(oldAnchor)
-            if (index != -1) {
-                val updatedAnchor =
-                    ARLabeledAnchor(oldAnchor.anchor, newLabelText, siteName).apply {
-                        this.fullDescription = siteInfo.description
-                        this.siteId = siteId
-                    }
-                arLabeledAnchors[index] = updatedAnchor
-            }
-        }
-    }
-
-
-    // Helper function to extract a single line or sentence for preview
-    private fun extractPreviewText(description: String): String {
-        if (description.isEmpty()) return ""
-
-        // First try to get the first sentence
-        val firstSentenceEnd = description.indexOfAny(charArrayOf('.', '!', '?'), 0)
-
-        // If we found a sentence ending
-        if (firstSentenceEnd >= 0 && firstSentenceEnd < 200) {
-            // Return the complete sentence including the punctuation
-            return description.substring(0, firstSentenceEnd + 1).trim()
-        }
-
-        // If no sentence end found, look for a line break
-        val firstLineEnd = description.indexOf('\n')
-        if (firstLineEnd >= 0 && firstLineEnd < 200) {
-            return description.substring(0, firstLineEnd).trim()
-        }
-
-        // If the description is very long with no sentence breaks, take up to 200 chars
-        if (description.length > 200) {
-            // Find the last space before 200 characters to avoid cutting words
-            val lastSpace = description.substring(0, 200).lastIndexOf(' ')
-            return if (lastSpace > 0) {
-                description.substring(0, lastSpace).trim() + "..."
-            } else {
-                // If no space found, cut at 200
-                description.substring(0, 200).trim() + "..."
-            }
-        }
-
-        // Otherwise return the whole description
-        return description.trim()
-    }
-
-    private fun handleAnchorClick(clickedAnchor: ARLabeledAnchor) {
-        // Use the siteName directly if available, otherwise extract from the label
-        val siteId = clickedAnchor.siteId
-        val siteName = clickedAnchor.siteName
-        Log.d(TAG, "Clicked on anchor: $siteId")
-
-        // Pass the full description to DetailActivity if available
-        activity.runOnUiThread {
-            activity.findViewById<View>(R.id.cameraButtonContainer)?.visibility = View.GONE
-            // Show site details as an overlay instead of starting a new activity
-            if (siteId != null) {
-                view.showSiteDetails(siteId, clickedAnchor.fullDescription, siteName)
-            }
-        }
-    }
-
-
-    private fun getAllAnchors() {
-        Model.shared.getAlArLabeledAnchors { fetchedAnchors ->
-            synchronized(arLabeledAnchors) {
-                arLabeledAnchors.clear()
-                arLabeledAnchors.addAll(fetchedAnchors)
-            }
-        }
-    }
-
-    private fun addAnchorToDatabase(anchor: ARLabeledAnchor) {
-        Model.shared.addArLabelAnchor(anchor) {
-            getAllAnchors()
-        }
+        arTouchInteractionManager.handleTouch(x, y)
     }
 
     fun getAnalyzedResult(path: String) {
