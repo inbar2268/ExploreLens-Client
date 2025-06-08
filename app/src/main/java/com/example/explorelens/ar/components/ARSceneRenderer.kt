@@ -36,6 +36,11 @@ class ARSceneRenderer(
     private val viewProjectionMatrix = FloatArray(16)
 
     private var isInitialized = false
+    private var screenWidth = 0
+    private var screenHeight = 0
+
+    // Callback to notify touch handler about screen dimensions
+    private var touchHandler: ARTouchInteractionManager? = null
 
     fun onSurfaceCreated(render: SampleRender) {
         backgroundRenderer = BackgroundRenderer(render).apply {
@@ -50,6 +55,23 @@ class ARSceneRenderer(
 
     fun onSurfaceChanged(render: SampleRender?, width: Int, height: Int) {
         displayRotationHelper.onSurfaceChanged(width, height)
+
+        // Store screen dimensions
+        screenWidth = width
+        screenHeight = height
+
+        // Update touch handler with screen dimensions
+        touchHandler?.updateScreenDimensions(width, height)
+
+        Log.d(TAG, "Surface changed to ${width}x${height}")
+    }
+
+    fun setTouchHandler(handler: ARTouchInteractionManager) {
+        touchHandler = handler
+        // Update with current dimensions if available
+        if (screenWidth > 0 && screenHeight > 0) {
+            handler.updateScreenDimensions(screenWidth, screenHeight)
+        }
     }
 
     fun drawFrame(
@@ -148,6 +170,9 @@ class ARSceneRenderer(
     }
 
     fun getLayerManager(): ARLayerManager = layerManager
+
+    // Getter for screen dimensions (useful for debugging)
+    fun getScreenDimensions(): Pair<Int, Int> = Pair(screenWidth, screenHeight)
 
     sealed class RenderResult {
         object Success : RenderResult()

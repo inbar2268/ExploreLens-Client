@@ -9,11 +9,12 @@ import android.view.View
 import com.example.explorelens.R
 import com.example.explorelens.ArActivity
 import com.example.explorelens.ar.ArActivityView
-import com.example.explorelens.ar.components.AnchorManager.Companion
 import com.example.explorelens.model.ARLabeledAnchor
 import com.google.ar.core.Frame
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
+import com.google.ar.core.Coordinates2d
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 class ARTouchInteractionManager(
@@ -23,12 +24,20 @@ class ARTouchInteractionManager(
 ) {
     companion object {
         private const val TAG = "ARTouchInteractionManager"
+
+        // Label dimensions from LabelRender - these should match exactly
+        private const val LABEL_SCREEN_SIZE = 0.15f // This should match LabelRender.DEFAULT_SCREEN_SIZE
+        private const val LABEL_ASPECT_RATIO = 1.0f / 0.6f // width / height from NDC_QUAD_COORDS_BUFFER
     }
 
     private var pendingTouchX: Float? = null
     private var pendingTouchY: Float? = null
     var scanButtonWasPressed = false
         private set
+
+    // Cache screen dimensions
+    private var screenWidth = 0
+    private var screenHeight = 0
 
     interface TouchInteractionListener {
         fun onScanButtonPressed()
@@ -39,6 +48,12 @@ class ARTouchInteractionManager(
 
     fun setTouchInteractionListener(listener: TouchInteractionListener) {
         this.listener = listener
+    }
+
+    fun updateScreenDimensions(width: Int, height: Int) {
+        screenWidth = width
+        screenHeight = height
+        Log.d(TAG, "Screen dimensions updated: ${width}x${height}")
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -100,40 +115,15 @@ class ARTouchInteractionManager(
             return
         }
 
+        if (screenWidth == 0 || screenHeight == 0) {
+            Log.w(TAG, "Screen dimensions not set")
+            return
+        }
+
         try {
-            val cameraPose = camera.pose
-            val cameraPos = cameraPose.translation
-            val forward = cameraPose.zAxis
+            Log.d(TAG, "Processing touch at ($x, $y) on screen ${screenWidth}x${screenHeight}")
 
-            // Normalize forward direction (pointing out of the camera)
-            val forwardNorm = floatArrayOf(-forward[0], -forward[1], -forward[2])
-
-            Log.d(TAG, "Camera position: ${cameraPos.contentToString()}")
-            Log.d(TAG, "Touch coordinates: $x, $y")
-
-            // Create a hit ray from the touch coordinates
-            val hitResults = frame.hitTest(x, y)
-
-            // Calculate ray direction from touch
-            val ray = if (hitResults.isNotEmpty()) {
-                val hitPos = hitResults.first().hitPose.translation
-                val rayX = hitPos[0] - cameraPos[0]
-                val rayY = hitPos[1] - cameraPos[1]
-                val rayZ = hitPos[2] - cameraPos[2]
-
-                val rayLength = sqrt(rayX * rayX + rayY * rayY + rayZ * rayZ)
-                if (rayLength > 0) {
-                    floatArrayOf(rayX / rayLength, rayY / rayLength, rayZ / rayLength)
-                } else {
-                    forwardNorm
-                }
-            } else {
-                forwardNorm
-            }
-
-            Log.d(TAG, "Ray direction: ${ray.contentToString()}")
-
-            val closestAnchor = findClosestAnchorToTouch(x, y, frame, cameraPos, ray)
+            val closestAnchor = findClosestAnchorToTouchExact(x, y, frame, camera)
 
             if (closestAnchor != null) {
                 Log.d(TAG, "Selected anchor: ${closestAnchor.label}")
@@ -146,59 +136,137 @@ class ARTouchInteractionManager(
         }
     }
 
-    fun findClosestAnchorToTouch(
+    /**
+     * Find the closest anchor to touch using exact screen space calculations
+     */
+    private fun findClosestAnchorToTouchExact(
         touchX: Float,
         touchY: Float,
         frame: Frame,
-        cameraPos: FloatArray,
-        ray: FloatArray
+        camera: com.google.ar.core.Camera
     ): ARLabeledAnchor? {
         var closestAnchor: ARLabeledAnchor? = null
         var closestDistance = Float.MAX_VALUE
 
         val anchorsToCheck = anchorManager.getAnchorsForRendering()
-        val touchThreshold = 0.2f
+
+        Log.d(TAG, "Checking ${anchorsToCheck.size} anchors for touch at ($touchX, $touchY)")
 
         for (anchor in anchorsToCheck) {
-            val anchorPose = anchor.anchor.pose
-            val anchorPos = anchorPose.translation
-
-            // Vector from camera to anchor
-            val toAnchorX = anchorPos[0] - cameraPos[0]
-            val toAnchorY = anchorPos[1] - cameraPos[1]
-            val toAnchorZ = anchorPos[2] - cameraPos[2]
-
-            val distanceToAnchor = sqrt(toAnchorX * toAnchorX + toAnchorY * toAnchorY + toAnchorZ * toAnchorZ)
-
-            // Calculate dot product to determine if anchor is in front of camera
-            val dotProduct = toAnchorX * ray[0] + toAnchorY * ray[1] + toAnchorZ * ray[2]
-
-            // Distance from ray to anchor (using vector rejection formula)
-            val projection = dotProduct / distanceToAnchor
-            val projectionDistance = distanceToAnchor * projection
-
-            // Calculate the closest point on the ray
-            val closestPointX = cameraPos[0] + ray[0] * projectionDistance
-            val closestPointY = cameraPos[1] + ray[1] * projectionDistance
-            val closestPointZ = cameraPos[2] + ray[2] * projectionDistance
-
-            // Distance from this point to the anchor
-            val dX = closestPointX - anchorPos[0]
-            val dY = closestPointY - anchorPos[1]
-            val dZ = closestPointZ - anchorPos[2]
-            val perpendicularDistance = sqrt(dX * dX + dY * dY + dZ * dZ)
-
-            if (dotProduct > 0 && perpendicularDistance < touchThreshold) {
-                if (distanceToAnchor < closestDistance) {
-                    closestAnchor = anchor
-                    closestDistance = distanceToAnchor
-                }
+            if (anchor.anchor.trackingState != TrackingState.TRACKING) {
+                continue
             }
 
-            Log.d(TAG, "Anchor ${anchor.label}: distance=$distanceToAnchor, perpendicular=$perpendicularDistance, dot=$dotProduct")
+            // Get the label bounds in screen coordinates
+            val labelBounds = calculateLabelScreenBounds(anchor, frame, camera)
+
+            if (labelBounds != null) {
+                Log.d(TAG, "Anchor '${anchor.label}' bounds: left=${labelBounds.left}, top=${labelBounds.top}, right=${labelBounds.right}, bottom=${labelBounds.bottom}")
+
+                // Check if touch is inside the label bounds
+                if (touchX >= labelBounds.left && touchX <= labelBounds.right &&
+                    touchY >= labelBounds.top && touchY <= labelBounds.bottom) {
+
+                    // Calculate distance from camera to anchor for prioritization
+                    val anchorPos = anchor.anchor.pose.translation
+                    val cameraPos = camera.pose.translation
+
+                    val dx = anchorPos[0] - cameraPos[0]
+                    val dy = anchorPos[1] - cameraPos[1]
+                    val dz = anchorPos[2] - cameraPos[2]
+                    val distance = sqrt(dx * dx + dy * dy + dz * dz)
+
+                    Log.d(TAG, "Touch hit anchor '${anchor.label}' at distance $distance")
+
+                    if (distance < closestDistance) {
+                        closestAnchor = anchor
+                        closestDistance = distance
+                    }
+                }
+            }
         }
 
         return closestAnchor
+    }
+
+    /**
+     * Calculate the exact screen bounds of a label
+     */
+    private fun calculateLabelScreenBounds(
+        anchor: ARLabeledAnchor,
+        frame: Frame,
+        camera: com.google.ar.core.Camera
+    ): LabelBounds? {
+        try {
+            // Get the anchor position (with Y offset matching LabelRender)
+            val anchorPose = anchor.anchor.pose
+            val worldPos = floatArrayOf(
+                anchorPose.tx(),
+                anchorPose.ty() + 0.1f, // Same offset as in LabelRender
+                anchorPose.tz(),
+                1.0f
+            )
+
+            // Project world position to screen coordinates
+            val projectionMatrix = FloatArray(16)
+            val viewMatrix = FloatArray(16)
+            val viewProjectionMatrix = FloatArray(16)
+
+            camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
+            camera.getViewMatrix(viewMatrix, 0)
+
+            // Multiply projection * view
+            android.opengl.Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+
+            // Transform world position to clip space
+            val clipSpacePos = FloatArray(4)
+            android.opengl.Matrix.multiplyMV(clipSpacePos, 0, viewProjectionMatrix, 0, worldPos, 0)
+
+            // Check if point is behind camera
+            if (clipSpacePos[3] <= 0) {
+                Log.d(TAG, "Anchor '${anchor.label}' is behind camera")
+                return null
+            }
+
+            // Convert to normalized device coordinates (NDC)
+            val ndcX = clipSpacePos[0] / clipSpacePos[3]
+            val ndcY = clipSpacePos[1] / clipSpacePos[3]
+            val ndcZ = clipSpacePos[2] / clipSpacePos[3]
+
+            // Check if point is outside viewing frustum
+            if (abs(ndcX) > 1.0f || abs(ndcY) > 1.0f || ndcZ < -1.0f || ndcZ > 1.0f) {
+                Log.d(TAG, "Anchor '${anchor.label}' is outside viewing frustum: NDC($ndcX, $ndcY, $ndcZ)")
+                return null
+            }
+
+            // Convert NDC to screen coordinates
+            val screenX = (ndcX + 1.0f) * 0.5f * screenWidth
+            val screenY = (1.0f - ndcY) * 0.5f * screenHeight // Flip Y for screen coordinates
+
+            // Calculate label dimensions in screen space
+            // LABEL_SCREEN_SIZE is a proportion of screen height
+            val labelHeightPixels = LABEL_SCREEN_SIZE * screenHeight
+            val labelWidthPixels = labelHeightPixels * LABEL_ASPECT_RATIO
+
+            // Calculate bounds
+            val halfWidth = labelWidthPixels * 0.5f
+            val halfHeight = labelHeightPixels * 0.5f
+
+            val bounds = LabelBounds(
+                left = screenX - halfWidth,
+                top = screenY - halfHeight,
+                right = screenX + halfWidth,
+                bottom = screenY + halfHeight
+            )
+
+            Log.d(TAG, "Anchor '${anchor.label}' at world(${worldPos[0]}, ${worldPos[1]}, ${worldPos[2]}) -> NDC($ndcX, $ndcY) -> screen($screenX, $screenY) -> bounds(${bounds.left}, ${bounds.top}, ${bounds.right}, ${bounds.bottom})")
+
+            return bounds
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculating label bounds for '${anchor.label}'", e)
+            return null
+        }
     }
 
     private fun handleAnchorClick(clickedAnchor: ARLabeledAnchor) {
@@ -217,4 +285,14 @@ class ARTouchInteractionManager(
             listener?.onAnchorClicked(clickedAnchor)
         }
     }
+
+    /**
+     * Data class to represent label bounds in screen coordinates
+     */
+    private data class LabelBounds(
+        val left: Float,
+        val top: Float,
+        val right: Float,
+        val bottom: Float
+    )
 }

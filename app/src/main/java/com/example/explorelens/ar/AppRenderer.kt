@@ -189,6 +189,7 @@ class AppRenderer(
             }
         })
 
+        arSceneRenderer.setTouchHandler(arTouchInteractionManager)
 
         arTouchInteractionManager.setupCameraButton()
     }
