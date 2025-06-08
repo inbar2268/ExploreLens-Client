@@ -16,7 +16,7 @@ import com.google.ar.core.TrackingState
 import com.google.ar.core.exceptions.CameraNotAvailableException
 
 
-class ARSceneRenderer(
+public class ARSceneRenderer(
     private val activity: ArActivity,
     private val displayRotationHelper: DisplayRotationHelper
 ) {

@@ -21,7 +21,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class SnapshotManager(
+public class SnapshotManager(
     private val context: Context,
     private val view: ArActivityView,
     private val displayRotationHelper: DisplayRotationHelper,
