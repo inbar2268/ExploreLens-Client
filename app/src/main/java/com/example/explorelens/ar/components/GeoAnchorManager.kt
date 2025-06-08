@@ -6,7 +6,6 @@ import android.os.Looper
 import android.util.Log
 import com.example.explorelens.ArActivity
 import com.example.explorelens.ar.ArActivityView
-import com.example.explorelens.ar.components.ARSceneRenderer
 import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
 import com.example.explorelens.data.repository.NearbyPlacesRepository
 import com.example.explorelens.utils.GeoLocationUtils
@@ -58,7 +57,6 @@ class GeoAnchorManager(
         Log.d(TAG, "Selected Filters: $categories")
 
         networkScope.launch {
-            Log.d(TAG, "Fetching inside networkScope...")
 
             val currentLocation = getLocationOptimized()
             Log.d(TAG, "Location result: $currentLocation")
@@ -239,14 +237,5 @@ class GeoAnchorManager(
 
     fun getCachedLocation(): Location? {
         return locationCache["current"]
-    }
-
-    fun hasPendingPlaces(): Boolean {
-        return shouldPlaceGeoAnchors && pendingPlaces != null
-    }
-
-    fun clearPendingPlaces() {
-        shouldPlaceGeoAnchors = false
-        pendingPlaces = null
     }
 }

@@ -70,6 +70,7 @@ import com.example.explorelens.ar.components.AnchorManager
 import com.example.explorelens.ar.components.ARTouchInteractionManager
 import com.example.explorelens.ar.components.SnapshotManager
 import com.example.explorelens.ar.components.ARSceneRenderer
+import com.example.explorelens.ar.components.GeoAnchorManager
 
 class AppRenderer(
     val activity: ArActivity,
@@ -84,23 +85,17 @@ class AppRenderer(
     private val networkScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val backgroundScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    // Caching for Location
-    private val locationCache = mutableMapOf<String, Location>()
-    private var lastLocationUpdate = 0L
-    private val LOCATION_UPDATE_INTERVAL = 30_000L // 30 seconds
-
     lateinit var view: ArActivityView
     val displayRotationHelper = DisplayRotationHelper(activity)
 
     var serverResult: ImageAnalyzedResult? = null
     private var lastSnapshotData: Snapshot? = null
-    private var shouldPlaceGeoAnchors = false
-    private var pendingPlaces: List<PointOfInterest>? = null
 
     private lateinit var anchorManager: AnchorManager
     private lateinit var arTouchInteractionManager: ARTouchInteractionManager
     private lateinit var snapshotManager: SnapshotManager
     private lateinit var arSceneRenderer: ARSceneRenderer
+    private lateinit var geoAnchorManager: GeoAnchorManager
 
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
@@ -120,8 +115,8 @@ class AppRenderer(
     override fun onDestroy(owner: LifecycleOwner) {
         networkScope.cancel()
         backgroundScope.cancel()
-        locationCache.clear()
         anchorManager.clear()
+        geoAnchorManager.clearLocationCache()
         super.onDestroy(owner)
     }
 
@@ -136,6 +131,13 @@ class AppRenderer(
             displayRotationHelper,
             networkScope,
             backgroundScope
+        )
+        geoAnchorManager = GeoAnchorManager(
+            activity,
+            view,
+            geoLocationUtils,
+            arSceneRenderer,
+            networkScope
         )
         setupCallbacks()
     }
@@ -162,6 +164,28 @@ class AppRenderer(
             override fun onAnchorClicked(anchor: ARLabeledAnchor) {
             }
         })
+        geoAnchorManager.setCallback(object : GeoAnchorManager.GeoAnchorCallback {
+            override fun onPlacesReceived(places: List<PointOfInterest>) {
+                Log.d(TAG, "Received ${places.size} places from GeoAnchorManager")
+            }
+
+            override fun onPlacesError(message: String) {
+                showSnackbar(message)
+            }
+
+            override fun onGeoAnchorPlaced(placeId: String, placeName: String) {
+                Log.d(TAG, "Geo anchor placed: $placeName")
+            }
+
+            override fun onGeospatialNotSupported() {
+                showSnackbar("Geospatial API not supported")
+            }
+
+            override fun showSnackbar(message: String) {
+                this@AppRenderer.showSnackbar(message)
+            }
+        })
+
 
         arTouchInteractionManager.setupCameraButton()
     }
@@ -198,7 +222,7 @@ class AppRenderer(
         processObjectResults(frame, session)
 
         // Handle geo-spatial anchor placement
-        handleGeoAnchorPlacement(session)
+        geoAnchorManager.handleGeoAnchorPlacement(session)
 
         // Delegate rendering to ARSceneRenderer
         val renderResult = arSceneRenderer.drawFrame(
@@ -210,18 +234,6 @@ class AppRenderer(
 
         // Handle render results
         handleRenderResult(renderResult)
-    }
-
-    private fun handleGeoAnchorPlacement(session: Session) {
-        val earth = session.earth
-        if (shouldPlaceGeoAnchors && earth != null && earth.trackingState == TrackingState.TRACKING) {
-            showSnackbar("Placing nearby locations...")
-            pendingPlaces?.let {
-                updateARViewWithPlaces(it)
-                shouldPlaceGeoAnchors = false
-                pendingPlaces = null
-            }
-        }
     }
 
     private fun handleRenderResult(result: ARSceneRenderer.RenderResult) {
@@ -260,46 +272,48 @@ class AppRenderer(
             serverResult = null
             val snapshotData = lastSnapshotData
             Log.i(TAG, "Analyzer got objects: $obj")
+
             if (snapshotData == null) {
                 Log.e(TAG, "No snapshot data available for anchor creation")
-                view.post {
-                    view.setScanningActive(false)
-                    showSnackbar("Unable to place AR labels. Please try again.")
-                }
+                updateDetectionUI(null)
                 return
             }
-            val anchor = anchorManager.createAnchorFromAnalyzedResult(session, snapshotData, obj, frame)
 
-            launch {
-                val currentLocation =
-                    geoLocationUtils.getSingleCurrentLocation() // Await the result
-                if (anchor != null) {
-                    anchorManager.addAnchor(anchor)
-                }
-                createSiteHistoryForDetectedObject(obj, currentLocation) // Pass the location
-            }
+            val anchor = anchorManager.createAnchorFromAnalyzedResult(session, snapshotData, obj, frame)
 
             if (anchor != null) {
                 anchorManager.addAnchor(anchor)
             }
 
-            view.post {
-                view.setScanningActive(false)
+            saveDetectionHistory(obj, anchor)
+            updateDetectionUI(anchor)
+        }
+    }
 
-                when {
-                    anchor == null ->
-                        showSnackbar("No landmark detected. Try scanning again.")
+    private fun updateDetectionUI(anchor: ARLabeledAnchor?) {
+        view.post {
+            view.setScanningActive(false)
+            when {
+                anchor == null ->
+                    showSnackbar("No landmark detected. Try scanning again.")
 
-                    anchor.anchor.trackingState != TrackingState.TRACKING ->
-                        showSnackbar("Could not anchor the landmark. Try moving your device around.")
+                anchor.anchor.trackingState != TrackingState.TRACKING ->
+                    showSnackbar("Could not anchor the landmark. Try moving your device around.")
 
-                    else ->
-                        showSnackbar("Tap on the label to see more details")
-                }
+                else ->
+                    showSnackbar("Tap on the label to see more details")
             }
         }
     }
 
+    private fun saveDetectionHistory(result: ImageAnalyzedResult, anchor: ARLabeledAnchor?) {
+        launch {
+            val currentLocation = geoAnchorManager.getCachedLocation()
+                ?: geoLocationUtils.getSingleCurrentLocation()
+
+            createSiteHistoryForDetectedObject(result, currentLocation)
+        }
+    }
 
     private fun showSnackbar(message: String): Unit =
         view.snackbarHelper.showError(activity, message)
@@ -307,140 +321,12 @@ class AppRenderer(
     private fun hideSnackbar() =
         activity.view.snackbarHelper.hide(activity)
 
-//    private var pendingTouchX: Float? = null
-//    private var pendingTouchY: Float? = null
-
     fun handleTouch(x: Float, y: Float) {
         arTouchInteractionManager.handleTouch(x, y)
     }
 
     fun getNearbyPlacesForAR(categories: List<String>) {
-        Log.d("NearbyPlaces", "Fetching nearby places for AR...")
-        Log.d("NearbyPlaces", "Selected Filters (on Apply): $categories")
-
-        networkScope.launch{
-            Log.d("NearbyPlaces", "Fetching inside networckScope..")
-
-
-            val currentLocation = getLocationOptimized()
-            Log.d("NearbyPlaces", "Location result: $currentLocation")
-            if (currentLocation == null) {
-                Log.e("NearbyPlaces", "Location is null! Aborting fetch.")
-                return@launch
-            }
-            geoLocationUtils.updateLocation(currentLocation)
-            val repository = NearbyPlacesRepository()
-            val result = repository.fetchNearbyPlaces(
-                currentLocation.latitude,
-                currentLocation.longitude,
-                categories
-            )
-
-            Log.d("NearbyPlaces", result.toString())
-
-            withContext(Dispatchers.Main) {
-                result.onSuccess { places ->
-                    Log.d("NearbyPlaces", "Received ${places} places")
-                    showSnackbar("Received ${places.size} places")
-                    pendingPlaces = places
-                    shouldPlaceGeoAnchors = true
-
-                }
-
-                result.onFailure { error ->
-                    Log.e("NearbyPlaces", "Error fetching places: ${error.localizedMessage}")
-                    showSnackbar("Couldn't load nearby places: ${error.message}")
-                }
-            }
-        }
-    }
-
-private suspend fun getLocationOptimized(): Location? {
-    val currentTime = System.currentTimeMillis()
-
-    if (currentTime - lastLocationUpdate < LOCATION_UPDATE_INTERVAL) {
-        return locationCache["current"]
-    }
-
-    return try {
-        val location = geoLocationUtils.getSingleCurrentLocation()
-        location?.let {
-            locationCache["current"] = it
-            lastLocationUpdate = currentTime
-        }
-        location
-    } catch (e: Exception) {
-        Log.e(TAG, "Location update failed", e)
-        locationCache.remove("current")
-        null
-    }
-}
-
-    private fun updateARViewWithPlaces(places: List<PointOfInterest>) {
-        Log.d("GeoAR", "updateARViewWithPlaces")
-
-        val session = activity.arCoreSessionHelper.sessionCache ?: return
-        val earth = session.earth ?: return
-
-        if (!session.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
-           Handler(Looper.getMainLooper()).post {
-                showSnackbar("Geospatial API not supported")
-            }
-            return
-        }
-
-        if (earth.trackingState != TrackingState.TRACKING) {
-            Log.d("GeoAR", "earth.trackingState != TrackingState.TRACKING")
-            return
-        }
-
-        val layerManager = arSceneRenderer.getLayerManager()
-        val existingPlaceIds = layerManager.getExistingPlaceIds()
-
-        for (point in places) {
-            if (existingPlaceIds.contains(point.id)) continue
-
-            val cameraPose = earth.cameraGeospatialPose
-            val targetAltitude = cameraPose.altitude - 0.5
-            val targetLat = point.location.lat
-            val targetLng = point.location.lng
-            val headingToPoint = computeBearing(
-                cameraPose.latitude,
-                cameraPose.longitude,
-                targetLat,
-                targetLng
-            )
-            val correctedHeading = (headingToPoint + 180) % 360
-            val headingQuaternion = calculateHeadingQuaternion(correctedHeading)
-
-            val anchor = earth.createAnchor(targetLat, targetLng, targetAltitude, headingQuaternion)
-            Log.d(
-                "GeoAR",
-                "Created Anchor at $targetLat, $targetLng, $targetAltitude for ${point.name}"
-            )
-
-            val placeMap = mapOf(
-                "place_id" to point.id,
-                "name" to point.name,
-                "location" to mapOf(
-                    "lat" to point.location.lat,
-                    "lng" to point.location.lng
-                ),
-                "rating" to point.rating,
-                "type" to point.type,
-                "address" to point.address,
-                "phone_number" to point.phoneNumber,
-                "business_status" to point.businessStatus,
-                "opening_hours" to point.openingHours?.let {
-                    mapOf(
-                        "open_now" to it.openNow,
-                        "weekday_text" to it.weekdayText
-                    )
-                }
-            )
-
-            layerManager.addLayerLabel(anchor, placeMap)
-        }
+        geoAnchorManager.getNearbyPlacesForAR(categories)
     }
 
     private fun createSiteHistoryForDetectedObject(
@@ -448,18 +334,19 @@ private suspend fun getLocationOptimized(): Location? {
         location: Location?
     ) {
         networkScope.launch { // Or
-            val currentLocation = getLocationOptimized() ?: return@launch
-            geoLocationUtils.updateLocation(currentLocation)
-            val geoHash = geoLocationUtils.getGeoHash() ?: ""
-            siteHistoryViewModel.createSiteHistory(
-                siteInfoId = result.siteInfoId,
-                currentLocation
-            )
-            Log.d(
-                TAG,
-                "Saved site history with geoHash: $geoHash, lat: ${currentLocation.latitude}, long: ${currentLocation.longitude}"
-            )
+            val currentLocation = location ?: geoLocationUtils.getSingleCurrentLocation()
+            currentLocation?.let {
+                geoLocationUtils.updateLocation(it)
+                val geoHash = geoLocationUtils.getGeoHash() ?: ""
+                siteHistoryViewModel.createSiteHistory(
+                    siteInfoId = result.siteInfoId,
+                    currentLocation
+                )
+                Log.d(
+                    TAG,
+                    "Saved site history with geoHash: $geoHash, lat: ${currentLocation.latitude}, long: ${currentLocation.longitude}"
+                )
+            }
         }
     }
-
 }
