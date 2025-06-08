@@ -69,6 +69,7 @@ import com.google.ar.core.Config
 import com.example.explorelens.ar.components.AnchorManager
 import com.example.explorelens.ar.components.ARTouchInteractionManager
 import com.example.explorelens.ar.components.SnapshotManager
+import com.example.explorelens.ar.components.ARSceneRenderer
 
 class AppRenderer(
     val activity: ArActivity,
@@ -90,32 +91,16 @@ class AppRenderer(
 
     lateinit var view: ArActivityView
     val displayRotationHelper = DisplayRotationHelper(activity)
-    lateinit var backgroundRenderer: BackgroundRenderer
-    val pointCloudRender = PointCloudRender()
-    val labelRenderer = LabelRender()
-
-
-    private val layerManager = ARLayerManager(activity)
-
-    val viewMatrix = FloatArray(16)
-    val projectionMatrix = FloatArray(16)
-    val viewProjectionMatrix = FloatArray(16)
 
     var serverResult: ImageAnalyzedResult? = null
-//    var scanButtonWasPressed = false
-
     private var lastSnapshotData: Snapshot? = null
-//    var arLabeledAnchors = Collections.synchronizedList(mutableListOf<ARLabeledAnchor>())
-//    private val reusableAnchorList = ArrayList<ARLabeledAnchor>()
-//    private var hasLoadedAnchors = false
-//    private val convertFloats = FloatArray(4)
-//    private val convertFloatsOut = FloatArray(4)
     private var shouldPlaceGeoAnchors = false
     private var pendingPlaces: List<PointOfInterest>? = null
 
     private lateinit var anchorManager: AnchorManager
     private lateinit var arTouchInteractionManager: ARTouchInteractionManager
     private lateinit var snapshotManager: SnapshotManager
+    private lateinit var arSceneRenderer: ARSceneRenderer
 
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
@@ -142,6 +127,7 @@ class AppRenderer(
 
     fun bindView(view: ArActivityView) {
         this.view = view
+        arSceneRenderer = ARSceneRenderer(activity, displayRotationHelper)
         anchorManager = AnchorManager(activity, view, networkScope)
         arTouchInteractionManager = ARTouchInteractionManager(activity, view, anchorManager)
         snapshotManager = SnapshotManager(
@@ -151,7 +137,10 @@ class AppRenderer(
             networkScope,
             backgroundScope
         )
+        setupCallbacks()
+    }
 
+    private fun setupCallbacks() {
         snapshotManager.setCallback(object : SnapshotManager.SnapshotCallback {
             override fun onSnapshotResult(result: ImageAnalyzedResult?) {
                 serverResult = result
@@ -173,45 +162,85 @@ class AppRenderer(
             override fun onAnchorClicked(anchor: ARLabeledAnchor) {
             }
         })
+
         arTouchInteractionManager.setupCameraButton()
     }
 
 
     override fun onSurfaceCreated(render: SampleRender) {
-        backgroundRenderer = BackgroundRenderer(render).apply {
-            setUseDepthVisualization(render, false)
-        }
-        pointCloudRender.onSurfaceCreated(render)
-        labelRenderer.onSurfaceCreated(render, activity)
-        layerManager.onSurfaceCreated(render)
+        arSceneRenderer.onSurfaceCreated(render)
     }
 
     override fun onSurfaceChanged(render: SampleRender?, width: Int, height: Int) {
-        displayRotationHelper.onSurfaceChanged(width, height)
+        arSceneRenderer.onSurfaceChanged(render, width, height)
     }
+
 
     override fun onDrawFrame(render: SampleRender) {
         val session = activity.arCoreSessionHelper.sessionCache ?: return
-        val earth = session.earth
-        session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.textureId))
-        displayRotationHelper.updateSessionIfNeeded(session)
+
+        // Update AR session
         val frame = try {
             session.update()
-        } catch (e: CameraNotAvailableException) {
-            Log.e(TAG, "Camera not available during onDrawFrame", e)
-            showSnackbar("Camera not available. Try restarting the app.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating AR session", e)
+            showSnackbar("AR session error. Try restarting the app.")
             return
         }
 
-        backgroundRenderer.updateDisplayGeometry(frame)
-        backgroundRenderer.drawBackground(render)
+        // Handle scan button press
+        handleScanButtonPress(frame, session)
 
-        val camera = frame.camera
-        camera.getViewMatrix(viewMatrix, 0)
-        camera.getProjectionMatrix(projectionMatrix, 0, 0.01f, 100.0f)
-        Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+        // Process pending touch interactions
+        arTouchInteractionManager.processPendingTouch(frame, session)
 
-            if (arTouchInteractionManager.scanButtonWasPressed) {
+        // Process object detection results
+        processObjectResults(frame, session)
+
+        // Handle geo-spatial anchor placement
+        handleGeoAnchorPlacement(session)
+
+        // Delegate rendering to ARSceneRenderer
+        val renderResult = arSceneRenderer.drawFrame(
+            render,
+            frame,
+            anchorManager.getAnchorsForRendering(),
+            lastSnapshotData
+        )
+
+        // Handle render results
+        handleRenderResult(renderResult)
+    }
+
+    private fun handleGeoAnchorPlacement(session: Session) {
+        val earth = session.earth
+        if (shouldPlaceGeoAnchors && earth != null && earth.trackingState == TrackingState.TRACKING) {
+            showSnackbar("Placing nearby locations...")
+            pendingPlaces?.let {
+                updateARViewWithPlaces(it)
+                shouldPlaceGeoAnchors = false
+                pendingPlaces = null
+            }
+        }
+    }
+
+    private fun handleRenderResult(result: ARSceneRenderer.RenderResult) {
+        when (result) {
+            is ARSceneRenderer.RenderResult.CameraError -> {
+                showSnackbar("Camera error: ${result.message}")
+            }
+            is ARSceneRenderer.RenderResult.UnknownError -> {
+                Log.e(TAG, "Rendering error: ${result.message}")
+            }
+            else -> {
+                // Success or other handled states
+            }
+        }
+    }
+
+    private fun handleScanButtonPress(frame: Frame, session: Session) {
+        if (arTouchInteractionManager.scanButtonWasPressed) {
+            val camera = frame.camera
             if (camera.trackingState != TrackingState.TRACKING) {
                 view.post {
                     view.setScanningActive(false)
@@ -222,53 +251,6 @@ class AppRenderer(
                 anchorManager.initialize()
             }
             arTouchInteractionManager.resetScanButton()
-        }
-
-        if (camera.trackingState != TrackingState.TRACKING) {
-            Log.w(TAG, "Camera is not tracking.")
-            return
-        }
-        frame.acquirePointCloud().use { pointCloud ->
-            pointCloudRender.drawPointCloud(render, pointCloud, viewProjectionMatrix)
-        }
-
-        arTouchInteractionManager.processPendingTouch(frame, session)
-
-        processObjectResults(frame, session)
-        drawAnchors(render, frame)
-
-
-        if (shouldPlaceGeoAnchors && earth != null && earth.trackingState == TrackingState.TRACKING) {
-            showSnackbar("updateARViewWithPlaces")
-            pendingPlaces?.let {
-                updateARViewWithPlaces(it)
-                shouldPlaceGeoAnchors = false
-                pendingPlaces = null
-            }
-        }
-        layerManager.drawLayerLabels(render, viewProjectionMatrix, camera.pose, frame)
-
-    }
-
-
-    private fun drawAnchors(render: SampleRender, frame: Frame) {
-
-        val anchorsToDraw = anchorManager.getAnchorsForRendering()
-        for (arDetectedObject in anchorsToDraw) {
-            val anchor = arDetectedObject.anchor
-            if (anchor.trackingState != TrackingState.TRACKING) {
-                continue
-            }
-            Log.d(TAG, "Anchor tracking state: ${anchor.trackingState}")
-            Log.d(TAG, "Label: ${arDetectedObject.label}")
-            if (anchor.trackingState != TrackingState.TRACKING) continue
-            labelRenderer.draw(
-                render,
-                viewProjectionMatrix,
-                anchor.pose,
-                lastSnapshotData?.cameraPose ?: frame.camera.pose,
-                arDetectedObject.label
-            )
         }
     }
 
@@ -412,6 +394,7 @@ private suspend fun getLocationOptimized(): Location? {
             return
         }
 
+        val layerManager = arSceneRenderer.getLayerManager()
         val existingPlaceIds = layerManager.getExistingPlaceIds()
 
         for (point in places) {
