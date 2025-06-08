@@ -71,6 +71,7 @@ import com.example.explorelens.ar.components.ARTouchInteractionManager
 import com.example.explorelens.ar.components.SnapshotManager
 import com.example.explorelens.ar.components.ARSceneRenderer
 import com.example.explorelens.ar.components.GeoAnchorManager
+import com.example.explorelens.ar.components.SiteHistoryHelper
 
 class AppRenderer(
     val activity: ArActivity,
@@ -96,6 +97,7 @@ class AppRenderer(
     private lateinit var snapshotManager: SnapshotManager
     private lateinit var arSceneRenderer: ARSceneRenderer
     private lateinit var geoAnchorManager: GeoAnchorManager
+    private lateinit var siteHistoryHelper: SiteHistoryHelper
 
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
@@ -125,6 +127,7 @@ class AppRenderer(
         arSceneRenderer = ARSceneRenderer(activity, displayRotationHelper)
         anchorManager = AnchorManager(activity, view, networkScope)
         arTouchInteractionManager = ARTouchInteractionManager(activity, view, anchorManager)
+        siteHistoryHelper = SiteHistoryHelper(siteHistoryViewModel, geoLocationUtils, networkScope)
         snapshotManager = SnapshotManager(
             activity.applicationContext,
             view,
@@ -311,7 +314,7 @@ class AppRenderer(
             val currentLocation = geoAnchorManager.getCachedLocation()
                 ?: geoLocationUtils.getSingleCurrentLocation()
 
-            createSiteHistoryForDetectedObject(result, currentLocation)
+            siteHistoryHelper.createSiteHistoryForDetectedObject(result, currentLocation)
         }
     }
 
