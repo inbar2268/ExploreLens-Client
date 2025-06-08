@@ -6,6 +6,7 @@ import android.os.Looper
 import android.util.Log
 import com.example.explorelens.ArActivity
 import com.example.explorelens.ar.ArActivityView
+import com.example.explorelens.ar.render.FilterListManager
 import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
 import com.example.explorelens.data.repository.NearbyPlacesRepository
 import com.example.explorelens.utils.GeoLocationUtils
@@ -18,7 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.*
 
-class GeoAnchorManager(
+public class GeoAnchorManager(
     private val activity: ArActivity,
     private val view: ArActivityView,
     private val geoLocationUtils: GeoLocationUtils,
@@ -33,6 +34,9 @@ class GeoAnchorManager(
     // Caching for Location
     private val locationCache = mutableMapOf<String, Location>()
     private var lastLocationUpdate = 0L
+    private var lastFetchedLocation: Location? = null
+    private val DISTANCE_THRESHOLD_METERS = 450.0
+    private val DISTANCE_CHECK_INTERVAL = 30_000L
 
     // State management
     private var shouldPlaceGeoAnchors = false
@@ -51,10 +55,53 @@ class GeoAnchorManager(
     fun setCallback(callback: GeoAnchorCallback) {
         this.callback = callback
     }
+    private val handler = Handler(Looper.getMainLooper())
+    private val locationDistanceChecker = object : Runnable {
+        override fun run() {
+            networkScope.launch {
+                val currentLocation = getLocationOptimized()
+                val lastLocation = lastFetchedLocation
 
-    fun getNearbyPlacesForAR(categories: List<String>) {
+                if (currentLocation != null && lastLocation != null) {
+                    val distance = currentLocation.distanceTo(lastLocation)
+                    Log.d(TAG, "Distance since last fetch: $distance meters")
+
+                    if (distance >= DISTANCE_THRESHOLD_METERS) {
+                        Log.d(TAG, "Distance threshold passed. Fetching new places.")
+                        getNearbyPlacesForAR()
+                        lastFetchedLocation = currentLocation
+                    }
+                } else if (currentLocation != null && lastLocation == null) {
+
+                    lastFetchedLocation = currentLocation
+                    getNearbyPlacesForAR()
+                }
+            }
+
+            handler.postDelayed(this, DISTANCE_CHECK_INTERVAL)
+        }
+    }
+    fun startDistanceMonitoring() {
+        handler.post(locationDistanceChecker)
+    }
+
+    fun stopDistanceMonitoring() {
+        handler.removeCallbacks(locationDistanceChecker)
+    }
+
+
+    fun getNearbyPlacesForAR() {
+        val  categories =FilterListManager.getAllFilters()
         Log.d(TAG, "Fetching nearby places for AR...")
         Log.d(TAG, "Selected Filters: $categories")
+
+        if (categories.isEmpty()) {
+            Log.i(TAG, "No filters selected – clearing anchors and skipping request.")
+            pendingPlaces = null
+            shouldPlaceGeoAnchors = false
+            arSceneRenderer.getLayerManager().clearLayerLabels()
+            return
+        }
 
         networkScope.launch {
 
