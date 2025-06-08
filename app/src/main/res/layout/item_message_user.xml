@@ -32,7 +32,7 @@
 
     </androidx.cardview.widget.CardView>
 
-    <!-- User avatar on the right side -->
+    <!-- User avatar on the right side - CENTERED vertically with message card -->
     <ImageView
         android:id="@+id/imageViewUserAvatar"
         android:layout_width="32dp"
@@ -44,7 +44,8 @@
         android:src="@drawable/avatar_placeholder"
         android:contentDescription="User avatar"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/cardViewUserMessage" />
+        app:layout_constraintTop_toTopOf="@+id/cardViewUserMessage"
+        app:layout_constraintBottom_toBottomOf="@+id/cardViewUserMessage" />
 
     <!-- Timestamp below message -->
     <TextView

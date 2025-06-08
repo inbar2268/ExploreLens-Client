@@ -54,6 +54,7 @@ class UserRepository(context: Context) {
     }
 
     // Update user both locally and on server
+// Update user both locally and on server
     suspend fun updateUser(user: User): Result<User> {
         return try {
             // First update on server
@@ -76,7 +77,7 @@ class UserRepository(context: Context) {
                         profilePictureUrl = userResponse.profilePicture
                     )
 
-                    // Save updated user to local database
+                    // Save updated user to local database only after successful server update
                     userDao.saveUser(updatedUser)
                     Result.success(updatedUser)
                 } else {
@@ -88,16 +89,9 @@ class UserRepository(context: Context) {
                 Result.failure(Exception("Error updating user: $errorMsg"))
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Exception during user update", e)
-            // If server update fails, still try to update locally
-            try {
-                userDao.saveUser(user)
-                Log.w(TAG, "Updated user locally despite server error")
-                Result.success(user)
-            } catch (localException: Exception) {
-                Log.e(TAG, "Failed to update user locally as well", localException)
-                Result.failure(e) // Return original server error
-            }
+            Log.e(TAG, "Exception during user update - no server connection", e)
+            // Return failure without updating locally
+            Result.failure(Exception("Cannot update profile without server connection"))
         }
     }
 
