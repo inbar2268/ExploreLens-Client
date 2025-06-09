@@ -59,6 +59,7 @@ class ArActivityView(
 
   // Selected filters
   private val selectedFilters = mutableSetOf<String>()
+  private var isSideSheetShowing = false
 
   // Site details management
   private var currentSiteDetailsFragment: SiteDetailsFragment? = null
@@ -85,7 +86,9 @@ class ArActivityView(
     // Setup layers/filter button
     binding.layersButton.setOnClickListener {
       Log.d(TAG, "Layers button clicked")
-      showFilterSideSheet()
+      if (!isSideSheetShowing) {
+        showFilterSideSheet()
+      }
     }
 
   }
@@ -110,6 +113,10 @@ class ArActivityView(
    */
   private fun showFilterSideSheet() {
     Log.d(TAG, "All Filter Options in showFilterSideSheet: ${filterOptions.joinToString()}")
+
+    isSideSheetShowing = true
+    binding.layersButton.isEnabled = false
+
     val sideSheetDialog = SideSheetDialog(activity)
     val sideSheetBinding = FilterSideSheetBinding.inflate(activity.layoutInflater)
 
@@ -142,6 +149,8 @@ class ArActivityView(
     // Handle dismissal to restore UI state
     sideSheetDialog.setOnDismissListener {
       FullScreenHelper.setFullScreenOnWindowFocusChanged(activity, true)
+      isSideSheetShowing = false
+      binding.layersButton.isEnabled = true
     }
 
     sideSheetDialog.setCanceledOnTouchOutside(true)
