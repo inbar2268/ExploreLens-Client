@@ -8,7 +8,7 @@ import com.example.explorelens.utils.GeoLocationUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-class SiteHistoryHelper(
+public class SiteHistoryHelper(
     private val siteHistoryViewModel: SiteHistoryViewModel,
     private val geoLocationUtils: GeoLocationUtils,
     private val networkScope: CoroutineScope

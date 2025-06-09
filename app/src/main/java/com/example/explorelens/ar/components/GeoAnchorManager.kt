@@ -6,6 +6,7 @@ import android.os.Looper
 import android.util.Log
 import com.example.explorelens.ArActivity
 import com.example.explorelens.ar.ArActivityView
+import com.example.explorelens.ar.render.FilterListManager
 import com.example.explorelens.data.model.PointOfIntrests.GeoLocation
 import com.example.explorelens.data.model.PointOfIntrests.OpeningHours
 import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
@@ -35,6 +36,9 @@ class GeoAnchorManager(
     // Caching for Location
     private val locationCache = mutableMapOf<String, Location>()
     private var lastLocationUpdate = 0L
+    private var lastFetchedLocation: Location? = null
+    private val DISTANCE_THRESHOLD_METERS = 300.0
+    private val DISTANCE_CHECK_INTERVAL = 30_000L
 
     // State management
     private var shouldPlaceGeoAnchors = false
@@ -52,6 +56,97 @@ class GeoAnchorManager(
 
     fun setCallback(callback: GeoAnchorCallback) {
         this.callback = callback
+    }
+    private val handler = Handler(Looper.getMainLooper())
+    private val locationDistanceChecker = object : Runnable {
+        override fun run() {
+            networkScope.launch {
+                val currentLocation = getLocationOptimized()
+                val lastLocation = lastFetchedLocation
+
+                if (currentLocation != null && lastLocation != null) {
+                    val distance = currentLocation.distanceTo(lastLocation)
+                    Log.d(TAG, "Distance since last fetch: $distance meters")
+
+                    if (distance >= DISTANCE_THRESHOLD_METERS) {
+                        Log.d(TAG, "Distance threshold passed. Fetching new places.")
+                        getNearbyPlacesForAR()
+                        lastFetchedLocation = currentLocation
+                    }
+                } else if (currentLocation != null && lastLocation == null) {
+
+                    lastFetchedLocation = currentLocation
+                    getNearbyPlacesForAR()
+                }
+            }
+
+            handler.postDelayed(this, DISTANCE_CHECK_INTERVAL)
+        }
+    }
+    fun startDistanceMonitoring() {
+        handler.post(locationDistanceChecker)
+    }
+
+    fun stopDistanceMonitoring() {
+        handler.removeCallbacks(locationDistanceChecker)
+    }
+
+
+    fun getNearbyPlacesForAR() {
+        val  categories =FilterListManager.getAllFilters()
+        Log.d(TAG, "Fetching nearby places for AR...")
+        Log.d(TAG, "Selected Filters: $categories")
+
+        if (categories.isEmpty()) {
+            Log.i(TAG, "No filters selected – clearing anchors and skipping request.")
+            pendingPlaces = null
+            shouldPlaceGeoAnchors = false
+            arSceneRenderer.getLayerManager().clearLayerLabels()
+            return
+        }
+
+        networkScope.launch {
+
+            val currentLocation = getLocationOptimized()
+            Log.d(TAG, "Location result: $currentLocation")
+
+            if (currentLocation == null) {
+                Log.e(TAG, "Location is null! Aborting fetch.")
+                withContext(Dispatchers.Main) {
+                    callback?.onPlacesError("Unable to get current location")
+                }
+                return@launch
+            }
+
+            geoLocationUtils.updateLocation(currentLocation)
+            val repository = NearbyPlacesRepository()
+            val result = repository.fetchNearbyPlaces(
+                currentLocation.latitude,
+                currentLocation.longitude,
+                categories
+            )
+
+            Log.d(TAG, result.toString())
+
+            withContext(Dispatchers.Main) {
+                result.onSuccess { places ->
+                    Log.d(TAG, "Received ${places.size} places")
+                    callback?.showSnackbar("Received ${places.size} places")
+                    callback?.onPlacesReceived(places)
+
+                    val mockPlaces = createMockPointsOfInterest()
+                    val combinedPlaces = places.toMutableList().apply { addAll(mockPlaces) }
+                    pendingPlaces = combinedPlaces
+                    shouldPlaceGeoAnchors = true
+                }
+
+                result.onFailure { error ->
+                    Log.e(TAG, "Error fetching places: ${error.localizedMessage}")
+                    val errorMessage = "Couldn't load nearby places: ${error.message}"
+                    callback?.onPlacesError(errorMessage)
+                }
+            }
+        }
     }
 
     private fun createMockPointsOfInterest(): List<PointOfInterest> {
@@ -87,60 +182,11 @@ class GeoAnchorManager(
         )
     }
 
-    fun getNearbyPlacesForAR(categories: List<String>) {
-        Log.d(TAG, "Fetching nearby places for AR...")
-        Log.d(TAG, "Selected Filters: $categories")
-
-        networkScope.launch {
-
-            val currentLocation = getLocationOptimized()
-            Log.d(TAG, "Location result: $currentLocation")
-
-            if (currentLocation == null) {
-                Log.e(TAG, "Location is null! Aborting fetch.")
-                withContext(Dispatchers.Main) {
-                    callback?.onPlacesError("Unable to get current location")
-                }
-                return@launch
-            }
-
-            geoLocationUtils.updateLocation(currentLocation)
-            val repository = NearbyPlacesRepository()
-            val result = repository.fetchNearbyPlaces(
-                currentLocation.latitude,
-                currentLocation.longitude,
-                categories
-            )
-
-            Log.d(TAG, result.toString())
-
-            withContext(Dispatchers.Main) {
-                result.onSuccess { places ->
-                    Log.d(TAG, "Received ${places.size} places")
-                    callback?.showSnackbar("Received ${places.size} places")
-                    callback?.onPlacesReceived(places)
-
-                    val mockPlaces = createMockPointsOfInterest()
-                    val combinedPlaces = places.toMutableList().apply { addAll(mockPlaces) }
-                    // Store places for AR placement
-                    pendingPlaces = combinedPlaces
-                    shouldPlaceGeoAnchors = true
-                }
-
-                result.onFailure { error ->
-                    Log.e(TAG, "Error fetching places: ${error.localizedMessage}")
-                    val errorMessage = "Couldn't load nearby places: ${error.message}"
-                    callback?.onPlacesError(errorMessage)
-                }
-            }
-        }
-    }
 
     fun handleGeoAnchorPlacement(session: Session): Boolean {
         val earth = session.earth
         if (shouldPlaceGeoAnchors && earth != null && earth.trackingState == TrackingState.TRACKING) {
             callback?.showSnackbar("Placing nearby locations...")
-            Log.d("hii", pendingPlaces.toString())
             pendingPlaces?.let { places ->
                 updateARViewWithPlaces(places, session)
                 shouldPlaceGeoAnchors = false

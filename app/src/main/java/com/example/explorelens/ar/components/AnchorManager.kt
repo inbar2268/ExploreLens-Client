@@ -16,7 +16,7 @@ import java.util.*
 import kotlin.coroutines.resume
 import kotlin.math.sqrt
 
-class AnchorManager(
+public class AnchorManager(
     private val activity: ArActivity,
     private val view: ArActivityView,
     private val networkScope: CoroutineScope

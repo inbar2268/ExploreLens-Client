@@ -17,7 +17,7 @@ import com.google.ar.core.TrackingState
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-class ARTouchInteractionManager(
+public class ARTouchInteractionManager(
     private val activity: ArActivity,
     private val view: ArActivityView,
     private val anchorManager: AnchorManager
