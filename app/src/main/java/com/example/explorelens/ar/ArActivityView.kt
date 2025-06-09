@@ -31,9 +31,6 @@ import com.example.explorelens.ar.render.FilterListManager
 import com.example.explorelens.ui.site.SiteDetailsFragment
 import com.google.android.material.sidesheet.SideSheetDialog
 
-/**
- * View class for AR activity that manages UI components and interactions
- */
 class ArActivityView(
   private val activity: FragmentActivity,
   private val renderer: AppRenderer,

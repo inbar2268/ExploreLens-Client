@@ -12,9 +12,6 @@ import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import java.util.concurrent.CopyOnWriteArrayList
 
-/**
- * Class for managing AR layer labels for nearby places
- */
 class ARLayerManager(private val context: Context) {
     companion object {
         private const val TAG = "ARLayerManager"
