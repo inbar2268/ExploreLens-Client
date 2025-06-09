@@ -95,17 +95,17 @@ class ARLayerManager(private val context: Context) {
             val distance = Math.sqrt((dx * dx + dy * dy + dz * dz).toDouble())
 
             if (distance > maxDistanceMeters) {
-                Log.d("AR-Debug", "⛔️ too far, skipping")
+                //Log.d("AR-Debug", "⛔️ too far, skipping")
                 continue
             }
 
             if (!isInFront(cameraPose, pose)) {
-                Log.d("AR-Debug", "⛔️ behind, skipping")
+                //Log.d("AR-Debug", "⛔️ behind, skipping")
                 continue
             }
 
             if (!isWithinFOV(cameraPose, pose, fovDegrees)) {
-                Log.d("AR-Debug", "⛔️ out of FOV, skipping")
+                //Log.d("AR-Debug", "⛔️ out of FOV, skipping")
                 continue
             }
 
@@ -182,4 +182,5 @@ class ARLayerManager(private val context: Context) {
     fun getAllLabels(): List<LayerLabelInfo> {
         return layerLabels.toList()
     }
+
 }

@@ -6,6 +6,9 @@ import android.os.Looper
 import android.util.Log
 import com.example.explorelens.ArActivity
 import com.example.explorelens.ar.ArActivityView
+import com.example.explorelens.ar.render.FilterListManager
+import com.example.explorelens.data.model.PointOfIntrests.GeoLocation
+import com.example.explorelens.data.model.PointOfIntrests.OpeningHours
 import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
 import com.example.explorelens.data.repository.NearbyPlacesRepository
 import com.example.explorelens.utils.GeoLocationUtils
@@ -33,6 +36,9 @@ class GeoAnchorManager(
     // Caching for Location
     private val locationCache = mutableMapOf<String, Location>()
     private var lastLocationUpdate = 0L
+    private var lastFetchedLocation: Location? = null
+    private val DISTANCE_THRESHOLD_METERS = 300.0
+    private val DISTANCE_CHECK_INTERVAL = 30_000L
 
     // State management
     private var shouldPlaceGeoAnchors = false
@@ -51,10 +57,53 @@ class GeoAnchorManager(
     fun setCallback(callback: GeoAnchorCallback) {
         this.callback = callback
     }
+    private val handler = Handler(Looper.getMainLooper())
+    private val locationDistanceChecker = object : Runnable {
+        override fun run() {
+            networkScope.launch {
+                val currentLocation = getLocationOptimized()
+                val lastLocation = lastFetchedLocation
 
-    fun getNearbyPlacesForAR(categories: List<String>) {
+                if (currentLocation != null && lastLocation != null) {
+                    val distance = currentLocation.distanceTo(lastLocation)
+                    Log.d(TAG, "Distance since last fetch: $distance meters")
+
+                    if (distance >= DISTANCE_THRESHOLD_METERS) {
+                        Log.d(TAG, "Distance threshold passed. Fetching new places.")
+                        getNearbyPlacesForAR()
+                        lastFetchedLocation = currentLocation
+                    }
+                } else if (currentLocation != null && lastLocation == null) {
+
+                    lastFetchedLocation = currentLocation
+                    getNearbyPlacesForAR()
+                }
+            }
+
+            handler.postDelayed(this, DISTANCE_CHECK_INTERVAL)
+        }
+    }
+    fun startDistanceMonitoring() {
+        handler.post(locationDistanceChecker)
+    }
+
+    fun stopDistanceMonitoring() {
+        handler.removeCallbacks(locationDistanceChecker)
+    }
+
+
+    fun getNearbyPlacesForAR() {
+        val  categories =FilterListManager.getAllFilters()
         Log.d(TAG, "Fetching nearby places for AR...")
         Log.d(TAG, "Selected Filters: $categories")
+
+        if (categories.isEmpty()) {
+            Log.i(TAG, "No filters selected – clearing anchors and skipping request.")
+            pendingPlaces = null
+            shouldPlaceGeoAnchors = false
+            arSceneRenderer.getLayerManager().clearLayerLabels()
+            return
+        }
 
         networkScope.launch {
 
@@ -85,8 +134,9 @@ class GeoAnchorManager(
                     callback?.showSnackbar("Received ${places.size} places")
                     callback?.onPlacesReceived(places)
 
-                    // Store places for AR placement
-                    pendingPlaces = places
+                    val mockPlaces = createMockPointsOfInterest()
+                    val combinedPlaces = places.toMutableList().apply { addAll(mockPlaces) }
+                    pendingPlaces = combinedPlaces
                     shouldPlaceGeoAnchors = true
                 }
 
@@ -98,6 +148,40 @@ class GeoAnchorManager(
             }
         }
     }
+
+    private fun createMockPointsOfInterest(): List<PointOfInterest> {
+        // Using Hod Hasharon coordinates as a base for mock data
+        val baseLat = 32.142845
+        val baseLng = 34.887489
+
+        return listOf(
+            PointOfInterest(
+                id = "mock_cafe_123",
+                name = "Mock Coffee Corner",
+                location =  GeoLocation(lat = baseLat + 0.000008, lng = baseLng + 0.000008),
+                rating = 4.2F,
+                type = "cafe",
+                address = "1 Mock Road, Hod Hasharon",
+                phoneNumber = "050-1112233",
+                businessStatus = "OPERATIONAL",
+                openingHours = OpeningHours(true, listOf("Mon-Fri: 7 AM - 6 PM", "Sat: 9 AM - 2 PM")),
+                elevation = 15.0
+            ),
+            PointOfInterest(
+                id = "mock_museum_456",
+                name = "Virtual History Museum",
+                location = GeoLocation(lat = baseLat, lng = baseLng ),
+                rating = 4.8F,
+                type = "museum",
+                address = "789 Pixel Lane, Hod Hasharon",
+                phoneNumber = "bull",
+                businessStatus = "OPERATIONAL",
+                openingHours = OpeningHours(false, listOf("Mon-Sun: 10 AM - 5 PM (Closed on holidays)")),
+                elevation = 15.0
+            )
+        )
+    }
+
 
     fun handleGeoAnchorPlacement(session: Session): Boolean {
         val earth = session.earth
@@ -229,6 +313,8 @@ class GeoAnchorManager(
             (cos(halfAngle)).toFloat()  // w
         )
     }
+
+
 
     fun clearLocationCache() {
         locationCache.clear()
