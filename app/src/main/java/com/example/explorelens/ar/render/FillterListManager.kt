@@ -9,6 +9,7 @@ object FilterListManager {
 
     private val _filtersLiveData = MutableLiveData<List<String>>()
     val filtersLiveData: LiveData<List<String>> = _filtersLiveData
+    private val listeners = mutableListOf<() -> Unit>()
 
     init {
         _filtersLiveData.postValue(emptyList())
@@ -22,12 +23,14 @@ object FilterListManager {
         filters.clear()
         filters.addAll(newFilters.distinct())
         _filtersLiveData.postValue(filters.toList())
+        notifyListeners()
     }
 
     fun addFilter(filter: String) {
         if (!filters.contains(filter)) {
             filters.add(filter)
             _filtersLiveData.postValue(filters.toList())
+            notifyListeners()
         }
     }
 
@@ -35,11 +38,24 @@ object FilterListManager {
         val removed = filters.remove(filter)
         if (removed) {
             _filtersLiveData.postValue(filters.toList())
+            notifyListeners()
         }
     }
 
     fun clearAll() {
         filters.clear()
         _filtersLiveData.postValue(emptyList())
+        notifyListeners()
+    }
+    fun addListener(listener: () -> Unit) {
+        listeners.add(listener)
+    }
+
+    fun removeListener(listener: () -> Unit) {
+        listeners.remove(listener)
+    }
+
+    private fun notifyListeners() {
+        listeners.forEach { it.invoke() }
     }
 }

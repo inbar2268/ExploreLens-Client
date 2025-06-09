@@ -83,11 +83,19 @@ class GeoAnchorManager(
             handler.postDelayed(this, DISTANCE_CHECK_INTERVAL)
         }
     }
+
+    private val filterChangeListener: () -> Unit = {
+        Log.d(TAG, "Filter list changed – fetching places again.")
+        getNearbyPlacesForAR()
+    }
+
     fun startDistanceMonitoring() {
+        FilterListManager.addListener(filterChangeListener)
         handler.post(locationDistanceChecker)
     }
 
     fun stopDistanceMonitoring() {
+        FilterListManager.removeListener(filterChangeListener)
         handler.removeCallbacks(locationDistanceChecker)
     }
 
@@ -133,6 +141,7 @@ class GeoAnchorManager(
                     Log.d(TAG, "Received ${places.size} places")
                     callback?.showSnackbar("Received ${places.size} places")
                     callback?.onPlacesReceived(places)
+                    lastFetchedLocation = currentLocation
 
                     val mockPlaces = createMockPointsOfInterest()
                     val combinedPlaces = places.toMutableList().apply { addAll(mockPlaces) }
