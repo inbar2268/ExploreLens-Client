@@ -6,6 +6,8 @@ import android.os.Looper
 import android.util.Log
 import com.example.explorelens.ArActivity
 import com.example.explorelens.ar.ArActivityView
+import com.example.explorelens.data.model.PointOfIntrests.GeoLocation
+import com.example.explorelens.data.model.PointOfIntrests.OpeningHours
 import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
 import com.example.explorelens.data.repository.NearbyPlacesRepository
 import com.example.explorelens.utils.GeoLocationUtils
@@ -52,6 +54,39 @@ class GeoAnchorManager(
         this.callback = callback
     }
 
+    private fun createMockPointsOfInterest(): List<PointOfInterest> {
+        // Using Hod Hasharon coordinates as a base for mock data
+        val baseLat = 32.142845
+        val baseLng = 34.887489
+
+        return listOf(
+            PointOfInterest(
+                id = "mock_cafe_123",
+                name = "Mock Coffee Corner",
+                location =  GeoLocation(lat = baseLat + 0.000008, lng = baseLng + 0.000008),
+                rating = 4.2F,
+                type = "cafe",
+                address = "1 Mock Road, Hod Hasharon",
+                phoneNumber = "050-1112233",
+                businessStatus = "OPERATIONAL",
+                openingHours = OpeningHours(true, listOf("Mon-Fri: 7 AM - 6 PM", "Sat: 9 AM - 2 PM")),
+                elevation = 15.0
+            ),
+            PointOfInterest(
+                id = "mock_museum_456",
+                name = "Virtual History Museum",
+                location = GeoLocation(lat = baseLat, lng = baseLng ),
+                rating = 4.8F,
+                type = "museum",
+                address = "789 Pixel Lane, Hod Hasharon",
+                phoneNumber = "bull",
+                businessStatus = "OPERATIONAL",
+                openingHours = OpeningHours(false, listOf("Mon-Sun: 10 AM - 5 PM (Closed on holidays)")),
+                elevation = 15.0
+            )
+        )
+    }
+
     fun getNearbyPlacesForAR(categories: List<String>) {
         Log.d(TAG, "Fetching nearby places for AR...")
         Log.d(TAG, "Selected Filters: $categories")
@@ -85,8 +120,10 @@ class GeoAnchorManager(
                     callback?.showSnackbar("Received ${places.size} places")
                     callback?.onPlacesReceived(places)
 
+                    val mockPlaces = createMockPointsOfInterest()
+                    val combinedPlaces = places.toMutableList().apply { addAll(mockPlaces) }
                     // Store places for AR placement
-                    pendingPlaces = places
+                    pendingPlaces = combinedPlaces
                     shouldPlaceGeoAnchors = true
                 }
 
@@ -103,6 +140,7 @@ class GeoAnchorManager(
         val earth = session.earth
         if (shouldPlaceGeoAnchors && earth != null && earth.trackingState == TrackingState.TRACKING) {
             callback?.showSnackbar("Placing nearby locations...")
+            Log.d("hii", pendingPlaces.toString())
             pendingPlaces?.let { places ->
                 updateARViewWithPlaces(places, session)
                 shouldPlaceGeoAnchors = false
@@ -229,6 +267,8 @@ class GeoAnchorManager(
             (cos(halfAngle)).toFloat()  // w
         )
     }
+
+
 
     fun clearLocationCache() {
         locationCache.clear()

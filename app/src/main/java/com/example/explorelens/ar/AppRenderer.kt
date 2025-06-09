@@ -166,6 +166,11 @@ class AppRenderer(
 
             override fun onAnchorClicked(anchor: ARLabeledAnchor) {
             }
+
+            override fun onLayerLabelClicked(layerLabel: ARLayerManager.LayerLabelInfo) {
+                val placeName = layerLabel.placeInfo["name"] as? String ?: "Unknown Place"
+                Log.d(TAG, "Layer label clicked: $placeName")
+            }
         })
         geoAnchorManager.setCallback(object : GeoAnchorManager.GeoAnchorCallback {
             override fun onPlacesReceived(places: List<PointOfInterest>) {
@@ -190,7 +195,7 @@ class AppRenderer(
         })
 
         arSceneRenderer.setTouchHandler(arTouchInteractionManager)
-
+        arTouchInteractionManager.setLayerManager(arSceneRenderer.getLayerManager())
         arTouchInteractionManager.setupCameraButton()
     }
 
