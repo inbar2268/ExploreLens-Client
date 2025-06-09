@@ -134,7 +134,11 @@ class AppRenderer(
                 val placeName = layerLabel.placeInfo["name"] as? String ?: "Unknown Place"
                 Log.d(TAG, "Layer label clicked: $placeName")
             }
+
+            override fun onLayerLabelClosed(layerLabel: ARLayerManager.LayerLabelInfo) {
+            }
         })
+
         geoAnchorManager.setCallback(object : GeoAnchorManager.GeoAnchorCallback {
             override fun onPlacesReceived(places: List<PointOfInterest>) {
                 Log.d(TAG, "Received ${places.size} places from GeoAnchorManager")

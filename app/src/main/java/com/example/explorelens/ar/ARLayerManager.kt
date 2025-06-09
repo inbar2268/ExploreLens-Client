@@ -3,6 +3,7 @@ package com.example.explorelens.ar
 import android.content.Context
 import android.util.Log
 import com.example.explorelens.ar.render.LayerLabelRenderer
+import com.example.explorelens.ar.render.LayerLabelTextureCache
 import com.example.explorelens.common.samplerender.SampleRender
 import com.google.ar.core.Frame
 import com.google.ar.core.Pose
@@ -22,6 +23,7 @@ class ARLayerManager(private val context: Context) {
 
     private val layerLabelRenderer = LayerLabelRenderer()
     private val layerLabels = CopyOnWriteArrayList<LayerLabelInfo>()
+    private val textureCache = LayerLabelTextureCache(context) // Add this line to declare and initialize textureCache
 
     data class LayerLabelInfo(
         val anchor: Anchor,
@@ -181,6 +183,15 @@ class ARLayerManager(private val context: Context) {
 
     fun getAllLabels(): List<LayerLabelInfo> {
         return layerLabels.toList()
+    }
+
+    fun removeLabel(labelToRemove: LayerLabelInfo) {
+        layerLabels.removeAll { it.anchor == labelToRemove.anchor }
+        Log.d(TAG, "Removed layer label: ${labelToRemove.placeInfo["name"]}")
+    }
+
+    fun getTextureCache(): LayerLabelTextureCache {
+        return textureCache
     }
 
 }
