@@ -17,7 +17,7 @@ import com.google.ar.core.Coordinates2d
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-class ARTouchInteractionManager(
+public class ARTouchInteractionManager(
     private val activity: ArActivity,
     private val view: ArActivityView,
     private val anchorManager: AnchorManager
