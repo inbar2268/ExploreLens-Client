@@ -48,6 +48,7 @@ public class ARTouchInteractionManager(
         fun onScanButtonPressed()
         fun onAnchorClicked(anchor: ARLabeledAnchor)
         fun onLayerLabelClicked(layerLabel: ARLayerManager.LayerLabelInfo) // Changed type to LayerLabelInfo
+        fun onLayerLabelClosed(layerLabel: ARLayerManager.LayerLabelInfo) // New callback for X button
     }
 
     private var listener: TouchInteractionListener? = null
@@ -145,6 +146,13 @@ public class ARTouchInteractionManager(
                 return
             }
 
+            val layerLabelWithXButton = findLayerLabelXButtonTouch(x, y, frame, camera)
+            if (layerLabelWithXButton != null) {
+                Log.d(TAG, "Layer Label X button '${layerLabelWithXButton.placeInfo["name"]}' clicked.")
+                handleLayerLabelXButtonClick(layerLabelWithXButton)
+                return
+            }
+
             val closestLayerLabel = findClosestLayerLabelToTouch(x, y, frame, camera)
             if (closestLayerLabel != null) {
                 Log.d(TAG, "Layer Label '${closestLayerLabel.placeInfo["name"]}' clicked.")
@@ -158,6 +166,110 @@ public class ARTouchInteractionManager(
             Log.e(TAG, "Error processing touch event", e)
         }
     }
+    private fun findLayerLabelXButtonTouch(
+        touchX: Float,
+        touchY: Float,
+        frame: Frame,
+        camera: com.google.ar.core.Camera
+    ): ARLayerManager.LayerLabelInfo? {
+        val currentLayerManager = this.layerManager
+            ?: run {
+                Log.w(TAG, "ARLayerManager is not set, cannot process layer label X button touch.")
+                return null
+            }
+
+        var closestLayerLabel: ARLayerManager.LayerLabelInfo? = null
+        var closestDistance = Float.MAX_VALUE
+
+        val layerLabelsToCheck = currentLayerManager.getAllLabels()
+
+        Log.d(TAG, "Checking ${layerLabelsToCheck.size} layer labels for X button touch at ($touchX, $touchY)")
+
+        for (layerLabel in layerLabelsToCheck) {
+            if (layerLabel.anchor.trackingState != TrackingState.TRACKING) {
+                continue
+            }
+
+            val xButtonBounds = calculateLayerLabelXButtonBounds(layerLabel, frame, camera)
+
+            if (xButtonBounds != null) {
+                val labelName = layerLabel.placeInfo["name"] ?: "Unknown"
+
+                // Check if touch is within X button bounds
+                val padding = 20f
+                if (touchX >= (xButtonBounds.left - padding) &&
+                    touchX <= (xButtonBounds.right + padding) &&
+                    touchY >= (xButtonBounds.top - padding) &&
+                    touchY <= (xButtonBounds.bottom + padding)) {
+
+                    // Calculate 3D distance from camera to layer label's position
+                    val labelPos = layerLabel.anchor.pose.translation
+                    val cameraPos = camera.pose.translation
+
+                    val dx = labelPos[0] - cameraPos[0]
+                    val dy = labelPos[1] - cameraPos[1]
+                    val dz = labelPos[2] - cameraPos[2]
+                    val distance = sqrt(dx * dx + dy * dy + dz * dz)
+
+                    Log.d(TAG, "Touch hit layer label X button '$labelName' at distance $distance meters.")
+
+                    // If this label is closer than previously hit labels, select it
+                    if (distance < closestDistance) {
+                        closestLayerLabel = layerLabel
+                        closestDistance = distance
+                    }
+                }
+            }
+        }
+        return closestLayerLabel
+    }
+
+    private fun calculateLayerLabelXButtonBounds(
+        layerLabel: ARLayerManager.LayerLabelInfo,
+        frame: Frame,
+        camera: com.google.ar.core.Camera
+    ): LabelBounds? {
+        try {
+            // First get the label's overall screen bounds
+            val labelPose = layerLabel.anchor.pose
+            val worldPos = floatArrayOf(
+                labelPose.tx(),
+                labelPose.ty() + 0.1f, // Same offset as in LayerLabelRenderer
+                labelPose.tz(),
+                1.0f
+            )
+
+            val labelScreenBounds = calculateScreenBounds(worldPos, frame, camera, LAYER_LABEL_SCREEN_SIZE, LAYER_LABEL_ASPECT_RATIO)
+                ?: return null
+
+            // Get X button bounds from texture cache (normalized coordinates 0-1)
+            val currentLayerManager = this.layerManager ?: return null
+            val textureCache = currentLayerManager.getTextureCache() // You'll need to expose this method
+            val xButtonNormalizedBounds = textureCache.getXButtonBounds()
+
+            // Convert normalized coordinates to screen pixel coordinates
+            val labelWidth = labelScreenBounds.right - labelScreenBounds.left
+            val labelHeight = labelScreenBounds.bottom - labelScreenBounds.top
+
+            val xButtonLeft = labelScreenBounds.left + (xButtonNormalizedBounds.left * labelWidth)
+            val xButtonTop = labelScreenBounds.top + (xButtonNormalizedBounds.top * labelHeight)
+            val xButtonRight = labelScreenBounds.left + (xButtonNormalizedBounds.right * labelWidth)
+            val xButtonBottom = labelScreenBounds.top + (xButtonNormalizedBounds.bottom * labelHeight)
+
+            return LabelBounds(
+                left = xButtonLeft,
+                top = xButtonTop,
+                right = xButtonRight,
+                bottom = xButtonBottom
+            )
+
+        } catch (e: Exception) {
+            val labelName = layerLabel.placeInfo["name"] ?: "Unknown"
+            Log.e(TAG, "Error calculating X button bounds for '$labelName'", e)
+            return null
+        }
+    }
+
 
     private fun findClosestAnchorToTouch(
         touchX: Float,
@@ -406,6 +518,17 @@ public class ARTouchInteractionManager(
             layerLabel?.let {
                 listener?.onLayerLabelClicked(it) // Notify external listener, passing the full LayerLabelInfo
             }
+        }
+    }
+
+    private fun handleLayerLabelXButtonClick(layerLabel: ARLayerManager.LayerLabelInfo) {
+        val placeName = layerLabel.placeInfo["name"] as? String ?: "Unknown Place"
+        Log.d(TAG, "handleLayerLabelXButtonClick called for place: $placeName")
+
+        activity.runOnUiThread {
+            layerManager?.removeLabel(layerLabel)
+            view.snackbarHelper.showMessage(activity, "Closed: $placeName")
+            listener?.onLayerLabelClosed(layerLabel)
         }
     }
 
