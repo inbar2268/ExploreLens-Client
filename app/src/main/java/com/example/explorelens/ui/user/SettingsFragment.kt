@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.explorelens.R
+import com.example.explorelens.ar.render.FilterListManager
 import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.data.repository.AuthRepository
 import com.example.explorelens.data.repository.UserRepository
@@ -192,6 +193,8 @@ class SettingsFragment : Fragment() {
             lifecycleScope.launch {
                 userRepository.clearUserData()
                 authRepository.logout()
+                FilterListManager.clearAll()
+
                 findNavController().navigate(R.id.action_settingsFragment_to_loginFragment)
                 ToastHelper.showShortToast(context, "Logged out successfully")
                 dialog.dismiss()
