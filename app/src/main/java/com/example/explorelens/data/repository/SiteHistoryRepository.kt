@@ -73,7 +73,85 @@ class SiteHistoryRepository(context: Context) {
         }
 
     }
+    /**
+     * Reset site history for a specific user from both server and local database
+     */
+    suspend fun resetSiteHistoryForUser(userId: String): Result<Unit> {
+        // Safety check for null or blank userId
+        if (userId.isNullOrBlank()) {
+            Log.e(TAG, "resetSiteHistoryForUser called with null or blank userId")
+            return Result.failure(IllegalArgumentException("User ID cannot be null or blank"))
+        }
 
+        return try {
+            Log.d(TAG, "Resetting site history for user: $userId")
+
+            // First, get all site history for this user from local database
+            val userSiteHistory = siteHistoryDao.getSiteHistoryByUserIdSync(userId)
+            Log.d(TAG, "Found ${userSiteHistory.size} site history items to delete")
+
+            if (userSiteHistory.isEmpty()) {
+                Log.d(TAG, "No site history found for user")
+                return Result.success(Unit)
+            }
+
+            // Delete each site history item from server using site info ID
+            var successCount = 0
+            var failureCount = 0
+
+            userSiteHistory.forEach { siteHistory ->
+                try {
+                    val response = siteHistoryApi.deleteSiteHistoryById(siteHistory.id) // or use siteHistory.siteInfoId
+                    if (response.isSuccessful) {
+                        successCount++
+                        Log.d(TAG, "Successfully deleted site history: ${siteHistory.id}")
+                    } else {
+                        failureCount++
+                        Log.w(TAG, "Failed to delete site history: ${siteHistory.id}, code: ${response.code()}")
+                    }
+                } catch (e: Exception) {
+                    failureCount++
+                    Log.e(TAG, "Exception deleting site history: ${siteHistory.id}", e)
+                }
+            }
+
+            // Clear local database regardless of server results
+            siteHistoryDao.clearSiteHistoryForUser(userId)
+            Log.d(TAG, "Local site history cleared successfully")
+
+            // Report results
+            if (failureCount == 0) {
+                Log.d(TAG, "All site history deleted successfully from server ($successCount items)")
+                Result.success(Unit)
+            } else {
+                Log.w(TAG, "Partial success: $successCount succeeded, $failureCount failed")
+                Result.success(Unit) // Still success since local was cleared
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception during site history reset", e)
+
+            // If everything fails, still try to clear local
+            try {
+                siteHistoryDao.clearSiteHistoryForUser(userId)
+                Log.d(TAG, "Local site history cleared despite server errors")
+                Result.success(Unit)
+            } catch (localException: Exception) {
+                Result.failure(localException)
+            }
+        }
+    }
+    /**
+     * Get site history count for user
+     */
+    suspend fun getSiteHistoryCount(userId: String): Int {
+        return try {
+            siteHistoryDao.getSiteHistoryCountForUser(userId)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting site history count", e)
+            0
+        }
+    }
     // Sync site history with server
     suspend fun syncSiteHistory(userId: String) {
         withContext(Dispatchers.IO) {
