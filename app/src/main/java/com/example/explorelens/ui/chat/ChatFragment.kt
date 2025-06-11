@@ -107,32 +107,46 @@ class ChatFragment : Fragment() {
     }
 
     private fun setupKeyboardDetection() {
-        // Find the bottom navigation view
         bottomNavigationView = activity?.findViewById<BottomNavigationView>(R.id.bottom_navigation)
 
-        // Create keyboard detection listener
+        // Debug: Check if bottom nav is found
+        Log.d("ChatFragment", "Bottom nav found: ${bottomNavigationView != null}")
+        Log.d("ChatFragment", "Bottom nav initial visibility: ${bottomNavigationView?.visibility}")
+
+        // Force show bottom navigation when fragment starts
+        bottomNavigationView?.visibility = View.VISIBLE
+
         keyboardListener = ViewTreeObserver.OnGlobalLayoutListener {
-            // Check if binding is still valid before accessing it
             if (_binding == null) return@OnGlobalLayoutListener
 
             val rootView = binding.root
             val heightDiff = rootView.rootView.height - rootView.height
 
-            // If height difference is more than 200 pixels, we assume keyboard is shown
-            if (heightDiff > 200) {
-                // Keyboard is shown - hide bottom navigation
+            // Debug: Log height difference
+            Log.d("ChatFragment", "Height diff: $heightDiff")
+
+            // Increase threshold and add more robust detection
+            if (heightDiff > 300) { // Increased from 200 to 300
+                // Keyboard is shown
+                Log.d("ChatFragment", "Keyboard shown - hiding bottom nav")
                 bottomNavigationView?.visibility = View.GONE
+                (binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
+                    bottomMargin = 0
+                    binding.inputContainer.layoutParams = this
+                }
             } else {
-                // Keyboard is hidden - show bottom navigation
+                // Keyboard is hidden
+                Log.d("ChatFragment", "Keyboard hidden - showing bottom nav")
                 bottomNavigationView?.visibility = View.VISIBLE
+                (binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
+                    bottomMargin = (56 * resources.displayMetrics.density).toInt()
+                    binding.inputContainer.layoutParams = this
+                }
             }
         }
 
-        // Add the listener
         binding.root.viewTreeObserver.addOnGlobalLayoutListener(keyboardListener)
-    }
-
-    private fun loadUserDataAndShowWelcome() {
+    }    private fun loadUserDataAndShowWelcome() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val user = userRepository.getUserFromDb()
