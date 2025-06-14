@@ -54,4 +54,21 @@
   <color name="legend_text_primary">#2c3e50</color>
   <color name="legend_text_secondary">#7f8c8d</color>
 
+  <!-- Text Colors -->
+  <color name="text_primary">#1F2937</color>
+  <color name="text_secondary">#6B7280</color>
+
+  <!-- UI Colors -->
+  <color name="background_color">#F9FAFB</color>
+  <color name="rating_color">#F59E0B</color>
+  <color name="success_color">#10B981</color>
+  <color name="error_color">#EF4444</color>
+  <color name="link_color">#3B82F6</color>
+  <color name="icon_color">#6B7280</color>
+
+  <!-- Card Colors -->
+  <color name="review_background">#F3F4F6</color>
+
+  <!-- Chip Background -->
+  <color name="chip_background">#E5E7EB</color>
 </resources>

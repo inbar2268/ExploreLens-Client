@@ -44,12 +44,16 @@ class GeoAnchorManager(
     private var shouldPlaceGeoAnchors = false
     private var pendingPlaces: List<PointOfInterest>? = null
 
+    // Use singleton repository instance
+    private val nearbyPlacesRepository = NearbyPlacesRepository.getInstance(activity)
+
     interface GeoAnchorCallback {
         fun onPlacesReceived(places: List<PointOfInterest>)
         fun onPlacesError(message: String)
         fun onGeoAnchorPlaced(placeId: String, placeName: String)
         fun onGeospatialNotSupported()
         fun showSnackbar(message: String)
+        fun navigateToPlaceDetails(placeId: String) // Add navigation callback
     }
 
     private var callback: GeoAnchorCallback? = null
@@ -57,6 +61,7 @@ class GeoAnchorManager(
     fun setCallback(callback: GeoAnchorCallback) {
         this.callback = callback
     }
+
     private val handler = Handler(Looper.getMainLooper())
     private val locationDistanceChecker = object : Runnable {
         override fun run() {
@@ -74,7 +79,6 @@ class GeoAnchorManager(
                         lastFetchedLocation = currentLocation
                     }
                 } else if (currentLocation != null && lastLocation == null) {
-
                     lastFetchedLocation = currentLocation
                     getNearbyPlacesForAR()
                 }
@@ -99,9 +103,8 @@ class GeoAnchorManager(
         handler.removeCallbacks(locationDistanceChecker)
     }
 
-
     fun getNearbyPlacesForAR() {
-        val  categories =FilterListManager.getAllFilters()
+        val categories = FilterListManager.getAllFilters()
         Log.d(TAG, "Fetching nearby places for AR...")
         Log.d(TAG, "Selected Filters: $categories")
 
@@ -114,7 +117,6 @@ class GeoAnchorManager(
         }
 
         networkScope.launch {
-
             val currentLocation = getLocationOptimized()
             Log.d(TAG, "Location result: $currentLocation")
 
@@ -127,8 +129,9 @@ class GeoAnchorManager(
             }
 
             geoLocationUtils.updateLocation(currentLocation)
-            val repository = NearbyPlacesRepository()
-            val result = repository.fetchNearbyPlaces(
+
+            // Use the singleton repository instance
+            val result = nearbyPlacesRepository.fetchNearbyPlaces(
                 currentLocation.latitude,
                 currentLocation.longitude,
                 categories
@@ -160,14 +163,14 @@ class GeoAnchorManager(
 
     private fun createMockPointsOfInterest(): List<PointOfInterest> {
         // Using Hod Hasharon coordinates as a base for mock data
-        val baseLat = 32.142845
-        val baseLng = 34.887489
+        val baseLat = 31.928302
+        val baseLng = 34.785040
 
         return listOf(
             PointOfInterest(
                 id = "mock_cafe_123",
                 name = "Mock Coffee Corner",
-                location =  GeoLocation(lat = baseLat + 0.000008, lng = baseLng + 0.000008),
+                location = GeoLocation(lat = baseLat + 0.000008, lng = baseLng + 0.000008),
                 rating = 4.2F,
                 type = "cafe",
                 address = "1 Mock Road, Hod Hasharon",
@@ -179,7 +182,7 @@ class GeoAnchorManager(
             PointOfInterest(
                 id = "mock_museum_456",
                 name = "Virtual History Museum",
-                location = GeoLocation(lat = baseLat, lng = baseLng ),
+                location = GeoLocation(lat = baseLat, lng = baseLng),
                 rating = 4.8F,
                 type = "museum",
                 address = "789 Pixel Lane, Hod Hasharon",
@@ -190,7 +193,6 @@ class GeoAnchorManager(
             )
         )
     }
-
 
     fun handleGeoAnchorPlacement(session: Session): Boolean {
         val earth = session.earth
@@ -254,6 +256,14 @@ class GeoAnchorManager(
 
             callback?.onGeoAnchorPlaced(point.id, point.name)
         }
+    }
+
+    /**
+     * Call this when user taps on an AR anchor to navigate to place details
+     */
+    fun onAnchorTapped(placeId: String) {
+        Log.d(TAG, "Anchor tapped for place: $placeId")
+        callback?.navigateToPlaceDetails(placeId)
     }
 
     private fun createPlaceMap(point: PointOfInterest): Map<String, Any?> {
@@ -322,8 +332,6 @@ class GeoAnchorManager(
             (cos(halfAngle)).toFloat()  // w
         )
     }
-
-
 
     fun clearLocationCache() {
         locationCache.clear()

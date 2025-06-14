@@ -6,7 +6,7 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface NearbyPlacesApi {
-    @GET("/places/nearby/")
+    @GET("/places/nearby")
     suspend fun getNearbyPlaces(
         @Query("lat") latitude: Double,
         @Query("lng") longitude: Double,
