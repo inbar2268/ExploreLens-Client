@@ -29,6 +29,7 @@ import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.imageview.ShapeableImageView
 import kotlinx.coroutines.launch
 
@@ -41,6 +42,7 @@ class MapFragment : Fragment() {
     private lateinit var authTokenManager: AuthTokenManager
     private lateinit var siteHistoryRepository: SiteHistoryRepository
     private lateinit var siteDetailsRepository: SiteDetailsRepository
+    private lateinit var satelliteToggleFab: FloatingActionButton
 
     // Store all site markers
     private val siteMarkers = mutableListOf<SiteMarker>()
@@ -48,12 +50,17 @@ class MapFragment : Fragment() {
     // Current popup dialog
     private var popupDialog: AlertDialog? = null
 
+    // Track current map type
+    private var isSatelliteView = false
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         val view = inflater.inflate(R.layout.fragment_map, container, false)
         mapView = view.findViewById(R.id.mapView)
+        satelliteToggleFab = view.findViewById(R.id.satelliteToggleFab)
+
         mapView.onCreate(savedInstanceState)
 
         // Initialize repositories
@@ -62,14 +69,58 @@ class MapFragment : Fragment() {
         siteDetailsRepository = SiteDetailsRepository(requireContext())
 
         setupMap(savedInstanceState)
+        setupSatelliteToggle()
 
         return view
+    }
+
+    private fun setupSatelliteToggle() {
+        satelliteToggleFab.setOnClickListener {
+            toggleMapType()
+        }
+    }
+
+    private fun toggleMapType() {
+        if (!::googleMap.isInitialized) return
+
+        isSatelliteView = !isSatelliteView
+
+        if (isSatelliteView) {
+            googleMap.mapType = GoogleMap.MAP_TYPE_SATELLITE
+            satelliteToggleFab.setImageResource(R.drawable.ic_map) // Switch to map icon
+            satelliteToggleFab.contentDescription = "Switch to normal view"
+        } else {
+            googleMap.mapType = GoogleMap.MAP_TYPE_NORMAL
+            satelliteToggleFab.setImageResource(R.drawable.ic_satellite) // Switch to satellite icon
+            satelliteToggleFab.contentDescription = "Switch to satellite view"
+        }
+
+        // Optional: Add a subtle animation
+        satelliteToggleFab.animate()
+            .scaleX(0.8f)
+            .scaleY(0.8f)
+            .setDuration(100)
+            .withEndAction {
+                satelliteToggleFab.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(100)
+            }
     }
 
     private fun setupMap(savedInstanceState: Bundle?) {
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync { map ->
             googleMap = map
+
+            // Set initial map type
+            googleMap.mapType = GoogleMap.MAP_TYPE_NORMAL
+
+            // Enable map controls
+            googleMap.uiSettings.isZoomControlsEnabled = false // We have our own FAB
+            googleMap.uiSettings.isMyLocationButtonEnabled = true
+            googleMap.uiSettings.isCompassEnabled = true
+            googleMap.uiSettings.isMapToolbarEnabled = true
 
             // Set click listener for markers
             googleMap.setOnMarkerClickListener { marker ->
@@ -348,6 +399,18 @@ class MapFragment : Fragment() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         mapView.onSaveInstanceState(outState)
+
+        // Save map type state
+        outState.putBoolean("isSatelliteView", isSatelliteView)
+    }
+
+    override fun onViewStateRestored(savedInstanceState: Bundle?) {
+        super.onViewStateRestored(savedInstanceState)
+
+        // Restore map type state
+        savedInstanceState?.let {
+            isSatelliteView = it.getBoolean("isSatelliteView", false)
+        }
     }
 
     override fun onLowMemory() {
