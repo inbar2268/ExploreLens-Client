@@ -20,7 +20,8 @@ class ARLayerManager(private val context: Context) {
 
     private val layerLabelRenderer = LayerLabelRenderer()
     private val layerLabels = CopyOnWriteArrayList<LayerLabelInfo>()
-    private val textureCache = LayerLabelTextureCache(context) // Add this line to declare and initialize textureCache
+    private val textureCache = LayerLabelTextureCache(context)
+    private val currentlyVisibleLabels = CopyOnWriteArrayList<LayerLabelInfo>()
 
     data class LayerLabelInfo(
         val anchor: Anchor,
@@ -70,8 +71,6 @@ class ARLayerManager(private val context: Context) {
         layerLabels.clear()
     }
 
-
-
     fun drawLayerLabels(
         render: SampleRender,
         viewProjectionMatrix: FloatArray,
@@ -80,6 +79,8 @@ class ARLayerManager(private val context: Context) {
     ) {
         val maxDistanceMeters = 50f
         val fovDegrees = 50f
+
+        currentlyVisibleLabels.clear()
 
         for (label in layerLabels) {
             val anchor = label.anchor
@@ -107,6 +108,8 @@ class ARLayerManager(private val context: Context) {
                 //Log.d("AR-Debug", "⛔️ out of FOV, skipping")
                 continue
             }
+
+            currentlyVisibleLabels.add(label)
 
             layerLabelRenderer.draw(
                 render,
@@ -189,6 +192,10 @@ class ARLayerManager(private val context: Context) {
 
     fun getTextureCache(): LayerLabelTextureCache {
         return textureCache
+    }
+
+    fun getCurrentlyVisibleLabels(): List<LayerLabelInfo> {
+        return currentlyVisibleLabels.toList()
     }
 
 }
