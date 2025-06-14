@@ -42,7 +42,6 @@
                 android:contentDescription="Back button"
                 android:scaleType="centerInside"
                 android:layout_margin="10dp"
-                android:focusableInTouchMode="true"
                 app:tint="@color/black"/>
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>

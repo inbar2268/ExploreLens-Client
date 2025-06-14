@@ -806,6 +806,9 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
 
             // Make sure the camera button is visible again
             activity.findViewById<View>(R.id.cameraButtonContainer)?.visibility = View.VISIBLE
+        } else {
+            // For regular fragment navigation, use back press behavior
+            requireActivity().onBackPressedDispatcher.onBackPressed()
         }
     }
     private fun navigateToChatFragment() {
