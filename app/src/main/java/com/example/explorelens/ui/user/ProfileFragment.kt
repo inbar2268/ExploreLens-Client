@@ -40,7 +40,7 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
 
         // Load initial data
         viewModel.fetchUserData()
-        viewModel.loadUserStatistics()
+        // Statistics are automatically loaded via repository LiveData
     }
 
     private fun initializeComponents() {
@@ -50,12 +50,12 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
 
         mapManager.setMapClickListener(this)
         mapManager.setupWorldMap {
-            // Map is ready, load statistics again to update map
-            viewModel.loadUserStatistics()
+            // Map is ready - statistics will update automatically via LiveData
         }
     }
 
     private fun setupObservers() {
+        // User state observer
         viewModel.userState.observe(viewLifecycleOwner) { state ->
             _binding?.let {
                 when (state) {
@@ -78,6 +78,7 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
             }
         }
 
+        // Statistics state observer (now reactive from repository)
         viewModel.statisticsState.observe(viewLifecycleOwner) { state ->
             _binding?.let {
                 when (state) {
@@ -87,6 +88,12 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
                     is ProfileViewModel.StatisticsState.Success -> {
                         uiHelper.updateStatistics(state.percentage, state.countryCount)
                         mapManager.updateCountries(state.countries)
+
+                        // Optionally show a subtle indicator if data is from cache
+                        if (state.isFromCache) {
+                            // You could show a small "cached" indicator if desired
+                            // uiHelper.showCacheIndicator()
+                        }
                     }
                     is ProfileViewModel.StatisticsState.Error -> {
                         uiHelper.showStatisticsError()
@@ -98,6 +105,7 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
             }
         }
 
+        // Refresh state observer
         viewModel.isRefreshing.observe(viewLifecycleOwner) { isRefreshing ->
             _binding?.let {
                 uiHelper.setRefreshing(isRefreshing)

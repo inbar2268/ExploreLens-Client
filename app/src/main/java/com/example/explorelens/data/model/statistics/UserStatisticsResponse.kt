@@ -4,7 +4,6 @@ data class UserStatisticsResponse(
     val userId: String,
     val percentageVisited: String,
     val countryCount: Int,
-    val continents: List<String>,
     val siteCount: Int,
     val createdAt: String? = null,
     val countries: List<String>,

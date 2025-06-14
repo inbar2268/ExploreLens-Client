@@ -3,166 +3,316 @@ package com.example.explorelens.data.repository
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.map
 import com.example.explorelens.data.db.AppDatabase
 import com.example.explorelens.data.db.statistics.UserStatistics
 import com.example.explorelens.data.model.statistics.UserStatisticsResponse
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 
+/**
+ * Repository following Android best practices:
+ * - Single Source of Truth (Room database)
+ * - Offline-first approach
+ * - Reactive data with Flow/LiveData
+ * - Proper error handling
+ * - Cache strategy with TTL
+ */
 class UserStatisticsRepository(context: Context) {
-    private val TAG = "UserStatisticsRepository"
+
+    companion object {
+        private const val TAG = "UserStatisticsRepository"
+        private const val CACHE_TIMEOUT_MINUTES = 15L // Cache valid for 15 minutes
+
+        @Volatile
+        private var INSTANCE: UserStatisticsRepository? = null
+
+        fun getInstance(context: Context): UserStatisticsRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: UserStatisticsRepository(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
+
     private val userStatisticsDao = AppDatabase.getInstance(context).userStatisticsDao()
     private val userStatisticsApi = ExploreLensApiClient.userStatisticsApi
     private val tokenManager: AuthTokenManager = AuthTokenManager.getInstance(context)
 
-    // Get user statistics from local database
-    fun getUserStatistics(userId: String): LiveData<UserStatistics?> {
-        return userStatisticsDao.getUserStatistics(userId)
+    // Repository scope for background operations
+    private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    /**
+     * Get user statistics as LiveData (reactive, single source of truth)
+     * This is the main method UI should observe
+     */
+    fun getUserStatisticsLiveData(): LiveData<Resource<UserStatistics>> {
+        val userId = tokenManager.getUserId()
+
+        return if (userId != null) {
+            userStatisticsDao.getUserStatistics(userId).map { cachedData ->
+                when {
+                    cachedData == null -> Resource.Loading()
+                    isCacheExpired(cachedData.createdAt) -> {
+                        // Trigger refresh in background but return cached data
+                        triggerBackgroundRefresh(userId)
+                        Resource.Success(cachedData, isFromCache = true)
+                    }
+                    else -> Resource.Success(cachedData, isFromCache = false)
+                }
+            }
+        } else {
+            // Return error LiveData if no user ID
+            androidx.lifecycle.MutableLiveData<Resource<UserStatistics>>().apply {
+                value = Resource.Error("User not authenticated")
+            }
+        }
     }
 
-    // Fetch user statistics from server and cache in Room
-    suspend fun fetchAndCacheUserStatistics(userId: String): Result<UserStatistics> {
+    /**
+     * Get user statistics as Flow (for more complex reactive scenarios)
+     */
+    fun getUserStatisticsFlow(): Flow<Resource<UserStatistics>> = flow {
+        val userId = tokenManager.getUserId()
+
+        if (userId == null) {
+            emit(Resource.Error("User not authenticated"))
+            return@flow
+        }
+
+        // Emit loading state
+        emit(Resource.Loading())
+
+        try {
+            // First, emit cached data if available
+            val cachedData = userStatisticsDao.getUserStatisticsSync(userId)
+            if (cachedData != null) {
+                emit(Resource.Success(cachedData, isFromCache = true))
+
+                // If cache is fresh, we're done
+                if (!isCacheExpired(cachedData.createdAt)) {
+                    return@flow
+                }
+            }
+
+            // Fetch fresh data from network
+            val networkResult = fetchFromNetwork(userId)
+
+            if (networkResult.isSuccess) {
+                val freshData = networkResult.getOrThrow()
+                // Cache the fresh data
+                userStatisticsDao.insertUserStatistics(freshData)
+                emit(Resource.Success(freshData, isFromCache = false))
+            } else {
+                // Network failed - if we have cached data, use it; otherwise emit error
+                if (cachedData != null) {
+                    emit(Resource.Success(cachedData, isFromCache = true))
+                } else {
+                    emit(Resource.Error(networkResult.exceptionOrNull()?.message ?: "Failed to load statistics"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception in getUserStatisticsFlow", e)
+            // Try to emit cached data as fallback
+            val cachedData = userStatisticsDao.getUserStatisticsSync(userId)
+            if (cachedData != null) {
+                emit(Resource.Success(cachedData, isFromCache = true))
+            } else {
+                emit(Resource.Error(e.message ?: "Unknown error"))
+            }
+        }
+    }.flowOn(Dispatchers.IO)
+
+    /**
+     * Force refresh statistics from server
+     */
+    suspend fun refreshStatistics(): Resource<UserStatistics> {
+        val userId = tokenManager.getUserId()
+
+        return if (userId != null) {
+            try {
+                Log.d(TAG, "Force refreshing statistics for user: $userId")
+
+                val networkResult = fetchFromNetwork(userId)
+
+                if (networkResult.isSuccess) {
+                    val freshData = networkResult.getOrThrow()
+                    // Update cache
+                    userStatisticsDao.insertUserStatistics(freshData)
+                    Resource.Success(freshData, isFromCache = false)
+                } else {
+                    // Network failed - try cached data as fallback
+                    val cachedData = withContext(Dispatchers.IO) {
+                        userStatisticsDao.getUserStatisticsSync(userId)
+                    }
+
+                    if (cachedData != null) {
+                        Log.w(TAG, "Network refresh failed, using cached data")
+                        Resource.Success(cachedData, isFromCache = true)
+                    } else {
+                        Resource.Error(networkResult.exceptionOrNull()?.message ?: "Refresh failed")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception during refresh", e)
+                Resource.Error(e.message ?: "Refresh failed")
+            }
+        } else {
+            Resource.Error("User not authenticated")
+        }
+    }
+
+    /**
+     * Get only cached statistics (useful for offline scenarios)
+     */
+    suspend fun getCachedStatistics(): Resource<UserStatistics> {
+        val userId = tokenManager.getUserId()
+
+        return if (userId != null) {
+            withContext(Dispatchers.IO) {
+                val cachedData = userStatisticsDao.getUserStatisticsSync(userId)
+                if (cachedData != null) {
+                    Resource.Success(cachedData, isFromCache = true)
+                } else {
+                    Resource.Error("No cached data available")
+                }
+            }
+        } else {
+            Resource.Error("User not authenticated")
+        }
+    }
+
+    /**
+     * Clear all cached statistics
+     */
+    suspend fun clearCache() {
+        val userId = tokenManager.getUserId()
+        if (userId != null) {
+            withContext(Dispatchers.IO) {
+                Log.d(TAG, "Clearing statistics cache for user: $userId")
+                userStatisticsDao.deleteUserStatisticsByUserId(userId)
+            }
+        }
+    }
+
+    /**
+     * Get cache info (exists, last updated)
+     */
+    suspend fun getCacheInfo(): CacheInfo {
+        val userId = tokenManager.getUserId()
+
+        return if (userId != null) {
+            withContext(Dispatchers.IO) {
+                val cachedData = userStatisticsDao.getUserStatisticsSync(userId)
+                if (cachedData != null) {
+                    CacheInfo(
+                        exists = true,
+                        lastUpdated = cachedData.createdAt,
+                        isExpired = isCacheExpired(cachedData.createdAt)
+                    )
+                } else {
+                    CacheInfo(exists = false, lastUpdated = null, isExpired = true)
+                }
+            }
+        } else {
+            CacheInfo(exists = false, lastUpdated = null, isExpired = true)
+        }
+    }
+
+    // Private helper methods
+
+    private suspend fun fetchFromNetwork(userId: String): Result<UserStatistics> {
         return withContext(Dispatchers.IO) {
             try {
-                Log.d(TAG, "Fetching user statistics for userId: $userId")
+                Log.d(TAG, "Fetching statistics from network for user: $userId")
 
                 val response = userStatisticsApi.getUserStatistics(userId)
 
                 if (response.isSuccessful) {
                     val statisticsResponse = response.body()
                     if (statisticsResponse != null) {
-                        Log.d(TAG, "Successfully fetched user statistics: $statisticsResponse")
-
-                        // Convert API response to Room entity
-                        val userStatistics = UserStatistics(
-                            userId = statisticsResponse.userId,
-                            percentageVisited = statisticsResponse.percentageVisited,
-                            countryCount = statisticsResponse.countryCount,
-                            continents = statisticsResponse.continents,
-                            siteCount = statisticsResponse.siteCount,
-                            countries = statisticsResponse.countries,
-                            createdAt = System.currentTimeMillis()
-                        )
-
-                        // Save to local database
-                        userStatisticsDao.insertUserStatistics(userStatistics)
-
+                        val userStatistics = mapResponseToEntity(statisticsResponse)
+                        Log.d(TAG, "Successfully fetched statistics from network")
                         Result.success(userStatistics)
                     } else {
-                        Log.e(TAG, "Response body is null")
-                        Result.failure(Exception("No statistics data received"))
+                        Log.e(TAG, "Network response body is null")
+                        Result.failure(Exception("Empty response from server"))
                     }
                 } else {
-                    val errorMsg = response.errorBody()?.string() ?: "Unknown error"
-                    Log.e(TAG, "Failed to fetch user statistics: ${response.code()} - $errorMsg")
-                    Result.failure(Exception("Failed to fetch statistics: $errorMsg"))
+                    val errorMsg = response.errorBody()?.string() ?: "HTTP ${response.code()}"
+                    Log.e(TAG, "Network request failed: $errorMsg")
+                    Result.failure(Exception("Server error: $errorMsg"))
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Exception while fetching user statistics", e)
+                Log.e(TAG, "Network request exception", e)
                 Result.failure(e)
             }
         }
     }
 
-    // Get current user's statistics - ALWAYS syncs with server
-    suspend fun getCurrentUserStatistics(): Result<UserStatistics> {
-        val userId = tokenManager.getUserId()
-        return if (userId != null) {
-            Log.d(TAG, "Always syncing statistics with server for userId: $userId")
-
+    private fun triggerBackgroundRefresh(userId: String) {
+        // Use repository scope for background operations
+        repositoryScope.launch {
             try {
-                // Always fetch fresh data from server first
-                val serverResult = fetchAndCacheUserStatistics(userId)
-
-                if (serverResult.isSuccess) {
-                    Log.d(TAG, "Successfully synced with server")
-                    serverResult
+                val networkResult = fetchFromNetwork(userId)
+                if (networkResult.isSuccess) {
+                    val freshData = networkResult.getOrThrow()
+                    userStatisticsDao.insertUserStatistics(freshData)
+                    Log.d(TAG, "Background refresh completed successfully")
                 } else {
-                    // If server fetch fails, fall back to cached data as last resort
-                    Log.w(TAG, "Server sync failed, attempting to use cached data as fallback")
-                    val localStats = withContext(Dispatchers.IO) {
-                        userStatisticsDao.getUserStatisticsSync(userId)
-                    }
-
-                    if (localStats != null) {
-                        Log.w(TAG, "Using cached statistics as fallback (last updated: ${localStats.createdAt})")
-                        Result.success(localStats)
-                    } else {
-                        Log.e(TAG, "No cached data available and server sync failed")
-                        serverResult // Return the original failure
-                    }
+                    Log.w(TAG, "Background refresh failed: ${networkResult.exceptionOrNull()?.message}")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Exception during sync, trying cached data", e)
-
-                // If there's an exception, try cached data
-                val localStats = withContext(Dispatchers.IO) {
-                    userStatisticsDao.getUserStatisticsSync(userId)
-                }
-
-                if (localStats != null) {
-                    Log.w(TAG, "Using cached statistics due to sync exception")
-                    Result.success(localStats)
-                } else {
-                    Log.e(TAG, "No cached data available and sync failed with exception")
-                    Result.failure(e)
-                }
+                Log.e(TAG, "Background refresh exception", e)
             }
-        } else {
-            Log.e(TAG, "User ID not found in token manager")
-            Result.failure(Exception("User ID not found"))
         }
     }
 
-    // Alternative method for getting cached statistics only (useful for offline scenarios)
-    suspend fun getCachedUserStatistics(): Result<UserStatistics> {
-        val userId = tokenManager.getUserId()
-        return if (userId != null) {
-            withContext(Dispatchers.IO) {
-                val localStats = userStatisticsDao.getUserStatisticsSync(userId)
-                if (localStats != null) {
-                    Log.d(TAG, "Retrieved cached statistics")
-                    Result.success(localStats)
-                } else {
-                    Log.w(TAG, "No cached statistics found")
-                    Result.failure(Exception("No cached statistics available"))
-                }
-            }
-        } else {
-            Result.failure(Exception("User ID not found"))
-        }
+    private fun mapResponseToEntity(response: UserStatisticsResponse): UserStatistics {
+        return UserStatistics(
+            userId = response.userId,
+            percentageVisited = response.percentageVisited,
+            countryCount = response.countryCount,
+            siteCount = response.siteCount,
+            countries = response.countries ?: emptyList(), // Handle null countries as fallback
+            createdAt = System.currentTimeMillis()
+        )
     }
 
-    // Force refresh statistics (same as getCurrentUserStatistics but more explicit)
-    suspend fun refreshUserStatistics(): Result<UserStatistics> {
-        Log.d(TAG, "Force refreshing user statistics")
-        return getCurrentUserStatistics()
-    }
-
-    // Clear user statistics
-    suspend fun clearUserStatistics(userId: String) {
-        withContext(Dispatchers.IO) {
-            Log.d(TAG, "Clearing cached statistics for userId: $userId")
-            userStatisticsDao.deleteUserStatisticsByUserId(userId)
-        }
-    }
-
-    // Check if cached data exists and when it was last updated
-    suspend fun getCachedDataInfo(): Pair<Boolean, Long?> {
-        val userId = tokenManager.getUserId()
-        return if (userId != null) {
-            withContext(Dispatchers.IO) {
-                val localStats = userStatisticsDao.getUserStatisticsSync(userId)
-                if (localStats != null) {
-                    Pair(true, localStats.createdAt)
-                } else {
-                    Pair(false, null)
-                }
-            }
-        } else {
-            Pair(false, null)
-        }
+    private fun isCacheExpired(cacheTimestamp: Long): Boolean {
+        val currentTime = System.currentTimeMillis()
+        val cacheAge = currentTime - cacheTimestamp
+        val maxCacheAge = TimeUnit.MINUTES.toMillis(CACHE_TIMEOUT_MINUTES)
+        return cacheAge > maxCacheAge
     }
 }
+
+/**
+ * Resource wrapper class for handling different states
+ */
+sealed class Resource<T>(
+    val data: T? = null,
+    val message: String? = null,
+    val isFromCache: Boolean = false
+) {
+    class Success<T>(data: T, isFromCache: Boolean = false) : Resource<T>(data = data, isFromCache = isFromCache)
+    class Error<T>(message: String, data: T? = null) : Resource<T>(data = data, message = message)
+    class Loading<T>(data: T? = null) : Resource<T>(data = data)
+}
+
+/**
+ * Cache information data class
+ */
+data class CacheInfo(
+    val exists: Boolean,
+    val lastUpdated: Long?,
+    val isExpired: Boolean
+)

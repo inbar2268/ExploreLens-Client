@@ -239,10 +239,13 @@ class WorldMapManager(
             
             svg path.visited { 
                 fill: #4CAF50 !important; 
+                stroke: #2E7D32 !important;
+                stroke-width: 0.5 !important;
             }
             
             svg path.unvisited { 
                 fill: #E0E0E0 !important; 
+                stroke: #fff !important;
             }
             
             @media (max-width: 768px) {
@@ -368,17 +371,26 @@ class WorldMapManager(
                 
                 var element = document.getElementById(countryCode);
                 if (element) {
-                    console.log('✓ Found country element:', countryCode);
+                    console.log('✓ Found country element:', countryCode, 'for country:', countryName);
                     return element;
                 }
                 
                 element = document.getElementById(countryCode.toLowerCase());
                 if (element) {
-                    console.log('✓ Found country element (lowercase):', countryCode.toLowerCase());
+                    console.log('✓ Found country element (lowercase):', countryCode.toLowerCase(), 'for country:', countryName);
                     return element;
                 }
                 
                 console.log('✗ Country code exists but element not found:', countryName, 'Code:', countryCode);
+                
+                // Debug: List all available IDs to help find the correct mapping
+                var allElements = document.querySelectorAll('svg path[id]');
+                var foundIds = [];
+                for (var i = 0; i < Math.min(10, allElements.length); i++) {
+                    foundIds.push(allElements[i].id);
+                }
+                console.log('Available element IDs (first 10):', foundIds);
+                
                 return null;
             }
 
@@ -388,10 +400,14 @@ class WorldMapManager(
                 var allPaths = document.querySelectorAll('svg path');
                 console.log('Total map elements:', allPaths.length);
                 
+                // Reset all countries to unvisited first
                 for (var i = 0; i < allPaths.length; i++) {
                     var path = allPaths[i];
                     path.classList.remove('visited');
                     path.classList.add('unvisited');
+                    // Force style reset
+                    path.style.fill = '#E0E0E0';
+                    path.style.stroke = '#fff';
                 }
                 
                 var coloredCount = 0;
@@ -406,6 +422,10 @@ class WorldMapManager(
                             console.log('✓ Coloring country:', countryName);
                             element.classList.remove('unvisited');
                             element.classList.add('visited');
+                            // Force style application
+                            element.style.fill = '#4CAF50';
+                            element.style.stroke = '#2E7D32';
+                            element.style.strokeWidth = '0.5';
                             coloredCount++;
                         } else {
                             var countryCode = countryNameToCode[countryName];

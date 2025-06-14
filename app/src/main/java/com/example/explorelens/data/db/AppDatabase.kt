@@ -17,7 +17,7 @@ import com.example.explorelens.data.db.statistics.UserStatisticsDao
  */
 @Database(
     entities = [User::class, SiteHistory::class, SiteDetailsEntity::class, UserStatistics::class],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 
