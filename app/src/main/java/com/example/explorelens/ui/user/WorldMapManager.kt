@@ -19,6 +19,7 @@ class WorldMapManager(
 
     private var mapClickListener: MapClickListener? = null
     private var isMapReady = false
+    private var pendingCountries: List<String>? = null // Store countries to color when map is ready
 
     fun setMapClickListener(listener: MapClickListener) {
         this.mapClickListener = listener
@@ -46,6 +47,17 @@ class WorldMapManager(
                     super.onPageFinished(view, url)
                     Log.d("WorldMapManager", "WebView page finished loading")
                     isMapReady = true
+
+                    // If we have pending countries to color, do it now
+                    pendingCountries?.let { countries ->
+                        Log.d(
+                            "WorldMapManager",
+                            "Applying pending countries after map ready: $countries"
+                        )
+                        updateCountriesInternal(countries)
+                        pendingCountries = null
+                    }
+
                     onMapReady()
                 }
             }
@@ -55,20 +67,47 @@ class WorldMapManager(
     }
 
     fun updateCountries(visitedCountries: List<String>) {
-        if (!isMapReady || visitedCountries.isEmpty()) {
-            Log.d("WorldMapManager", "Map not ready or no countries to display")
+        if (!isMapReady) {
+            Log.d(
+                "WorldMapManager",
+                "Map not ready, storing countries for later: $visitedCountries"
+            )
+            pendingCountries = visitedCountries
+            return
+        }
+
+        updateCountriesInternal(visitedCountries)
+    }
+
+    private fun updateCountriesInternal(visitedCountries: List<String>) {
+        if (visitedCountries.isEmpty()) {
+            Log.d("WorldMapManager", "No countries to display on map")
             return
         }
 
         val countriesArray = visitedCountries.joinToString("\",\"", "[\"", "\"]")
-        val javascript =
-            "if(typeof updateMap === 'function') { updateMap($countriesArray); } else { console.log('updateMap not available'); }"
+        val javascript = """
+            if(typeof updateMap === 'function') { 
+                console.log('Updating map with countries from Android: $visitedCountries');
+                updateMap($countriesArray); 
+            } else { 
+                console.log('updateMap function not available yet'); 
+            }
+        """.trimIndent()
 
         webView.post {
             webView.evaluateJavascript(javascript) { result ->
                 Log.d("WorldMapManager", "Map update completed. Countries colored: $result")
             }
         }
+    }
+
+    /**
+     * Call this when the fragment is being destroyed to clean up
+     */
+    fun cleanup() {
+        isMapReady = false
+        pendingCountries = null
     }
 
     private inner class WebAppInterface {
@@ -408,6 +447,7 @@ class WorldMapManager(
                     // Force style reset
                     path.style.fill = '#E0E0E0';
                     path.style.stroke = '#fff';
+                    path.style.strokeWidth = '0.3';
                 }
                 
                 var coloredCount = 0;
@@ -422,10 +462,10 @@ class WorldMapManager(
                             console.log('✓ Coloring country:', countryName);
                             element.classList.remove('unvisited');
                             element.classList.add('visited');
-                            // Force style application
+                            // Force style application with stronger colors
                             element.style.fill = '#4CAF50';
                             element.style.stroke = '#2E7D32';
-                            element.style.strokeWidth = '0.5';
+                            element.style.strokeWidth = '0.8';
                             coloredCount++;
                         } else {
                             var countryCode = countryNameToCode[countryName];
@@ -437,6 +477,14 @@ class WorldMapManager(
                 }
                 
                 console.log('Map update complete. Colored:', coloredCount, '| Not available:', notAvailableCount);
+                
+                // Force a repaint
+                if (typeof requestAnimationFrame !== 'undefined') {
+                    requestAnimationFrame(function() {
+                        console.log('Map repaint completed');
+                    });
+                }
+                
                 return coloredCount;
             }
 

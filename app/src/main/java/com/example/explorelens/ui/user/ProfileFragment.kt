@@ -87,6 +87,7 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
                     }
                     is ProfileViewModel.StatisticsState.Success -> {
                         uiHelper.updateStatistics(state.percentage, state.countryCount)
+                        // Always try to update map, even if not ready yet (will be queued)
                         mapManager.updateCountries(state.countries)
 
                         // Optionally show a subtle indicator if data is from cache
@@ -146,6 +147,7 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        mapManager.cleanup() // Clean up map state
         _binding = null
     }
 }
