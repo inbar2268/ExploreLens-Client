@@ -181,7 +181,7 @@ public class ARTouchInteractionManager(
         var closestLayerLabel: ARLayerManager.LayerLabelInfo? = null
         var closestDistance = Float.MAX_VALUE
 
-        val layerLabelsToCheck = currentLayerManager.getAllLabels()
+        val layerLabelsToCheck = currentLayerManager.getCurrentlyVisibleLabels()
 
         Log.d(TAG, "Checking ${layerLabelsToCheck.size} layer labels for X button touch at ($touchX, $touchY)")
 
@@ -357,7 +357,7 @@ public class ARTouchInteractionManager(
         var closestLayerLabel: ARLayerManager.LayerLabelInfo? = null
         var closestDistance = Float.MAX_VALUE // Distance to camera
 
-        val layerLabelsToCheck = currentLayerManager.getAllLabels()
+        val layerLabelsToCheck = currentLayerManager.getCurrentlyVisibleLabels()
 
         Log.d(TAG, "Checking ${layerLabelsToCheck.size} layer labels for touch at ($touchX, $touchY)")
 
