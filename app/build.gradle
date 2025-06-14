@@ -185,6 +185,9 @@ dependencies {
     //PICASSO
     implementation 'com.squareup.picasso:picasso:2.8'
 
+    //statistics map
+    implementation 'com.google.android.gms:play-services-maps:18.1.0'
+
 }
 configurations.all {
     resolutionStrategy {

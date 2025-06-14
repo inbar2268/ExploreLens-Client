@@ -41,4 +41,17 @@
   <color name="gray">#F5F5F5</color>
   <color name="light_gray">#FCFCFC</color>
 
+  <color name="continent_visited">#27ae60</color>
+  <color name="continent_unvisited">#ecf0f1</color>
+  <color name="map_background_start">#4a90e2</color>
+  <color name="map_background_end">#1e5f99</color>
+  <color name="map_stroke">#ffffff</color>
+  <color name="map_stroke_hover">#2c3e50</color>
+
+  <!-- Legend Colors -->
+  <color name="legend_background">#ffffff</color>
+  <color name="legend_border">#e9ecef</color>
+  <color name="legend_text_primary">#2c3e50</color>
+  <color name="legend_text_secondary">#7f8c8d</color>
+
 </resources>
