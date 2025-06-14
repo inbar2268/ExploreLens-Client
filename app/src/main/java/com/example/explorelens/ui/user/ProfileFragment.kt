@@ -25,6 +25,7 @@ import com.example.explorelens.databinding.FragmentProfileBinding
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.util.Locale
 import android.os.Build
 
@@ -32,6 +33,11 @@ class ProfileFragment : Fragment() {
 
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
+
+    // Job references to cancel when fragment is destroyed
+    private var statisticsJob: Job? = null
+    private var mapDataJob: Job? = null
+    private var userObserverJob: Job? = null
 
     // UserState sealed class for handling UI states
     sealed class UserState {
@@ -157,7 +163,7 @@ class ProfileFragment : Fragment() {
     private fun setupUserObserver() {
         viewLifecycleOwner.lifecycle.addObserver(androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
-                viewLifecycleOwner.lifecycleScope.launch {
+                userObserverJob = viewLifecycleOwner.lifecycleScope.launch {
                     userRepository.observeUser().collectLatest { user ->
                         if (user != null) {
                             _userState.value = UserState.Success(user)
@@ -192,7 +198,9 @@ class ProfileFragment : Fragment() {
                         _userState.value = UserState.Logout
 
                         // Show toast and navigate to login page when user ID is not found
-                        ToastHelper.showShortToast(requireContext(), "User not found. Please login again")
+                        if (_binding != null) {
+                            ToastHelper.showShortToast(requireContext(), "User not found. Please login again")
+                        }
                     }
                 )
             }
@@ -201,42 +209,45 @@ class ProfileFragment : Fragment() {
 
     private fun setupObservers() {
         userState.observe(viewLifecycleOwner) { state ->
-            when (state) {
-                is UserState.Loading -> {
-                    binding.progressBar.visibility = View.VISIBLE
-                    binding.errorMessage.visibility = View.GONE
-                }
-                is UserState.Success -> {
-                    binding.progressBar.visibility = View.GONE
-                    binding.errorMessage.visibility = View.GONE
-
-                    // Update UI with user data
-                    binding.usernameText.text = state.user.username
-                    binding.emailText.text = state.user.email
-
-                    // Load profile picture with Glide
-                    if (!state.user.profilePictureUrl.isNullOrEmpty()) {
-                        Glide.with(this)
-                            .load(state.user.profilePictureUrl)
-                            .apply(RequestOptions.circleCropTransform())
-                            .placeholder(R.drawable.ic_default_profile)
-                            .error(R.drawable.ic_default_profile)
-                            .into(binding.profileImage)
-                    } else {
-                        binding.profileImage.setImageResource(R.drawable.avatar_placeholder)
+            // Check if binding is still available before updating UI
+            _binding?.let { safeBinding ->
+                when (state) {
+                    is UserState.Loading -> {
+                        safeBinding.progressBar.visibility = View.VISIBLE
+                        safeBinding.errorMessage.visibility = View.GONE
                     }
-                }
-                is UserState.Error -> {
-                    binding.progressBar.visibility = View.GONE
-                    binding.errorMessage.visibility = View.VISIBLE
-                    binding.errorMessage.text = state.message
+                    is UserState.Success -> {
+                        safeBinding.progressBar.visibility = View.GONE
+                        safeBinding.errorMessage.visibility = View.GONE
 
-                    ToastHelper.showShortToast(context, state.message)
-                }
-                is UserState.Logout -> {
-                    binding.progressBar.visibility = View.GONE
-                    binding.errorMessage.visibility = View.GONE
-                    findNavController().navigate(R.id.action_profileFragment_to_loginFragment)
+                        // Update UI with user data
+                        safeBinding.usernameText.text = state.user.username
+                        safeBinding.emailText.text = state.user.email
+
+                        // Load profile picture with Glide
+                        if (!state.user.profilePictureUrl.isNullOrEmpty()) {
+                            Glide.with(this)
+                                .load(state.user.profilePictureUrl)
+                                .apply(RequestOptions.circleCropTransform())
+                                .placeholder(R.drawable.ic_default_profile)
+                                .error(R.drawable.ic_default_profile)
+                                .into(safeBinding.profileImage)
+                        } else {
+                            safeBinding.profileImage.setImageResource(R.drawable.avatar_placeholder)
+                        }
+                    }
+                    is UserState.Error -> {
+                        safeBinding.progressBar.visibility = View.GONE
+                        safeBinding.errorMessage.visibility = View.VISIBLE
+                        safeBinding.errorMessage.text = state.message
+
+                        ToastHelper.showShortToast(context, state.message)
+                    }
+                    is UserState.Logout -> {
+                        safeBinding.progressBar.visibility = View.GONE
+                        safeBinding.errorMessage.visibility = View.GONE
+                        findNavController().navigate(R.id.action_profileFragment_to_loginFragment)
+                    }
                 }
             }
         }
@@ -252,13 +263,22 @@ class ProfileFragment : Fragment() {
 
     private fun updateSwipeRefreshState() {
         // Only hide refresh indicator when both statistics and map data are done loading
-        if (!isLoadingStatistics && !isLoadingMapData) {
-            binding.swipeRefresh.isRefreshing = false
+        // AND the binding is still available
+        _binding?.let { safeBinding ->
+            if (!isLoadingStatistics && !isLoadingMapData) {
+                safeBinding.swipeRefresh.isRefreshing = false
+            }
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+
+        // Cancel all running jobs to prevent accessing destroyed view
+        statisticsJob?.cancel()
+        mapDataJob?.cancel()
+        userObserverJob?.cancel()
+
         _binding = null
     }
 
@@ -271,11 +291,14 @@ class ProfileFragment : Fragment() {
         isLoadingStatistics = true
         Log.d("ProfileFragment", "Starting to load user statistics (always syncing with server)")
 
-        // Show loading indicator
-        binding.statisticsProgressBar.visibility = View.VISIBLE
-        binding.statisticsContainer.visibility = View.GONE
+        // Check if binding is available before starting
+        _binding?.let { safeBinding ->
+            // Show loading indicator
+            safeBinding.statisticsProgressBar.visibility = View.VISIBLE
+            safeBinding.statisticsContainer.visibility = View.GONE
+        }
 
-        lifecycleScope.launch {
+        statisticsJob = lifecycleScope.launch {
             try {
                 // This now always syncs with server first thanks to the updated repository
                 val result = userStatisticsRepository.getCurrentUserStatistics()
@@ -284,24 +307,30 @@ class ProfileFragment : Fragment() {
                     onSuccess = { statistics ->
                         Log.d("ProfileFragment", "Successfully loaded statistics: ${statistics.countryCount} countries, ${statistics.percentageVisited}% visited")
 
-                        // Update UI with statistics
-                        binding.percentageValue.text = statistics.percentageVisited
-                        binding.countryValue.text = statistics.countryCount.toString()
+                        // Check if binding is still available before updating UI
+                        _binding?.let { safeBinding ->
+                            // Update UI with statistics
+                            safeBinding.percentageValue.text = statistics.percentageVisited
+                            safeBinding.countryValue.text = statistics.countryCount.toString()
 
-                        // Hide loading and show statistics
-                        binding.statisticsProgressBar.visibility = View.GONE
-                        binding.statisticsContainer.visibility = View.VISIBLE
+                            // Hide loading and show statistics
+                            safeBinding.statisticsProgressBar.visibility = View.GONE
+                            safeBinding.statisticsContainer.visibility = View.VISIBLE
+                        }
                     },
                     onFailure = { error ->
                         Log.e("ProfileFragment", "Failed to load user statistics", error)
 
-                        // Hide loading indicator
-                        binding.statisticsProgressBar.visibility = View.GONE
-                        binding.statisticsContainer.visibility = View.VISIBLE
+                        // Check if binding is still available before updating UI
+                        _binding?.let { safeBinding ->
+                            // Hide loading indicator
+                            safeBinding.statisticsProgressBar.visibility = View.GONE
+                            safeBinding.statisticsContainer.visibility = View.VISIBLE
 
-                        // Show default values
-                        binding.percentageValue.text = "--"
-                        binding.countryValue.text = "--"
+                            // Show default values
+                            safeBinding.percentageValue.text = "--"
+                            safeBinding.countryValue.text = "--"
+                        }
 
                         // Show different messages based on error type
                         val errorMessage = when {
@@ -309,16 +338,28 @@ class ProfileFragment : Fragment() {
                             error.message?.contains("network") == true || error.message?.contains("internet") == true -> "Check your internet connection"
                             else -> "Failed to load statistics"
                         }
-                        ToastHelper.showShortToast(requireContext(), errorMessage)
+
+                        // Only show toast if context is still available
+                        if (_binding != null) {
+                            ToastHelper.showShortToast(requireContext(), errorMessage)
+                        }
                     }
                 )
             } catch (e: Exception) {
                 Log.e("ProfileFragment", "Exception loading statistics", e)
-                binding.statisticsProgressBar.visibility = View.GONE
-                binding.statisticsContainer.visibility = View.VISIBLE
-                binding.percentageValue.text = "--"
-                binding.countryValue.text = "--"
-                ToastHelper.showShortToast(requireContext(), "Error loading statistics")
+
+                // Check if binding is still available before updating UI
+                _binding?.let { safeBinding ->
+                    safeBinding.statisticsProgressBar.visibility = View.GONE
+                    safeBinding.statisticsContainer.visibility = View.VISIBLE
+                    safeBinding.percentageValue.text = "--"
+                    safeBinding.countryValue.text = "--"
+                }
+
+                // Only show toast if context is still available
+                if (_binding != null) {
+                    ToastHelper.showShortToast(requireContext(), "Error loading statistics")
+                }
             } finally {
                 isLoadingStatistics = false
                 updateSwipeRefreshState()
@@ -363,8 +404,10 @@ class ProfileFragment : Fragment() {
         @JavascriptInterface
         fun onContinentClicked(continentName: String) {
             requireActivity().runOnUiThread {
-                ToastHelper.showShortToast(requireContext(), "Clicked: $continentName")
-                // You can add navigation or other actions here
+                if (_binding != null) {
+                    ToastHelper.showShortToast(requireContext(), "Clicked: $continentName")
+                    // You can add navigation or other actions here
+                }
             }
         }
     }
@@ -949,7 +992,7 @@ class ProfileFragment : Fragment() {
         isLoadingMapData = true
         Log.d("ProfileFragment", "Starting to load continent data (always syncing with server)")
 
-        lifecycleScope.launch {
+        mapDataJob = lifecycleScope.launch {
             try {
                 kotlinx.coroutines.delay(1000) // Allow WebView to fully load
 
@@ -1004,14 +1047,19 @@ class ProfileFragment : Fragment() {
             return
         }
 
-        val countriesArray = visitedCountries.joinToString("\",\"", "[\"", "\"]")
-        val javascript = "if(typeof updateMap === 'function') { updateMap($countriesArray); } else { console.log('updateMap not available'); }"
+        // Check if binding is still available before accessing WebView
+        _binding?.let { safeBinding ->
+            val countriesArray = visitedCountries.joinToString("\",\"", "[\"", "\"]")
+            val javascript = "if(typeof updateMap === 'function') { updateMap($countriesArray); } else { console.log('updateMap not available'); }"
 
-        binding.worldMapWebView.post {
-            binding.worldMapWebView.evaluateJavascript(javascript) { result ->
-                Log.d("ProfileFragment", "Map update completed. Countries colored: $result")
+            safeBinding.worldMapWebView.post {
+                // Double-check binding is still available in the post block
+                _binding?.let {
+                    safeBinding.worldMapWebView.evaluateJavascript(javascript) { result ->
+                        Log.d("ProfileFragment", "Map update completed. Countries colored: $result")
+                    }
+                }
             }
         }
     }
-
 }
