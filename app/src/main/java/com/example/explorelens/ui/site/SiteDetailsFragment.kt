@@ -20,7 +20,9 @@ import android.widget.ProgressBar
 import android.widget.RatingBar
 import android.widget.TextView
 import androidx.cardview.widget.CardView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentContainerView
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -92,6 +94,14 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val navHostFragment = activity?.findViewById<FragmentContainerView>(R.id.nav_host_fragment)
+        val layoutParams = navHostFragment?.layoutParams as? ConstraintLayout.LayoutParams
+
+        layoutParams?.let {
+            it.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            it.bottomToTop = ConstraintLayout.LayoutParams.UNSET
+            navHostFragment.layoutParams = it
+        }
 
         // Initialize Text-to-Speech
         textToSpeech = TextToSpeech(requireContext(), this)
