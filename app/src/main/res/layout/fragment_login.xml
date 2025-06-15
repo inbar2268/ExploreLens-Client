@@ -117,7 +117,7 @@
                 android:layout_marginTop="24dp"
                 android:background="@drawable/bg_button_primary"
                 android:fontFamily="@font/harmonyos_sans_medium"
-                android:text="Log in"
+                android:text="Login"
                 android:textAllCaps="false"
                 android:textColor="@android:color/white"
                 android:textSize="12sp"

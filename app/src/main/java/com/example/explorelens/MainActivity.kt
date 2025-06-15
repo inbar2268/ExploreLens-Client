@@ -16,23 +16,31 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.example.explorelens.ui.site.SiteDetailsFragment
 import androidx.activity.OnBackPressedCallback
 import com.example.explorelens.utils.FragmentNavigationManager
+import com.example.explorelens.data.repository.AuthRepository
+import com.example.explorelens.data.network.auth.GoogleSignInHelper.Companion.isUserAuthenticatedWithGoogle
 
 class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedListener {
 
     private lateinit var navController: NavController
     private lateinit var bottomNavigationView: BottomNavigationView
+    private lateinit var authRepository: AuthRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main2)
         ExploreLensApiClient.init(applicationContext)
 
-        bottomNavigationView = findViewById(R.id.bottom_navigation)
+        // Initialize AuthRepository
+        authRepository = AuthRepository(this)
 
+        bottomNavigationView = findViewById(R.id.bottom_navigation)
 
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         navController = navHostFragment.navController
+
+        // Check authentication state and set start destination
+        checkAuthenticationAndSetStartDestination()
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
             FragmentNavigationManager.setCurrentFragmentId(destination.id)
@@ -54,6 +62,7 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
                 }
             }
         }
+
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 val currentFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
@@ -78,8 +87,21 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
         }
     }
 
+    private fun checkAuthenticationAndSetStartDestination() {
+        val isLoggedIn = authRepository.isLoggedIn() || isUserAuthenticatedWithGoogle(this)
+
+        if (!isLoggedIn) {
+            // User is not logged in, navigate to landing page
+            navController.navigate(R.id.landingFragment)
+        } else {
+            // User is logged in, navigate to main app (profile or AR activity)
+            navController.navigate(R.id.profileFragment)
+        }
+    }
+
     private fun updateBottomNavigationVisibility(fragmentId: Int) {
         val fragmentsWithoutBottomNav = listOf(
+            R.id.landingFragment,  // Add landing fragment here
             R.id.loginFragment,
             R.id.registerFragment,
             R.id.forgotPasswordFragment,
@@ -93,21 +115,19 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
         }
     }
 
-
     override fun onDestinationChanged(
         controller: NavController,
         destination: NavDestination,
         arguments: Bundle?
     ) {
         val fragmentsWithoutBottomNav = listOf(
-
+            R.id.landingFragment,  // Add landing fragment here too
             R.id.loginFragment,
             R.id.registerFragment,
             R.id.forgotPasswordFragment
         )
 
         Log.d("MainActivity111", "Destination changed to: ${destination.id}")
-
 
         if (destination.id in fragmentsWithoutBottomNav) {
             bottomNavigationView.visibility = View.GONE
@@ -151,11 +171,9 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
         }
     }
 
-
     fun launchArActivity() {
         val intent = Intent(this, ArActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         startActivity(intent)
     }
-
 }
