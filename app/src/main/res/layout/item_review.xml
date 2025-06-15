@@ -1,92 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- res/layout/item_review_clean.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="2dp"
-    app:cardBackgroundColor="@color/background_color">
+    android:orientation="vertical"
+    android:paddingVertical="12dp">
 
+    <!-- Review Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
 
-        <!-- Review Header -->
+        <!-- Author Name -->
+        <TextView
+            android:id="@+id/authorName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:fontFamily="@font/harmonyos_sans_black"
+            tools:text="Sarah M" />
+
+        <!-- Rating -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <!-- Author Info -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/authorName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    tools:text="Alice" />
-
-                <TextView
-                    android:id="@+id/reviewTime"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp"
-                    tools:text="2 weeks ago" />
-
-            </LinearLayout>
-
-            <!-- Rating -->
-            <LinearLayout
+            <TextView
+                android:id="@+id/reviewRating"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:layout_marginEnd="4dp"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:fontFamily="@font/harmonyos_sans_black"
+                tools:text="5" />
 
-                <TextView
-                    android:id="@+id/reviewRating"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/rating_color"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    tools:text="5" />
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_marginStart="4dp"
-                    android:src="@drawable/ic_star"
-                    app:tint="@color/rating_color" />
-
-            </LinearLayout>
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_star"
+                app:tint="@color/rating_star" />
 
         </LinearLayout>
 
-        <!-- Review Text -->
-        <TextView
-            android:id="@+id/reviewText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:textColor="@color/text_primary"
-            android:textSize="15sp"
-            android:lineSpacingExtra="2dp"
-            tools:text="Fantastic vibes and great lattes! The baristas are friendly and the atmosphere is perfect for working or catching up with friends." />
-
     </LinearLayout>
 
-</androidx.cardview.widget.CardView>
+    <!-- Review Text -->
+    <TextView
+        android:id="@+id/reviewText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:lineSpacingMultiplier="1.3"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp"
+        android:fontFamily="@font/harmonyos_sans_regular"
+        tools:text="Amazing coffee and friendly staff! The atmosphere is perfect for working" />
+
+    <!-- Review Time (smaller, at bottom) -->
+    <TextView
+        android:id="@+id/reviewTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp"
+        android:fontFamily="@font/harmonyos_sans_regular"
+        tools:text="2 weeks ago" />
+
+    <!-- Divider line between reviews -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="16dp"
+        android:background="@color/light_gray_divider" />
+
+</LinearLayout>

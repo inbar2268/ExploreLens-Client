@@ -155,36 +155,20 @@ class LayerDetailFragment : Fragment() {
 
         _binding?.let { binding ->
             binding.apply {
-                // Show content container FIRST
+                // Show content container
                 contentContainer.visibility = View.VISIBLE
-                Log.d("LayerDetailFragment", "ContentContainer visibility set to VISIBLE")
-
-                // Debug: Check all container visibilities immediately
-                Log.d("LayerDetailFragment", "=== VISIBILITY CHECK ===")
-                Log.d("LayerDetailFragment", "contentContainer.visibility = ${contentContainer.visibility} (should be 0)")
-                Log.d("LayerDetailFragment", "progressBar.visibility = ${progressBar.visibility} (should be 8)")
-                Log.d("LayerDetailFragment", "errorMessage.visibility = ${errorMessage.visibility} (should be 8)")
-                Log.d("LayerDetailFragment", "swipeRefresh.visibility = ${swipeRefresh.visibility} (should be 0)")
 
                 // Basic information
                 placeName.text = place.name
                 placeType.text = formatPlaceType(place.type)
                 ratingValue.text = String.format("%.1f", place.rating)
 
-                Log.d("LayerDetailFragment", "=== TEXT SET ===")
-                Log.d("LayerDetailFragment", "placeName.text = '${placeName.text}'")
-                Log.d("LayerDetailFragment", "placeType.text = '${placeType.text}'")
-                Log.d("LayerDetailFragment", "ratingValue.text = '${ratingValue.text}'")
-
                 // Editorial summary
                 if (!place.editorialSummary.isNullOrEmpty()) {
                     editorialSummary.text = place.editorialSummary
                     editorialSummary.visibility = View.VISIBLE
-                    Log.d("LayerDetailFragment", "editorialSummary.text = '${editorialSummary.text}'")
-                    Log.d("LayerDetailFragment", "editorialSummary.visibility = ${editorialSummary.visibility}")
                 } else {
                     editorialSummary.visibility = View.GONE
-                    Log.d("LayerDetailFragment", "No editorial summary")
                 }
 
                 // Contact information
@@ -195,30 +179,8 @@ class LayerDetailFragment : Fragment() {
 
                 // Reviews
                 setupReviews(place)
-
-                // POST LAYOUT DEBUG - Check dimensions after layout
-                contentContainer.post {
-                    Log.d("LayerDetailFragment", "=== POST-LAYOUT DIMENSIONS ===")
-                    Log.d("LayerDetailFragment", "contentContainer: ${contentContainer.width}x${contentContainer.height}")
-                    Log.d("LayerDetailFragment", "contentContainer.visibility = ${contentContainer.visibility}")
-                    Log.d("LayerDetailFragment", "swipeRefresh: ${swipeRefresh.width}x${swipeRefresh.height}")
-                    Log.d("LayerDetailFragment", "root: ${root.width}x${root.height}")
-
-                    // Check if any parent views are hiding content
-                    var parent = contentContainer.parent
-                    var level = 1
-                    while (parent != null && level < 5) {
-                        if (parent is View) {
-                            Log.d("LayerDetailFragment", "Parent $level: ${parent.javaClass.simpleName} - ${parent.width}x${parent.height}, visibility=${parent.visibility}")
-                        }
-                        parent = parent.parent
-                        level++
-                    }
-                }
-
-                Log.d("LayerDetailFragment", "Finished displaying place details")
             }
-        } ?: Log.e("LayerDetailFragment", "Binding is null in displayPlaceDetails")
+        }
     }
 
     private fun setupContactInfo(place: Place) {
@@ -285,18 +247,19 @@ class LayerDetailFragment : Fragment() {
             binding.hoursContainer.removeAllViews()
 
             place.weekdayText.forEach { hourText ->
-                val textView = TextView(requireContext()).apply {
-                    text = hourText
-                    textSize = 15f
-                    setTextColor(requireContext().getColor(R.color.text_primary))
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        setMargins(0, 0, 0, 8)
-                    }
+                val parts = hourText.split(": ")
+                if (parts.size == 2) {
+                    val hourView = LayoutInflater.from(requireContext())
+                        .inflate(R.layout.item_opening_hour, binding.hoursContainer, false)
+
+                    val dayText = hourView.findViewById<TextView>(R.id.dayText)
+                    val timeText = hourView.findViewById<TextView>(R.id.timeText)
+
+                    dayText.text = parts[0]
+                    timeText.text = parts[1]
+
+                    binding.hoursContainer.addView(hourView)
                 }
-                binding.hoursContainer.addView(textView)
             }
 
             binding.openingHoursCard.visibility = View.VISIBLE

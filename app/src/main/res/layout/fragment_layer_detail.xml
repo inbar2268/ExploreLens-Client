@@ -4,48 +4,44 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_color">
+    android:background="@color/white">
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefresh"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <androidx.core.widget.NestedScrollView
+        <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:fillViewport="true">
 
-            <androidx.constraintlayout.widget.ConstraintLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/background_color">
+                android:orientation="vertical">
 
                 <!-- Loading State -->
                 <ProgressBar
                     android:id="@+id/progressBar"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_gravity="center"
                     android:layout_marginTop="100dp"
-                    android:visibility="gone"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    android:visibility="gone" />
 
                 <!-- Error State -->
                 <TextView
                     android:id="@+id/errorMessage"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_margin="24dp"
                     android:gravity="center"
                     android:text="Failed to load place details"
                     android:textColor="@color/error_color"
                     android:textSize="16sp"
-                    android:visibility="gone"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    android:fontFamily="@font/harmonyos_sans_regular"
+                    android:visibility="gone" />
 
                 <!-- Content Container -->
                 <LinearLayout
@@ -53,398 +49,358 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:visibility="visible"
-                    android:background="#00FFFFFF"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent">
+                    android:visibility="visible">
 
-                    <!-- Header Card -->
-                    <androidx.cardview.widget.CardView
+                    <!-- Main Header Section -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:orientation="vertical"
                         android:layout_margin="16dp"
-                        android:background="#D0D7D0"
-                        app:cardCornerRadius="12dp"
-                        app:cardElevation="4dp">
+                        android:paddingHorizontal="20dp"
+                        android:paddingTop="24dp"
+                        android:paddingBottom="24dp">
+
+                        <!-- Place Name and Rating Row -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="24dp">
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="8dp">
 
-                            <!-- Place Name and Rating -->
+                            <!-- Place Name -->
+                            <TextView
+                                android:id="@+id/placeName"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:textColor="@color/black"
+                                android:textSize="28sp"
+                                android:fontFamily="@font/harmonyos_sans_black"
+                                android:lineSpacingMultiplier="1.1"
+                                tools:text="Mock Coffee Corner" />
+
+                            <!-- Rating -->
                             <LinearLayout
-                                android:layout_width="match_parent"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:gravity="center_vertical"
                                 android:orientation="horizontal">
 
-                                <LinearLayout
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:orientation="vertical">
-
-                                    <TextView
-                                        android:id="@+id/placeName"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:textColor="@color/text_primary"
-                                        android:textSize="28sp"
-                                        android:textStyle="bold"
-                                        tools:text="Space Needle" />
-
-                                    <TextView
-                                        android:id="@+id/placeType"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:layout_marginTop="4dp"
-                                        android:textColor="@color/text_secondary"
-                                        android:textSize="16sp"
-                                        tools:text="Tourist attraction" />
-
-                                </LinearLayout>
-
-                                <!-- Rating -->
-                                <LinearLayout
+                                <TextView
+                                    android:id="@+id/ratingValue"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:gravity="center_vertical"
-                                    android:orientation="horizontal">
+                                    android:layout_marginEnd="6dp"
+                                    android:textColor="@color/black"
+                                    android:textSize="18sp"
+                                    android:fontFamily="@font/harmonyos_sans_black"
+                                    tools:text="4.2" />
 
-                                    <TextView
-                                        android:id="@+id/ratingValue"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:textColor="@color/rating_color"
-                                        android:textSize="24sp"
-                                        android:textStyle="bold"
-                                        tools:text="4.5" />
-
-                                    <ImageView
-                                        android:layout_width="24dp"
-                                        android:layout_height="24dp"
-                                        android:layout_marginStart="4dp"
-                                        android:src="@drawable/ic_star"
-                                        app:tint="@color/rating_color" />
-
-                                </LinearLayout>
+                                <ImageView
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:src="@drawable/ic_star"
+                                    app:tint="@color/rating_star" />
 
                             </LinearLayout>
 
-                            <!-- Editorial Summary -->
-                            <TextView
-                                android:id="@+id/editorialSummary"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="16dp"
-                                android:lineSpacingExtra="4dp"
-                                android:textColor="@color/text_primary"
-                                android:textSize="16sp"
-                                android:visibility="gone"
-                                tools:text="Iconic observation tower featuring sweeping views of Seattle plus a rotating, glass-floored restaurant."
-                                tools:visibility="visible" />
-
-                            <!-- Cache indicator -->
-                            <TextView
-                                android:id="@+id/cacheIndicator"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:background="@drawable/chip_background"
-                                android:paddingHorizontal="12dp"
-                                android:paddingVertical="4dp"
-                                android:text="Cached"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="12sp"
-                                android:visibility="gone" />
-
                         </LinearLayout>
 
-                    </androidx.cardview.widget.CardView>
+                        <!-- Place Type -->
+                        <TextView
+                            android:id="@+id/placeType"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="16dp"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp"
+                            android:fontFamily="@font/harmonyos_sans_regular"
+                            tools:text="Cafe" />
 
-                    <!-- Contact Information Card -->
-                    <androidx.cardview.widget.CardView
+                        <!-- Editorial Summary -->
+                        <TextView
+                            android:id="@+id/editorialSummary"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:lineSpacingMultiplier="1.4"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:fontFamily="@font/harmonyos_sans_regular"
+                            android:visibility="gone"
+                            tools:text="A cozy neighborhood coffee shop with excellent espresso and fresh pastries. Perfect for working or catching up with friends."
+                            tools:visibility="visible" />
+
+                    </LinearLayout>
+
+                    <!-- Contact Section -->
+                    <LinearLayout
                         android:id="@+id/contactCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:orientation="vertical"
                         android:layout_marginHorizontal="16dp"
                         android:layout_marginBottom="16dp"
-                        app:cardCornerRadius="12dp"
-                        app:cardElevation="4dp">
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="20dp"
+                        android:background="@drawable/section_background">
 
+                        <!-- Address -->
                         <LinearLayout
+                            android:id="@+id/addressContainer"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="20dp">
+                            android:layout_marginBottom="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingVertical="8dp"
+                            android:visibility="gone"
+                            tools:visibility="visible">
 
-                            <!-- Address -->
-                            <LinearLayout
-                                android:id="@+id/addressContainer"
-                                android:layout_width="match_parent"
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="16dp"
+                                android:src="@drawable/ic_location"
+                                app:tint="@color/blue" />
+
+                            <TextView
+                                android:id="@+id/address"
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:gravity="start"
-                                android:orientation="horizontal"
-                                android:visibility="gone"
-                                tools:visibility="visible">
-
-                                <ImageView
-                                    android:layout_width="20dp"
-                                    android:layout_height="20dp"
-                                    android:layout_marginEnd="16dp"
-                                    android:src="@drawable/ic_location"
-                                    app:tint="@color/icon_color" />
-
-                                <TextView
-                                    android:id="@+id/address"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="16sp"
-                                    tools:text="400 Broad St, Seattle, WA 98109" />
-
-                            </LinearLayout>
-
-                            <!-- Website -->
-                            <LinearLayout
-                                android:id="@+id/websiteContainer"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="16dp"
-                                android:gravity="start"
-                                android:orientation="horizontal"
-                                android:visibility="gone"
-                                tools:visibility="visible">
-
-                                <ImageView
-                                    android:layout_width="20dp"
-                                    android:layout_height="20dp"
-                                    android:layout_marginEnd="16dp"
-                                    android:src="@drawable/ic_web"
-                                    app:tint="@color/icon_color" />
-
-                                <TextView
-                                    android:id="@+id/website"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:textColor="@color/link_color"
-                                    android:textSize="16sp"
-                                    tools:text="www.spaceneedle.com" />
-
-                            </LinearLayout>
-
-                            <!-- Phone -->
-                            <LinearLayout
-                                android:id="@+id/phoneContainer"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="16dp"
-                                android:gravity="start"
-                                android:orientation="horizontal"
-                                android:visibility="gone"
-                                tools:visibility="visible">
-
-                                <ImageView
-                                    android:layout_width="20dp"
-                                    android:layout_height="20dp"
-                                    android:layout_marginEnd="16dp"
-                                    android:src="@drawable/ic_phone"
-                                    app:tint="@color/icon_color" />
-
-                                <TextView
-                                    android:id="@+id/phoneNumber"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:textColor="@color/link_color"
-                                    android:textSize="16sp"
-                                    tools:text="+1 206-905-2100" />
-
-                            </LinearLayout>
-
-                            <!-- Status -->
-                            <LinearLayout
-                                android:id="@+id/statusContainer"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="16dp"
-                                android:gravity="start"
-                                android:orientation="horizontal"
-                                android:visibility="gone"
-                                tools:visibility="visible">
-
-                                <ImageView
-                                    android:layout_width="20dp"
-                                    android:layout_height="20dp"
-                                    android:layout_marginEnd="16dp"
-                                    android:src="@drawable/ic_clock"
-                                    app:tint="@color/icon_color" />
-
-                                <TextView
-                                    android:id="@+id/openStatus"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:textColor="@color/success_color"
-                                    android:textSize="16sp"
-                                    android:textStyle="bold"
-                                    tools:text="Open now" />
-
-                            </LinearLayout>
-
-                            <!-- Price Level -->
-                            <LinearLayout
-                                android:id="@+id/priceLevelContainer"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="16dp"
-                                android:gravity="start"
-                                android:orientation="horizontal"
-                                android:visibility="gone"
-                                tools:visibility="visible">
-
-                                <ImageView
-                                    android:layout_width="20dp"
-                                    android:layout_height="20dp"
-                                    android:layout_marginEnd="16dp"
-                                    android:src="@drawable/ic_dollar"
-                                    app:tint="@color/icon_color" />
-
-                                <TextView
-                                    android:id="@+id/priceLevel"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="16sp"
-                                    tools:text="$$" />
-
-                            </LinearLayout>
+                                android:layout_weight="1"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/harmonyos_sans_regular"
+                                tools:text="1 Mock Road, Hod Hasharon" />
 
                         </LinearLayout>
 
-                    </androidx.cardview.widget.CardView>
+                        <!-- Website -->
+                        <LinearLayout
+                            android:id="@+id/websiteContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingVertical="8dp"
+                            android:visibility="gone"
+                            tools:visibility="visible">
 
-                    <!-- Opening Hours Card -->
-                    <androidx.cardview.widget.CardView
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="16dp"
+                                android:src="@drawable/ic_web"
+                                app:tint="@color/blue" />
+
+                            <TextView
+                                android:id="@+id/website"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:textColor="@color/blue"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/harmonyos_sans_regular"
+                                tools:text="www.mockcoffee.com" />
+
+                        </LinearLayout>
+
+                        <!-- Phone -->
+                        <LinearLayout
+                            android:id="@+id/phoneContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="8dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingVertical="8dp"
+                            android:visibility="gone">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="16dp"
+                                android:src="@drawable/ic_phone"
+                                app:tint="@color/blue" />
+
+                            <TextView
+                                android:id="@+id/phoneNumber"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/harmonyos_sans_regular"
+                                tools:text="050-1112233" />
+
+                        </LinearLayout>
+
+                        <!-- Status -->
+                        <LinearLayout
+                            android:id="@+id/statusContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingVertical="8dp"
+                            android:visibility="gone"
+                            tools:visibility="visible">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="16dp"
+                                android:src="@drawable/ic_clock"
+                                app:tint="@color/blue" />
+
+                            <TextView
+                                android:id="@+id/openStatus"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/harmonyos_sans_regular"
+                                tools:text="Open now" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Opening Hours Section -->
+                    <LinearLayout
                         android:id="@+id/openingHoursCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:orientation="vertical"
                         android:layout_marginHorizontal="16dp"
                         android:layout_marginBottom="16dp"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="24dp"
+                        android:background="@drawable/section_background"
                         android:visibility="gone"
-                        app:cardCornerRadius="12dp"
-                        app:cardElevation="4dp"
                         tools:visibility="visible">
 
-                        <LinearLayout
+                        <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="20dp">
+                            android:layout_marginBottom="16dp"
+                            android:text="Opening Hours"
+                            android:textColor="@color/black"
+                            android:textSize="20sp"
+                            android:fontFamily="@font/harmonyos_sans_black" />
 
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Opening Hours"
-                                android:textColor="@color/text_primary"
-                                android:textSize="20sp"
-                                android:textStyle="bold" />
+                        <LinearLayout
+                            android:id="@+id/hoursContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
 
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:gravity="start"
-                                android:orientation="horizontal">
+                    </LinearLayout>
 
-                                <ImageView
-                                    android:layout_width="20dp"
-                                    android:layout_height="20dp"
-                                    android:layout_marginEnd="16dp"
-                                    android:src="@drawable/ic_calendar"
-                                    app:tint="@color/icon_color" />
-
-                                <LinearLayout
-                                    android:id="@+id/hoursContainer"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:orientation="vertical"
-                                    tools:ignore="UselessLeaf">
-
-                                    <!-- Opening hours will be added dynamically -->
-
-                                </LinearLayout>
-
-                            </LinearLayout>
-
-                        </LinearLayout>
-
-                    </androidx.cardview.widget.CardView>
-
-                    <!-- Reviews Card -->
-                    <androidx.cardview.widget.CardView
+                    <!-- Reviews Section -->
+                    <LinearLayout
                         android:id="@+id/reviewsCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:orientation="vertical"
                         android:layout_marginHorizontal="16dp"
                         android:layout_marginBottom="16dp"
+                        android:paddingHorizontal="20dp"
+                        android:paddingTop="24dp"
+                        android:paddingBottom="32dp"
+                        android:background="@drawable/section_background"
                         android:visibility="gone"
-                        app:cardCornerRadius="12dp"
-                        app:cardElevation="4dp"
                         tools:visibility="visible">
 
-                        <LinearLayout
+                        <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="20dp">
+                            android:layout_marginBottom="16dp"
+                            android:text="Reviews"
+                            android:textColor="@color/black"
+                            android:textSize="20sp"
+                            android:fontFamily="@font/harmonyos_sans_black" />
 
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Reviews"
-                                android:textColor="@color/text_primary"
-                                android:textSize="20sp"
-                                android:textStyle="bold" />
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/reviewsRecyclerView"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false"
+                            tools:itemCount="2"
+                            tools:listitem="@layout/item_review" />
 
-                            <androidx.recyclerview.widget.RecyclerView
-                                android:id="@+id/reviewsRecyclerView"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="16dp"
-                                android:nestedScrollingEnabled="false"
-                                tools:itemCount="2"
-                                tools:listitem="@layout/item_review" />
+                    </LinearLayout>
 
-                        </LinearLayout>
+                    <!-- Cache indicator -->
+                    <TextView
+                        android:id="@+id/cacheIndicator"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_margin="16dp"
+                        android:background="@color/light_gray"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="6dp"
+                        android:text="Cached Data"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:fontFamily="@font/harmonyos_sans_regular"
+                        android:visibility="gone" />
 
-                    </androidx.cardview.widget.CardView>
+                    <!-- Price Level (hidden but keep for compatibility) -->
+                    <TextView
+                        android:id="@+id/priceLevel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone"
+                        tools:text="$$" />
+
+                    <!-- Price Level Container (keep for compatibility) -->
+                    <LinearLayout
+                        android:id="@+id/priceLevelContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:visibility="gone" />
+
+                    <!-- Bottom Spacing -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="80dp" />
 
                 </LinearLayout>
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
+            </LinearLayout>
 
-        </androidx.core.widget.NestedScrollView>
+        </ScrollView>
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
+    <!-- Close Button -->
     <ImageButton
         android:id="@+id/closeButton"
-        android:layout_width="34dp"
-        android:layout_height="34dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:layout_gravity="top|end"
         android:layout_margin="16dp"
+        android:backgroundTint="#757575"
+        android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Close"
-        android:elevation="8dp"
         android:src="@drawable/ic_close"
         android:scaleType="centerInside"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:padding="12dp" />
+        android:padding="8dp" />
 
 </FrameLayout>
