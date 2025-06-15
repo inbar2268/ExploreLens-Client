@@ -60,6 +60,8 @@
                         android:paddingHorizontal="20dp"
                         android:paddingTop="16dp"
                         android:paddingBottom="16dp">
+                        android:paddingTop="32dp"
+                        android:paddingBottom="24dp">
 
                         <!-- Place Name and Rating Row -->
                         <LinearLayout
