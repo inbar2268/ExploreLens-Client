@@ -77,7 +77,7 @@ class ARLayerManager(private val context: Context) {
         cameraPose: Pose,
         frame: Frame
     ) {
-        val maxDistanceMeters = 500f
+        val maxDistanceMeters = 50f
         val fovDegrees = 50f
 
         currentlyVisibleLabels.clear()
