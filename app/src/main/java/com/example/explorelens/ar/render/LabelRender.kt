@@ -202,10 +202,10 @@ class LabelRender {
       ).asFloatBuffer().apply {
         put(
           floatArrayOf(
-            -1.0f, -0.6f, // Bottom left
-            1.0f, -0.6f,  // Bottom right
-            -1.0f, 0.6f,  // Top left
-            1.0f, 0.6f,   // Top right
+            -1.2f, -0.6f, // Bottom left
+            1.2f, -0.6f,  // Bottom right
+            -1.2f, 0.6f,  // Top left
+            1.2f, 0.6f,   // Top right
           )
         )
         position(0)
