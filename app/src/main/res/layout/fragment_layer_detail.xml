@@ -53,7 +53,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:visibility="gone"
+                    android:visibility="visible"
+                    android:background="#20FF0000"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
@@ -63,9 +64,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_margin="16dp"
+                        android:background="#00FF00"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="4dp">
-
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -433,18 +434,17 @@
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-    <!-- Floating X Close Button -->
     <ImageButton
         android:id="@+id/closeButton"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_gravity="top|end"
         android:layout_margin="16dp"
+        android:background="@android:color/black"
         android:contentDescription="Close"
         android:elevation="8dp"
-        android:src="@drawable/ic_close"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
         android:scaleType="centerInside"
-        android:padding="12dp"
-        app:tint="@color/white" />
+        android:padding="12dp" />
 
 </FrameLayout>

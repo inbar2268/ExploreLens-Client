@@ -52,47 +52,70 @@ class LayerDetailFragment : Fragment() {
 
         // Set the place ID from navigation arguments
         if (placeId.isNotEmpty()) {
+            Log.d("LayerDetailFragment", "Setting placeId: $placeId")
             viewModel.setPlaceId(placeId)
         } else {
+            Log.e("LayerDetailFragment", "No place ID provided")
             showError("No place ID provided")
         }
     }
 
     private fun initializeComponents() {
-        viewModel = ViewModelProvider(this)[LayerDetailViewModel::class.java]
+        Log.d("LayerDetailFragment", "initializeComponents called")
 
-        // Setup reviews RecyclerView
-        reviewsAdapter = ReviewsAdapter()
-        binding.reviewsRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = reviewsAdapter
+        try {
+            viewModel = ViewModelProvider(this)[LayerDetailViewModel::class.java]
+            Log.d("LayerDetailFragment", "ViewModel created successfully")
+
+            // Setup reviews RecyclerView
+            reviewsAdapter = ReviewsAdapter()
+            _binding?.let { binding ->
+                binding.reviewsRecyclerView.apply {
+                    layoutManager = LinearLayoutManager(context)
+                    adapter = reviewsAdapter
+                }
+                Log.d("LayerDetailFragment", "RecyclerView setup complete")
+            } ?: Log.e("LayerDetailFragment", "Binding is null in initializeComponents")
+
+        } catch (e: Exception) {
+            Log.e("LayerDetailFragment", "Error in initializeComponents", e)
         }
     }
 
     private fun setupObservers() {
+        Log.d("LayerDetailFragment", "Setting up observers")
+
         // Place detail state observer
         viewModel.placeDetailState.observe(viewLifecycleOwner) { state ->
-            _binding?.let {
+            Log.d("LayerDetailFragment", "PlaceDetailState changed: $state")
+
+            _binding?.let { binding ->
                 when (state) {
                     is LayerDetailViewModel.PlaceDetailState.Loading -> {
+                        Log.d("LayerDetailFragment", "Showing loading state")
                         showLoading()
                     }
                     is LayerDetailViewModel.PlaceDetailState.Success -> {
+                        Log.d("LayerDetailFragment", "Showing success state for place: ${state.place.name}")
                         hideLoading()
                         displayPlaceDetails(state.place)
                         showCacheIndicator(state.isFromCache)
                     }
                     is LayerDetailViewModel.PlaceDetailState.Error -> {
+                        Log.e("LayerDetailFragment", "Showing error state: ${state.message}")
                         hideLoading()
                         showError(state.message)
                         ToastHelper.showShortToast(requireContext(), state.message)
                     }
                 }
+            } ?: run {
+                Log.e("LayerDetailFragment", "Binding is null when trying to update UI")
             }
         }
 
         // Refresh state observer
         viewModel.isRefreshing.observe(viewLifecycleOwner) { isRefreshing ->
+            Log.d("LayerDetailFragment", "Refresh state: $isRefreshing")
             _binding?.let {
                 binding.swipeRefresh.isRefreshing = isRefreshing
             }
@@ -128,32 +151,74 @@ class LayerDetailFragment : Fragment() {
     }
 
     private fun displayPlaceDetails(place: Place) {
-        binding.apply {
-            // Show content container
-            contentContainer.visibility = View.VISIBLE
+        Log.d("LayerDetailFragment", "displayPlaceDetails called for: ${place.name}")
 
-            // Basic information
-            placeName.text = place.name
-            placeType.text = formatPlaceType(place.type)
-            ratingValue.text = String.format("%.1f", place.rating)
+        _binding?.let { binding ->
+            binding.apply {
+                // Show content container FIRST
+                contentContainer.visibility = View.VISIBLE
+                Log.d("LayerDetailFragment", "ContentContainer visibility set to VISIBLE")
 
-            // Editorial summary
-            if (!place.editorialSummary.isNullOrEmpty()) {
-                editorialSummary.text = place.editorialSummary
-                editorialSummary.visibility = View.VISIBLE
-            } else {
-                editorialSummary.visibility = View.GONE
+                // Debug: Check all container visibilities immediately
+                Log.d("LayerDetailFragment", "=== VISIBILITY CHECK ===")
+                Log.d("LayerDetailFragment", "contentContainer.visibility = ${contentContainer.visibility} (should be 0)")
+                Log.d("LayerDetailFragment", "progressBar.visibility = ${progressBar.visibility} (should be 8)")
+                Log.d("LayerDetailFragment", "errorMessage.visibility = ${errorMessage.visibility} (should be 8)")
+                Log.d("LayerDetailFragment", "swipeRefresh.visibility = ${swipeRefresh.visibility} (should be 0)")
+
+                // Basic information
+                placeName.text = place.name
+                placeType.text = formatPlaceType(place.type)
+                ratingValue.text = String.format("%.1f", place.rating)
+
+                Log.d("LayerDetailFragment", "=== TEXT SET ===")
+                Log.d("LayerDetailFragment", "placeName.text = '${placeName.text}'")
+                Log.d("LayerDetailFragment", "placeType.text = '${placeType.text}'")
+                Log.d("LayerDetailFragment", "ratingValue.text = '${ratingValue.text}'")
+
+                // Editorial summary
+                if (!place.editorialSummary.isNullOrEmpty()) {
+                    editorialSummary.text = place.editorialSummary
+                    editorialSummary.visibility = View.VISIBLE
+                    Log.d("LayerDetailFragment", "editorialSummary.text = '${editorialSummary.text}'")
+                    Log.d("LayerDetailFragment", "editorialSummary.visibility = ${editorialSummary.visibility}")
+                } else {
+                    editorialSummary.visibility = View.GONE
+                    Log.d("LayerDetailFragment", "No editorial summary")
+                }
+
+                // Contact information
+                setupContactInfo(place)
+
+                // Opening hours
+                setupOpeningHours(place)
+
+                // Reviews
+                setupReviews(place)
+
+                // POST LAYOUT DEBUG - Check dimensions after layout
+                contentContainer.post {
+                    Log.d("LayerDetailFragment", "=== POST-LAYOUT DIMENSIONS ===")
+                    Log.d("LayerDetailFragment", "contentContainer: ${contentContainer.width}x${contentContainer.height}")
+                    Log.d("LayerDetailFragment", "contentContainer.visibility = ${contentContainer.visibility}")
+                    Log.d("LayerDetailFragment", "swipeRefresh: ${swipeRefresh.width}x${swipeRefresh.height}")
+                    Log.d("LayerDetailFragment", "root: ${root.width}x${root.height}")
+
+                    // Check if any parent views are hiding content
+                    var parent = contentContainer.parent
+                    var level = 1
+                    while (parent != null && level < 5) {
+                        if (parent is View) {
+                            Log.d("LayerDetailFragment", "Parent $level: ${parent.javaClass.simpleName} - ${parent.width}x${parent.height}, visibility=${parent.visibility}")
+                        }
+                        parent = parent.parent
+                        level++
+                    }
+                }
+
+                Log.d("LayerDetailFragment", "Finished displaying place details")
             }
-
-            // Contact information
-            setupContactInfo(place)
-
-            // Opening hours
-            setupOpeningHours(place)
-
-            // Reviews
-            setupReviews(place)
-        }
+        } ?: Log.e("LayerDetailFragment", "Binding is null in displayPlaceDetails")
     }
 
     private fun setupContactInfo(place: Place) {
@@ -250,15 +315,23 @@ class LayerDetailFragment : Fragment() {
     }
 
     private fun showLoading() {
-        binding.apply {
-            progressBar.visibility = View.VISIBLE
-            contentContainer.visibility = View.GONE
-            errorMessage.visibility = View.GONE
-        }
+        Log.d("LayerDetailFragment", "showLoading called")
+        _binding?.let { binding ->
+            binding.apply {
+                progressBar.visibility = View.VISIBLE
+                contentContainer.visibility = View.GONE
+                errorMessage.visibility = View.GONE
+                Log.d("LayerDetailFragment", "Loading state set - progress visible, content/error gone")
+            }
+        } ?: Log.e("LayerDetailFragment", "Binding is null in showLoading")
     }
 
     private fun hideLoading() {
-        binding.progressBar.visibility = View.GONE
+        Log.d("LayerDetailFragment", "hideLoading called")
+        _binding?.let { binding ->
+            binding.progressBar.visibility = View.GONE
+            Log.d("LayerDetailFragment", "Progress bar hidden")
+        } ?: Log.e("LayerDetailFragment", "Binding is null in hideLoading")
     }
 
     private fun showError(message: String) {

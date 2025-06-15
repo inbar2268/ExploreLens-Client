@@ -1,6 +1,7 @@
 package com.example.explorelens.ui.places
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -81,8 +82,19 @@ class LayerDetailViewModel(application: Application) : AndroidViewModel(applicat
      * Set the place ID to fetch details for
      */
     fun setPlaceId(placeId: String) {
+        Log.d("LayerDetailViewModel", "setPlaceId called with: $placeId")
+
         if (_placeId.value != placeId) {
             _placeId.value = placeId
+            Log.d("LayerDetailViewModel", "PlaceId set to: $placeId")
+
+            // Debug: Test mock place creation
+            if (placeId.startsWith("mock_")) {
+                val mockPlace = createMockPlace(placeId)
+                Log.d("LayerDetailViewModel", "Mock place created: ${mockPlace?.name ?: "null"}")
+            }
+        } else {
+            Log.d("LayerDetailViewModel", "PlaceId unchanged: $placeId")
         }
     }
 

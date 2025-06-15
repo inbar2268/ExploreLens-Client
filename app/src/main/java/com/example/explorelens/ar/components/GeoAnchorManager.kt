@@ -276,38 +276,19 @@ class GeoAnchorManager(
             activity.runOnUiThread {
                 val fragment = LayerDetailFragment.newInstance(placeId)
 
-                if (activity is FragmentActivity) {
-                    // Hide the AR view temporarily
-                    view.root.visibility = android.view.View.GONE
+                // Hide the AR view
+                view.root.visibility = android.view.View.GONE
 
-                    // Get the main content view
-                    val contentView = activity.findViewById<android.view.ViewGroup>(android.R.id.content)
+                // Add fragment directly to the main content container
+                activity.supportFragmentManager.beginTransaction()
+                    .add(android.R.id.content, fragment, "LayerDetailFragment")
+                    .addToBackStack("LayerDetail")
+                    .commitAllowingStateLoss()
 
-                    // Create a fragment container if it doesn't exist
-                    var fragmentContainer = activity.findViewById<android.view.ViewGroup>(R.id.fragment_container)
-
-                    if (fragmentContainer == null) {
-                        fragmentContainer = android.widget.FrameLayout(activity).apply {
-                            id = android.view.View.generateViewId()
-                            layoutParams = android.view.ViewGroup.LayoutParams(
-                                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                                android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                            tag = "fragment_container"
-                        }
-                        contentView.addView(fragmentContainer)
-                    }
-
-                    activity.supportFragmentManager.beginTransaction()
-                        .replace(fragmentContainer.id, fragment, "LayerDetailFragment")
-                        .addToBackStack("LayerDetail")
-                        .commit()
-
-                    Log.d(TAG, "Showed LayerDetailFragment as full screen for placeId: $placeId")
-                }
+                Log.d(TAG, "Added LayerDetailFragment directly to content for placeId: $placeId")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing full screen LayerDetailFragment", e)
+            Log.e(TAG, "Error showing LayerDetailFragment", e)
             callback?.showSnackbar("Error opening place details")
         }
     }
