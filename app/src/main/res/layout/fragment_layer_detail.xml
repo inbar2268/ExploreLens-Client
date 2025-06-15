@@ -54,7 +54,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:visibility="visible"
-                    android:background="#20FF0000"
+                    android:background="#00FFFFFF"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
@@ -64,7 +64,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_margin="16dp"
-                        android:background="#00FF00"
+                        android:background="#D0D7D0"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="4dp">
                         <LinearLayout
@@ -281,8 +281,8 @@
                                     android:layout_width="20dp"
                                     android:layout_height="20dp"
                                     android:layout_marginEnd="16dp"
-                                    android:src="@drawable/ic_calendar"
-                                    app:tint="@color/success_color" />
+                                    android:src="@drawable/ic_clock"
+                                    app:tint="@color/icon_color" />
 
                                 <TextView
                                     android:id="@+id/openStatus"
@@ -436,15 +436,15 @@
 
     <ImageButton
         android:id="@+id/closeButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
         android:layout_gravity="top|end"
         android:layout_margin="16dp"
-        android:background="@android:color/black"
         android:contentDescription="Close"
         android:elevation="8dp"
-        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:src="@drawable/ic_close"
         android:scaleType="centerInside"
+        android:background="?attr/selectableItemBackgroundBorderless"
         android:padding="12dp" />
 
 </FrameLayout>
