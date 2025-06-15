@@ -322,25 +322,4 @@ class AppRenderer(
     fun getNearbyPlacesForAR() {
         geoAnchorManager.startDistanceMonitoring()
     }
-
-    private fun createSiteHistoryForDetectedObject(
-        result: ImageAnalyzedResult,
-        location: Location?
-    ) {
-        networkScope.launch { // Or
-            val currentLocation = location ?: geoLocationUtils.getSingleCurrentLocation()
-            currentLocation?.let {
-                geoLocationUtils.updateLocation(it)
-                val geoHash = geoLocationUtils.getGeoHash() ?: ""
-                siteHistoryViewModel.createSiteHistory(
-                    siteInfoId = result.siteInfoId,
-                    currentLocation
-                )
-                Log.d(
-                    TAG,
-                    "Saved site history with geoHash: $geoHash, lat: ${currentLocation.latitude}, long: ${currentLocation.longitude}"
-                )
-            }
-        }
-    }
 }

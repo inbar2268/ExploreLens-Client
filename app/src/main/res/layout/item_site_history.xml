@@ -26,7 +26,7 @@
             android:adjustViewBounds="true"
             android:contentDescription="Site image"
             app:shapeAppearanceOverlay="@style/RoundedImageStyle"
-            tools:src="@drawable/eiffel" />
+            tools:src="@drawable/noimage" />
 
         <!-- Site name and location icon in same row with proper alignment -->
         <LinearLayout
@@ -43,7 +43,7 @@
                 android:layout_width="12dp"
                 android:layout_height="12dp"
                 android:src="@drawable/ic_location"
-                app:tint="#2682D9"
+                app:tint="@color/light_blue"
             android:contentDescription="Location icon" />
 
             <TextView

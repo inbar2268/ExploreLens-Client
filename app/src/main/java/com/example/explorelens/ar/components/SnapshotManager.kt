@@ -122,9 +122,11 @@ public class SnapshotManager(
                 label = "full-image",
                 x = 0.5f,
                 y = 0.5f,
-                siteName = "Colosseum"
+                siteName = "Taj Mahal"
+                        //siteName = "Colosseum"
             ),
-            siteInfoId = "6818fd47b249f52360e546ec",
+            //siteInfoId = "6818fd47b249f52360e546ec",
+            siteInfoId = "68264c65600fc819f657de91",
         )
 
         networkScope.launch {
