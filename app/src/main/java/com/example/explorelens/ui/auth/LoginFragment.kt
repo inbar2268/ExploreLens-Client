@@ -72,7 +72,7 @@ class LoginFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupGoogleSignIn()
-        checkExistingLogin()
+       // checkExistingLogin()
         setupListeners()
     }
 

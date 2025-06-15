@@ -56,10 +56,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:layout_margin="16dp"
+                        android:layout_margin="24dp"
                         android:paddingHorizontal="20dp"
-                        android:paddingTop="24dp"
-                        android:paddingBottom="24dp">
+                        android:paddingTop="16dp"
+                        android:paddingBottom="16dp">
 
                         <!-- Place Name and Rating Row -->
                         <LinearLayout
@@ -76,7 +76,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:textColor="@color/black"
-                                android:textSize="28sp"
+                                android:textSize="22sp"
                                 android:fontFamily="@font/harmonyos_sans_black"
                                 android:lineSpacingMultiplier="1.1"
                                 tools:text="Mock Coffee Corner" />
@@ -94,7 +94,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginEnd="6dp"
                                     android:textColor="@color/black"
-                                    android:textSize="18sp"
+                                    android:textSize="16sp"
                                     android:fontFamily="@font/harmonyos_sans_black"
                                     tools:text="4.2" />
 
@@ -113,9 +113,9 @@
                             android:id="@+id/placeType"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="16dp"
+                            android:layout_marginBottom="12dp"
                             android:textColor="@color/text_secondary"
-                            android:textSize="16sp"
+                            android:textSize="12sp"
                             android:fontFamily="@font/harmonyos_sans_regular"
                             tools:text="Cafe" />
 
@@ -126,7 +126,7 @@
                             android:layout_height="wrap_content"
                             android:lineSpacingMultiplier="1.4"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp"
+                            android:textSize="12sp"
                             android:fontFamily="@font/harmonyos_sans_regular"
                             android:visibility="gone"
                             tools:text="A cozy neighborhood coffee shop with excellent espresso and fresh pastries. Perfect for working or catching up with friends."
@@ -174,7 +174,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:textColor="@color/text_primary"
-                                android:textSize="16sp"
+                                android:textSize="12sp"
                                 android:fontFamily="@font/harmonyos_sans_regular"
                                 tools:text="1 Mock Road, Hod Hasharon" />
 
@@ -208,7 +208,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:textColor="@color/blue"
-                                android:textSize="16sp"
+                                android:textSize="12sp"
                                 android:fontFamily="@font/harmonyos_sans_regular"
                                 tools:text="www.mockcoffee.com" />
 
@@ -241,7 +241,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:textColor="@color/text_primary"
-                                android:textSize="16sp"
+                                android:textSize="12sp"
                                 android:fontFamily="@font/harmonyos_sans_regular"
                                 tools:text="050-1112233" />
 
@@ -271,7 +271,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:textColor="@color/text_primary"
-                                android:textSize="16sp"
+                                android:textSize="12sp"
                                 android:fontFamily="@font/harmonyos_sans_regular"
                                 tools:text="Open now" />
 
@@ -299,7 +299,7 @@
                             android:layout_marginBottom="16dp"
                             android:text="Opening Hours"
                             android:textColor="@color/black"
-                            android:textSize="20sp"
+                            android:textSize="14sp"
                             android:fontFamily="@font/harmonyos_sans_black" />
 
                         <LinearLayout
@@ -331,7 +331,7 @@
                             android:layout_marginBottom="16dp"
                             android:text="Reviews"
                             android:textColor="@color/black"
-                            android:textSize="20sp"
+                            android:textSize="14sp"
                             android:fontFamily="@font/harmonyos_sans_black" />
 
                         <androidx.recyclerview.widget.RecyclerView
@@ -394,12 +394,11 @@
         android:id="@+id/closeButton"
         android:layout_width="32dp"
         android:layout_height="32dp"
-        android:layout_gravity="top|end"
+        android:layout_gravity="top|start"
         android:layout_margin="16dp"
-        android:backgroundTint="#757575"
-        android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Close"
-        android:src="@drawable/ic_close"
+        android:background="@drawable/rounded_button_background"
+        android:src="@drawable/ic_back"
         android:scaleType="centerInside"
         android:padding="8dp" />
 
