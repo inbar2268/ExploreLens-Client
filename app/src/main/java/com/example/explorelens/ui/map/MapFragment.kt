@@ -87,7 +87,7 @@ class MapFragment : Fragment() {
 
         if (isSatelliteView) {
             googleMap.mapType = GoogleMap.MAP_TYPE_SATELLITE
-            satelliteToggleFab.setImageResource(R.drawable.ic_map) // Switch to map icon
+            satelliteToggleFab.setImageResource(R.drawable.ic_map_filled) // Switch to map icon
             satelliteToggleFab.contentDescription = "Switch to normal view"
         } else {
             googleMap.mapType = GoogleMap.MAP_TYPE_NORMAL

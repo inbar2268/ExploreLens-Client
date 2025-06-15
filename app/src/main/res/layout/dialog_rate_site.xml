@@ -72,7 +72,7 @@
             android:id="@+id/submitRatingButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/submit_button_background"
+            android:background="@drawable/bg_button_primary"
             android:paddingVertical="10dp"
             android:text="Submit"
             android:textColor="#FFFFFF"

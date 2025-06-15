@@ -568,8 +568,8 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
             try {
                 Glide.with(requireContext())
                     .load(imageUrl)
-                    .placeholder(R.drawable.eiffel)
-                    .error(R.drawable.eiffel)
+                    .placeholder(R.drawable.placeholder_landmark)
+                    .error(R.drawable.placeholder_landmark)
                     .into(headerBackground)
             } catch (e: Exception) {
                 Log.e("SiteDetailsFragment", "Error loading image: ${e.message}", e)

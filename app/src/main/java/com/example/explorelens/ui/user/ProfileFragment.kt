@@ -116,7 +116,9 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
 
     private fun setupListeners() {
         binding.settingsButton.setOnClickListener {
-            findNavController().navigate(R.id.action_profileFragment_to_settingsFragment)
+            if (isAdded) {
+                findNavController().navigate(R.id.action_profileFragment_to_settingsFragment)
+            }
         }
 
         binding.swipeRefresh.setOnRefreshListener {
@@ -128,13 +130,15 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
         val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation)
         bottomNav.setOnItemReselectedListener { menuItem ->
             if (menuItem.itemId == R.id.profileFragment) {
-                val navController = findNavController()
-                val currentDestinationId = navController.currentDestination?.id
-                if (currentDestinationId != R.id.profileFragment) {
-                    navController.popBackStack(R.id.profileFragment, false)
-                } else {
-                    // Refresh data when user taps profile tab again
-                    viewModel.refreshAllData()
+                if (isAdded) {
+                    val navController = findNavController()
+                    val currentDestinationId = navController.currentDestination?.id
+                    if (currentDestinationId != R.id.profileFragment) {
+                        navController.popBackStack(R.id.profileFragment, false)
+                    } else {
+                        // Refresh data when user taps profile tab again
+                        viewModel.refreshAllData()
+                    }
                 }
             }
         }
@@ -149,5 +153,7 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
         super.onDestroyView()
         mapManager.cleanup() // Clean up map state
         _binding = null
+        val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        bottomNav.setOnItemReselectedListener(null)
     }
 }

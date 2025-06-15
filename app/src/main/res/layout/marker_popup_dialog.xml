@@ -114,7 +114,7 @@
                 android:textStyle="bold"
                 android:layout_marginTop="4dp"
                 android:text="View Details"
-                android:backgroundTint="#10B5C7"
+                android:backgroundTint="@color/light_blue"
                 android:textColor="#FFFFFF"
                 android:background="@drawable/submit_button_background"
                 android:fontFamily="@font/harmonyos_sans_regular" />
