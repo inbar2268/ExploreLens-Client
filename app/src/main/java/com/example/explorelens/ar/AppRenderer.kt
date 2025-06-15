@@ -132,13 +132,24 @@ class AppRenderer(
 
             override fun onLayerLabelClicked(layerLabel: ARLayerManager.LayerLabelInfo) {
                 val placeName = layerLabel.placeInfo["name"] as? String ?: "Unknown Place"
+                val placeId = layerLabel.placeInfo["place_id"] as? String
+
                 Log.d(TAG, "Layer label clicked: $placeName")
+
+                // Navigate to place details when layer label is clicked
+                if (!placeId.isNullOrEmpty()) {
+                    Log.d(TAG, "Navigating to place details for: $placeId")
+                    geoAnchorManager.onAnchorTapped(placeId)
+                } else {
+                    Log.w(TAG, "No place ID found for clicked layer label")
+                }
             }
 
             override fun onLayerLabelClosed(layerLabel: ARLayerManager.LayerLabelInfo) {
             }
         })
 
+        // Updated GeoAnchorManager callback with all required methods
         geoAnchorManager.setCallback(object : GeoAnchorManager.GeoAnchorCallback {
             override fun onPlacesReceived(places: List<PointOfInterest>) {
                 Log.d(TAG, "Received ${places.size} places from GeoAnchorManager")
@@ -158,6 +169,13 @@ class AppRenderer(
 
             override fun showSnackbar(message: String) {
                 this@AppRenderer.showSnackbar(message)
+            }
+
+            // ADD THIS MISSING METHOD
+            override fun navigateToPlaceDetails(placeId: String) {
+                Log.d(TAG, "AppRenderer: Delegating navigation to ArActivity for place: $placeId")
+                // Delegate to the ArActivity which implements the actual navigation
+                (activity as? GeoAnchorManager.GeoAnchorCallback)?.navigateToPlaceDetails(placeId)
             }
         })
 

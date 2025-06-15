@@ -142,6 +142,19 @@
         android:id="@+id/action_siteHistoryFragment_to_siteDetailsFragment"
         app:destination="@id/siteDetailsFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/layerDetailFragment"
+        android:name="com.example.explorelens.ui.places.LayerDetailFragment"
+        android:label="Place Details"
+        tools:layout="@layout/fragment_layer_detail">
+
+        <argument
+            android:name="placeId"
+            app:argType="string" />
+
+    </fragment>
+
     <activity
         android:id="@+id/arActivity"
         android:name="com.example.explorelens.ArActivity"

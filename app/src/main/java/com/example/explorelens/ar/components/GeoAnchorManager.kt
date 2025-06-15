@@ -4,13 +4,16 @@ import android.location.Location
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.fragment.app.FragmentActivity
 import com.example.explorelens.ArActivity
+import com.example.explorelens.R
 import com.example.explorelens.ar.ArActivityView
 import com.example.explorelens.ar.render.FilterListManager
 import com.example.explorelens.data.model.PointOfIntrests.GeoLocation
 import com.example.explorelens.data.model.PointOfIntrests.OpeningHours
 import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
 import com.example.explorelens.data.repository.NearbyPlacesRepository
+import com.example.explorelens.ui.places.LayerDetailFragment
 import com.example.explorelens.utils.GeoLocationUtils
 import com.google.ar.core.Config
 import com.google.ar.core.Session
@@ -44,12 +47,16 @@ class GeoAnchorManager(
     private var shouldPlaceGeoAnchors = false
     private var pendingPlaces: List<PointOfInterest>? = null
 
+    // Use singleton repository instance
+    private val nearbyPlacesRepository = NearbyPlacesRepository.getInstance(activity)
+
     interface GeoAnchorCallback {
         fun onPlacesReceived(places: List<PointOfInterest>)
         fun onPlacesError(message: String)
         fun onGeoAnchorPlaced(placeId: String, placeName: String)
         fun onGeospatialNotSupported()
         fun showSnackbar(message: String)
+        fun navigateToPlaceDetails(placeId: String) // Add navigation callback
     }
 
     private var callback: GeoAnchorCallback? = null
@@ -57,6 +64,7 @@ class GeoAnchorManager(
     fun setCallback(callback: GeoAnchorCallback) {
         this.callback = callback
     }
+
     private val handler = Handler(Looper.getMainLooper())
     private val locationDistanceChecker = object : Runnable {
         override fun run() {
@@ -74,7 +82,6 @@ class GeoAnchorManager(
                         lastFetchedLocation = currentLocation
                     }
                 } else if (currentLocation != null && lastLocation == null) {
-
                     lastFetchedLocation = currentLocation
                     getNearbyPlacesForAR()
                 }
@@ -99,9 +106,8 @@ class GeoAnchorManager(
         handler.removeCallbacks(locationDistanceChecker)
     }
 
-
     fun getNearbyPlacesForAR() {
-        val  categories =FilterListManager.getAllFilters()
+        val categories = FilterListManager.getAllFilters()
         Log.d(TAG, "Fetching nearby places for AR...")
         Log.d(TAG, "Selected Filters: $categories")
 
@@ -114,7 +120,6 @@ class GeoAnchorManager(
         }
 
         networkScope.launch {
-
             val currentLocation = getLocationOptimized()
             Log.d(TAG, "Location result: $currentLocation")
 
@@ -127,8 +132,9 @@ class GeoAnchorManager(
             }
 
             geoLocationUtils.updateLocation(currentLocation)
-            val repository = NearbyPlacesRepository()
-            val result = repository.fetchNearbyPlaces(
+
+            // Use the singleton repository instance
+            val result = nearbyPlacesRepository.fetchNearbyPlaces(
                 currentLocation.latitude,
                 currentLocation.longitude,
                 categories
@@ -160,14 +166,14 @@ class GeoAnchorManager(
 
     private fun createMockPointsOfInterest(): List<PointOfInterest> {
         // Using Hod Hasharon coordinates as a base for mock data
-        val baseLat = 32.142845
-        val baseLng = 34.887489
+        val baseLat = 31.928319
+        val baseLng = 34.784890
 
-        return listOf(
+        val mockPlaces = listOf(
             PointOfInterest(
                 id = "mock_cafe_123",
                 name = "Mock Coffee Corner",
-                location =  GeoLocation(lat = baseLat + 0.000008, lng = baseLng + 0.000008),
+                location = GeoLocation(lat = baseLat + 0.000008, lng = baseLng + 0.000008),
                 rating = 4.2F,
                 type = "cafe",
                 address = "1 Mock Road, Hod Hasharon",
@@ -179,18 +185,18 @@ class GeoAnchorManager(
             PointOfInterest(
                 id = "mock_museum_456",
                 name = "Virtual History Museum",
-                location = GeoLocation(lat = baseLat, lng = baseLng ),
+                location = GeoLocation(lat = baseLat, lng = baseLng),
                 rating = 4.8F,
                 type = "museum",
                 address = "789 Pixel Lane, Hod Hasharon",
-                phoneNumber = "bull",
+                phoneNumber = "null",
                 businessStatus = "OPERATIONAL",
                 openingHours = OpeningHours(false, listOf("Mon-Sun: 10 AM - 5 PM (Closed on holidays)")),
                 elevation = 15.0
             )
         )
+        return mockPlaces
     }
-
 
     fun handleGeoAnchorPlacement(session: Session): Boolean {
         val earth = session.earth
@@ -253,6 +259,37 @@ class GeoAnchorManager(
             layerManager.addLayerLabel(anchor, placeMap)
 
             callback?.onGeoAnchorPlaced(point.id, point.name)
+        }
+    }
+
+    /**
+     * Call this when user taps on an AR anchor to navigate to place details
+     */
+    fun onAnchorTapped(placeId: String) {
+        Log.d(TAG, "Anchor tapped for place: $placeId")
+        //callback?.navigateToPlaceDetails(placeId)
+        showLayerDetailAsFullScreen(placeId)
+    }
+
+    private fun showLayerDetailAsFullScreen(placeId: String) {
+        try {
+            activity.runOnUiThread {
+                val fragment = LayerDetailFragment.newInstance(placeId)
+
+                // Hide the AR view
+                view.root.visibility = android.view.View.GONE
+
+                // Add fragment directly to the main content container
+                activity.supportFragmentManager.beginTransaction()
+                    .add(android.R.id.content, fragment, "LayerDetailFragment")
+                    .addToBackStack("LayerDetail")
+                    .commitAllowingStateLoss()
+
+                Log.d(TAG, "Added LayerDetailFragment directly to content for placeId: $placeId")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing LayerDetailFragment", e)
+            callback?.showSnackbar("Error opening place details")
         }
     }
 
@@ -322,8 +359,6 @@ class GeoAnchorManager(
             (cos(halfAngle)).toFloat()  // w
         )
     }
-
-
 
     fun clearLocationCache() {
         locationCache.clear()
