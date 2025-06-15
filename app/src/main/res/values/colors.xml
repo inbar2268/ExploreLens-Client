@@ -32,6 +32,7 @@
   <color name="filter">#3373F2</color>
   <color name="dialog_cancel_text">#262626</color>
   <color name="dialog_logout_text">#FFFFFF</color>
+  <color name="gray_light">#E0E0E0</color>
 
 
   <color name="light_blue">#87BFE0</color>

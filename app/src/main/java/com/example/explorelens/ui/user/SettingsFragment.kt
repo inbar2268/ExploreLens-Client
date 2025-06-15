@@ -54,8 +54,7 @@ class SettingsFragment : Fragment() {
         }
 
         binding.changePasswordRow.setOnClickListener {
-            // Navigate to change password screen
-            // Example: startActivity(Intent(requireContext(), ChangePasswordActivity::class.java))
+            findNavController().navigate(R.id.action_settingsFragment_to_changePasswordFragment)
         }
 
         binding.deleteAccountRow.setOnClickListener {
@@ -75,8 +74,28 @@ class SettingsFragment : Fragment() {
         }
 
         loadCurrentMapType()
+        checkGoogleSignInStatus()
 
         return view
+    }
+
+    private fun checkGoogleSignInStatus() {
+        lifecycleScope.launch {
+            try {
+                // Check if user is signed with Google from stored token data
+                val isSignedWithGoogle = tokenManager.isSignedWithGoogle()
+
+                // Hide/show change password option based on Google sign-in status
+                binding.changePasswordRow.visibility = if (isSignedWithGoogle) {
+                    View.GONE
+                } else {
+                    View.VISIBLE
+                }
+            } catch (e: Exception) {
+                // If there's an error checking the status, show the option by default
+                binding.changePasswordRow.visibility = View.VISIBLE
+            }
+        }
     }
 
     private fun showDeleteUserDialog() {
