@@ -3,15 +3,18 @@ package com.example.explorelens.ui.places
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.setFragmentResult
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.explorelens.ArActivity
 import com.example.explorelens.R
 import com.example.explorelens.common.helpers.ToastHelper
 import com.example.explorelens.data.db.places.Place
@@ -45,6 +48,7 @@ class LayerDetailFragment : Fragment() {
         initializeComponents()
         setupObservers()
         setupListeners()
+        setupArActivityCommunication()
 
         // Set the place ID from navigation arguments
         if (placeId.isNotEmpty()) {
@@ -324,12 +328,6 @@ class LayerDetailFragment : Fragment() {
             ToastHelper.showShortToast(requireContext(), "Cannot open maps")
         }
     }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-    }
-
     companion object {
         /**
          * Helper function to create a new instance with placeId
@@ -341,5 +339,52 @@ class LayerDetailFragment : Fragment() {
                 }
             }
         }
+    }
+    private fun setupArActivityCommunication() {
+        // If you don't have a toolbar, add a close button to your layout
+        binding.closeButton?.setOnClickListener {
+            closeFragment()
+        }
+
+        // Handle system back button
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    closeFragment()
+                }
+            }
+        )
+    }
+
+    /**
+     * Close the fragment and return to AR view
+     */
+    private fun closeFragment() {
+        try {
+            // Send result to ArActivity
+            setFragmentResult("layer_detail_closed", Bundle.EMPTY)
+
+            // Remove this fragment
+            parentFragmentManager.beginTransaction()
+                .remove(this)
+                .commit()
+
+            Log.d("LayerDetailFragment", "Fragment closed successfully")
+
+        } catch (e: Exception) {
+            Log.e("LayerDetailFragment", "Error closing fragment", e)
+            // Fallback: just pop back stack
+            parentFragmentManager.popBackStack()
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+
+        // Ensure AR view is shown when fragment is destroyed
+        (activity as? ArActivity)?.showArViewSafely()
+
+        _binding = null
     }
 }

@@ -4,13 +4,16 @@ import android.location.Location
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.fragment.app.FragmentActivity
 import com.example.explorelens.ArActivity
+import com.example.explorelens.R
 import com.example.explorelens.ar.ArActivityView
 import com.example.explorelens.ar.render.FilterListManager
 import com.example.explorelens.data.model.PointOfIntrests.GeoLocation
 import com.example.explorelens.data.model.PointOfIntrests.OpeningHours
 import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
 import com.example.explorelens.data.repository.NearbyPlacesRepository
+import com.example.explorelens.ui.places.LayerDetailFragment
 import com.example.explorelens.utils.GeoLocationUtils
 import com.google.ar.core.Config
 import com.google.ar.core.Session
@@ -163,10 +166,10 @@ class GeoAnchorManager(
 
     private fun createMockPointsOfInterest(): List<PointOfInterest> {
         // Using Hod Hasharon coordinates as a base for mock data
-        val baseLat = 31.928302
-        val baseLng = 34.785040
+        val baseLat = 31.928319
+        val baseLng = 34.784890
 
-        return listOf(
+        val mockPlaces = listOf(
             PointOfInterest(
                 id = "mock_cafe_123",
                 name = "Mock Coffee Corner",
@@ -186,12 +189,13 @@ class GeoAnchorManager(
                 rating = 4.8F,
                 type = "museum",
                 address = "789 Pixel Lane, Hod Hasharon",
-                phoneNumber = "bull",
+                phoneNumber = "null",
                 businessStatus = "OPERATIONAL",
                 openingHours = OpeningHours(false, listOf("Mon-Sun: 10 AM - 5 PM (Closed on holidays)")),
                 elevation = 15.0
             )
         )
+        return mockPlaces
     }
 
     fun handleGeoAnchorPlacement(session: Session): Boolean {
@@ -263,7 +267,49 @@ class GeoAnchorManager(
      */
     fun onAnchorTapped(placeId: String) {
         Log.d(TAG, "Anchor tapped for place: $placeId")
-        callback?.navigateToPlaceDetails(placeId)
+        //callback?.navigateToPlaceDetails(placeId)
+        showLayerDetailAsFullScreen(placeId)
+    }
+
+    private fun showLayerDetailAsFullScreen(placeId: String) {
+        try {
+            activity.runOnUiThread {
+                val fragment = LayerDetailFragment.newInstance(placeId)
+
+                if (activity is FragmentActivity) {
+                    // Hide the AR view temporarily
+                    view.root.visibility = android.view.View.GONE
+
+                    // Get the main content view
+                    val contentView = activity.findViewById<android.view.ViewGroup>(android.R.id.content)
+
+                    // Create a fragment container if it doesn't exist
+                    var fragmentContainer = activity.findViewById<android.view.ViewGroup>(R.id.fragment_container)
+
+                    if (fragmentContainer == null) {
+                        fragmentContainer = android.widget.FrameLayout(activity).apply {
+                            id = android.view.View.generateViewId()
+                            layoutParams = android.view.ViewGroup.LayoutParams(
+                                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                            tag = "fragment_container"
+                        }
+                        contentView.addView(fragmentContainer)
+                    }
+
+                    activity.supportFragmentManager.beginTransaction()
+                        .replace(fragmentContainer.id, fragment, "LayerDetailFragment")
+                        .addToBackStack("LayerDetail")
+                        .commit()
+
+                    Log.d(TAG, "Showed LayerDetailFragment as full screen for placeId: $placeId")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing full screen LayerDetailFragment", e)
+            callback?.showSnackbar("Error opening place details")
+        }
     }
 
     private fun createPlaceMap(point: PointOfInterest): Map<String, Any?> {
