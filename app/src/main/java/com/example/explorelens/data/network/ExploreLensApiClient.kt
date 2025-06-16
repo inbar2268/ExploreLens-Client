@@ -26,8 +26,6 @@ object ExploreLensApiClient {
     private lateinit var authInterceptor: AuthInterceptor
     private val commonHeadersInterceptor = CommonHeadersInterceptor()
 
-    private val USE_UNSAFE_CLIENT = true
-
     fun init(context: Context) {
         authInterceptor = AuthInterceptor(context)
     }
@@ -39,68 +37,19 @@ object ExploreLensApiClient {
         }
     }
 
-    private fun createBaseOkHttpClientBuilder(): OkHttpClient.Builder {
-        return OkHttpClient.Builder()
+    private fun getOkHttpClient(authenticated: Boolean): OkHttpClient {
+        val builder = OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
             .addInterceptor(commonHeadersInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
-            .hostnameVerifier(HostnameVerifier { hostname, _ ->
-                hostname == "explorelensserver.cs.colman.ac.il"
-            })
-    }
 
-    fun getUnsafeOkHttpClient(): OkHttpClient {
-        try {
-            val trustAllCerts = arrayOf<TrustManager>(
-                object : X509TrustManager {
-                    override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
-                    override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
-                    override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-                }
-            )
-
-            val sslContext = SSLContext.getInstance("SSL")
-            sslContext.init(null, trustAllCerts, SecureRandom())
-            val sslSocketFactory = sslContext.socketFactory
-
-            return OkHttpClient.Builder()
-                .sslSocketFactory(sslSocketFactory, trustAllCerts[0] as X509TrustManager)
-                .hostnameVerifier { _, _ -> true }
-                .addInterceptor(loggingInterceptor)
-                .addInterceptor(commonHeadersInterceptor)
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
-                .build()
-        } catch (e: Exception) {
-            throw RuntimeException(e)
+        if (authenticated) {
+            builder.addInterceptor(authInterceptor)
         }
-    }
 
-    // Helper function to get the appropriate OkHttpClient based on flag and interceptor usage
-    private fun getOkHttpClient(authenticated: Boolean): OkHttpClient {
-        return if (USE_UNSAFE_CLIENT) {
-            // For unsafe, just add auth interceptor if needed
-            if (authenticated) {
-                getUnsafeOkHttpClient().newBuilder()
-                    .addInterceptor(authInterceptor)
-                    .build()
-            } else {
-                getUnsafeOkHttpClient()
-            }
-        } else {
-            // Safe client
-            if (authenticated) {
-                createBaseOkHttpClientBuilder()
-                    .addInterceptor(authInterceptor)
-                    .build()
-            } else {
-                createBaseOkHttpClientBuilder()
-                    .build()
-            }
-        }
+        return builder.build()
     }
 
     private fun createRetrofitClient(client: OkHttpClient): Retrofit {
@@ -110,6 +59,7 @@ object ExploreLensApiClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
+
 
     val authApi: AuthApi by lazy {
         createRetrofitClient(getOkHttpClient(authenticated = false)).create(AuthApi::class.java)
