@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="24dp"> <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@android:color/white"
-    android:padding="24dp"
-    android:fontFamily="@font/harmonyos_sans_regular">
+    android:background="@drawable/dialog_background" android:padding="24dp" android:fontFamily="@font/harmonyos_sans_regular">
 
     <TextView
         android:id="@+id/dialog_title"
@@ -55,7 +56,7 @@
             android:layout_width="0dp"
             android:layout_height="56dp"
             android:layout_weight="1"
-            android:background="@drawable/bg_button_primary"
+            android:background="@drawable/bg_button_submit"
             android:text="Logout"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
@@ -66,3 +67,4 @@
     </LinearLayout>
 
 </LinearLayout>
+</FrameLayout>
