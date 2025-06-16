@@ -68,7 +68,6 @@
                 android:id="@+id/profileImageCard"
                 android:layout_width="100dp"
                 android:layout_height="100dp"
-                android:layout_marginTop="24dp"
                 app:cardCornerRadius="45dp"
                 app:cardElevation="0dp"
                 app:layout_constraintEnd_toEndOf="parent"
