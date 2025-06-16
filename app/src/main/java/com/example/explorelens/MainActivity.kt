@@ -55,9 +55,18 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
                     launchArActivity()
                     false
                 }
+
                 else -> {
-                    FragmentNavigationManager.setCurrentFragmentId(item.itemId)
-                    item.onNavDestinationSelected(navController) || super.onOptionsItemSelected(item)
+                    val currentDest = navController.currentDestination?.id
+                    val selectedDest = item.itemId
+
+                    if (currentDest == selectedDest) {
+                        navController.popBackStack(selectedDest, false)
+                    } else {
+                        navController.navigate(selectedDest)
+                    }
+
+                    FragmentNavigationManager.setCurrentFragmentId(selectedDest)
                     true
                 }
             }
@@ -65,8 +74,9 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                val currentFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
-                    ?.childFragmentManager?.fragments?.firstOrNull()
+                val currentFragment =
+                    supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
+                        ?.childFragmentManager?.fragments?.firstOrNull()
 
                 if (currentFragment is SiteDetailsFragment && intent.hasExtra("NAVIGATE_TO")) {
                     // Create a new intent to return to ArActivity
@@ -151,7 +161,8 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
         if (intent.getBooleanExtra("RETURNED_FROM_AR", false)) {
             intent.removeExtra("RETURNED_FROM_AR")
 
-            val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+            val navHostFragment =
+                supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
             val navController = navHostFragment.navController
             val fragmentId = FragmentNavigationManager.getLastFragmentId()
 
