@@ -38,10 +38,22 @@ class FilterOptionAdapter(
             option.iconResId?.let { iconImageView.setImageResource(it) }
             checkBox.isChecked = option.isChecked
 
-            checkBox.setOnCheckedChangeListener { _, isChecked ->
-                option.isChecked = isChecked // Update the adapter's internal state
-                onOptionChecked(option, isChecked) // Notify the Activity/Fragment (optional for UI updates)
+            // Remove any existing listeners to prevent conflicts
+            checkBox.setOnCheckedChangeListener(null)
+            itemView.setOnClickListener(null)
+
+            itemView.setOnClickListener {
+                toggleOption(option)
             }
+            checkBox.setOnClickListener {
+                toggleOption(option)
+            }
+        }
+
+        private fun toggleOption(option: FilterOption) {
+            option.isChecked = !option.isChecked
+            checkBox.isChecked = option.isChecked
+            onOptionChecked(option, option.isChecked)
         }
     }
 
