@@ -37,10 +37,9 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
         setupObservers()
         setupListeners()
         setupBottomNavigation()
-
+        setupSwipeRefreshBehavior()
         // Load initial data
         viewModel.fetchUserData()
-        // Statistics are automatically loaded via repository LiveData
     }
 
     private fun initializeComponents() {
@@ -147,6 +146,14 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
     override fun onCountryClicked(countryId: String) {
         // Handle country click - you can add navigation or other actions here
         // For now, the toast is handled in WorldMapManager
+    }
+
+    private fun setupSwipeRefreshBehavior() {
+        val scrollView = binding.mainScrollView
+
+        scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            binding.swipeRefresh.isEnabled = scrollY == 0
+        }
     }
 
     override fun onDestroyView() {

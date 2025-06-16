@@ -34,96 +34,95 @@
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Error message" />
 
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/nonScrollableTop"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/topBar"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingTop="10dp"
-                android:paddingBottom="5dp"
-                app:layout_constraintTop_toTopOf="parent">
-
-                <ImageButton
-                    android:id="@+id/settingsButton"
-                    android:layout_width="27dp"
-                    android:layout_height="27dp"
-                    android:layout_marginEnd="10dp"
-                    android:background="@android:color/transparent"
-                    android:contentDescription="settings"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/ic_settings"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:tint="@color/black" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-            <androidx.cardview.widget.CardView
-                android:id="@+id/profileImageCard"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
-                app:cardCornerRadius="45dp"
-                app:cardElevation="0dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/topBar">
-
-                <ImageView
-                    android:id="@+id/profileImage"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:contentDescription="Profile Picture"
-                    android:scaleType="centerCrop"
-                    tools:src="@drawable/avatar_placeholder" />
-            </androidx.cardview.widget.CardView>
-
-            <TextView
-                android:id="@+id/usernameText"
-                android:layout_width="wrap_content"
-                android:fontFamily="@font/harmonyos_sans_black"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="Username"
-                android:textColor="#000000"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/profileImageCard" />
-
-            <TextView
-                android:id="@+id/emailText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:fontFamily="@font/harmonyos_sans_regular"
-                android:text="user@example.com"
-                android:textColor="#666666"
-                android:textSize="12sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/usernameText" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
         <ScrollView
+            android:id="@+id/mainScrollView"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:layout_height="match_parent"
             android:fillViewport="true"
+            android:overScrollMode="never"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/nonScrollableTop">
+            app:layout_constraintTop_toTopOf="parent">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/scrollableContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
+                <!-- Top Bar Section (now inside scroll) -->
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/topBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="5dp"
+                    app:layout_constraintTop_toTopOf="parent">
+
+                    <ImageButton
+                        android:id="@+id/settingsButton"
+                        android:layout_width="27dp"
+                        android:layout_height="27dp"
+                        android:layout_marginEnd="10dp"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="settings"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:tint="@color/black" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <!-- Profile Image Section (now inside scroll) -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/profileImageCard"
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    app:cardCornerRadius="45dp"
+                    app:cardElevation="0dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/topBar">
+
+                    <ImageView
+                        android:id="@+id/profileImage"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="Profile Picture"
+                        android:scaleType="centerCrop"
+                        tools:src="@drawable/avatar_placeholder" />
+                </androidx.cardview.widget.CardView>
+
+                <!-- Username Section (now inside scroll) -->
+                <TextView
+                    android:id="@+id/usernameText"
+                    android:layout_width="wrap_content"
+                    android:fontFamily="@font/harmonyos_sans_black"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Username"
+                    android:textColor="#000000"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/profileImageCard" />
+
+                <!-- Email Section (now inside scroll) -->
+                <TextView
+                    android:id="@+id/emailText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="@font/harmonyos_sans_regular"
+                    android:text="user@example.com"
+                    android:textColor="#666666"
+                    android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/usernameText" />
+
+                <!-- Statistics Section Header -->
                 <ImageView
                     android:id="@+id/statisticsIcon"
                     android:layout_width="24dp"
@@ -132,7 +131,7 @@
                     android:layout_marginTop="24dp"
                     android:src="@drawable/ic_statistic"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/emailText"
                     app:tint="@color/black" />
 
                 <TextView
@@ -147,7 +146,7 @@
                     android:textSize="14sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toEndOf="@+id/statisticsIcon"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toBottomOf="@+id/emailText" />
 
                 <!-- Statistics Section with Progress Bar -->
                 <FrameLayout
