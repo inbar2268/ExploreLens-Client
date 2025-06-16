@@ -65,16 +65,11 @@ class SettingsFragment : Fragment() {
         binding.resetHistoryRow.setOnClickListener {
             showResetHistoryDialog()
         }
-
-        binding.changeMapTypeRow.setOnClickListener {
-            showMapTypeDialog()
-        }
-
+        
         binding.logoutButton.setOnClickListener {
             showLogoutDialog()
         }
 
-        loadCurrentMapType()
         checkGoogleSignInStatus()
 
         return view
@@ -201,46 +196,6 @@ class SettingsFragment : Fragment() {
         dialog.show()
     }
 
-    private fun showMapTypeDialog() {
-        val dialog = Dialog(requireContext())
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-
-        val dialogBinding = DialogMapTypeBinding.inflate(layoutInflater)
-        dialog.setContentView(dialogBinding.root)
-
-        // Set the current selection in the radio group
-        val currentMapType = getCurrentMapType()
-        when (currentMapType) {
-            "Normal" -> dialogBinding.normalMapRadio.isChecked = true
-            "Hybrid" -> dialogBinding.hybridMapRadio.isChecked = true
-            "Satellite" -> dialogBinding.satelliteMapRadio.isChecked = true
-            "Terrain" -> dialogBinding.terrainMapRadio.isChecked = true
-        }
-
-        dialogBinding.cancelButton.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        dialogBinding.confirmButton.setOnClickListener {
-            // Find which radio button is checked
-            val selectedId = dialogBinding.mapTypeRadioGroup.checkedRadioButtonId
-            if (selectedId != -1) {
-                val radioButton = dialog.findViewById<RadioButton>(selectedId)
-                val selectedType = radioButton.text.toString()
-                saveMapType(selectedType)
-                binding.currentMapTypeTextView.text = selectedType
-                ToastHelper.showShortToast(context, "Map type updated to $selectedType")
-            }
-            dialog.dismiss()
-        }
-
-        // Set dialog width to match parent
-        val window = dialog.window
-        window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-
-        dialog.show()
-    }
-
     private fun showLogoutDialog() {
         val dialog = Dialog(requireContext())
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -272,24 +227,7 @@ class SettingsFragment : Fragment() {
         dialog.show()
     }
 
-    private fun loadCurrentMapType() {
-        // Load the current map type from preferences or data storage
-        val defaultType = "Normal" // Set a default value
-        val savedType = defaultType // Replace with actual retrieval logic
-        binding.currentMapTypeTextView.text = savedType
-    }
 
-    private fun getCurrentMapType(): String {
-        // Retrieve the current map type
-        return binding.currentMapTypeTextView.text.toString()
-    }
-
-    private fun saveMapType(mapType: String) {
-        // Save the selected map type to preferences or data storage
-        // Example with SharedPreferences:
-        // val sharedPreferences = requireContext().getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
-        // sharedPreferences.edit().putString("map_type", mapType).apply()
-    }
 
     override fun onDestroyView() {
         super.onDestroyView()

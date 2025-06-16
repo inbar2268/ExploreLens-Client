@@ -184,7 +184,7 @@
         android:paddingStart="16dp"
         android:paddingTop="18dp"
         android:paddingBottom="6dp"
-        android:text="Site History &amp; Map"
+        android:text="Site History"
         android:textColor="#1e3851"
         android:textSize="18sp"
         android:textStyle="bold" />
@@ -236,47 +236,7 @@
         android:layout_marginEnd="16dp"
         android:foreground="?android:attr/selectableItemBackground"
         app:cardCornerRadius="8dp"
-        app:cardElevation="0dp">
-
-        <LinearLayout
-            android:id="@+id/changeMapTypeRow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="12dp"
-            android:background="@color/light_gray"> <ImageView
-            android:layout_width="18dp"
-            android:layout_height="18dp"
-            android:layout_marginEnd="12dp"
-            android:src="@drawable/ic_map" />
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:fontFamily="@font/harmonyos_sans_regular"
-                android:text="Change map type"
-                android:textColor="#1e3851"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/currentMapTypeTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="7dp"
-                android:textSize="14sp"
-                android:textColor="@color/light_blue"
-                android:fontFamily="@font/harmonyos_sans_regular"
-                tools:text="Normal" />
-
-            <ImageView
-                android:layout_width="18dp"
-                android:layout_height="18dp"
-                android:src="@drawable/ic_arrow_right"
-                app:tint="#B0B0B0" />
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
+        app:cardElevation="0dp"/>
 
     <Button
         android:id="@+id/logoutButton"
