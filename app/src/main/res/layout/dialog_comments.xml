@@ -30,21 +30,23 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Comments"
+                android:fontFamily="@font/harmonyos_sans_regular"
                 android:textColor="#333333"
-                android:textSize="22sp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
             <Button
                 android:id="@+id/cancelButton"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
+                android:layout_gravity="top|end"
                 android:layout_margin="16dp"
-                android:background="@drawable/cancel_button_background"
+                android:background="@android:color/transparent"
+                android:fontFamily="@font/harmonyos_sans_regular"
                 android:text="✕"
                 android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:layout_gravity="top|end" />
+                android:textColor="#333333"
+                android:textSize="16sp" />
         </LinearLayout>
 
 
@@ -83,6 +85,7 @@
                 android:layout_weight="1"
                 android:background="@drawable/comment_input_background"
                 android:hint="Add a comment..."
+                android:fontFamily="@font/harmonyos_sans_regular"
                 android:inputType="textMultiLine"
                 android:minHeight="48dp"
                 android:padding="12dp"
@@ -100,6 +103,7 @@
                     android:id="@+id/submitCommentButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/harmonyos_sans_regular"
                     android:background="@drawable/bg_button_primary"
                     android:minWidth="90dp"
                     android:minHeight="0dp"

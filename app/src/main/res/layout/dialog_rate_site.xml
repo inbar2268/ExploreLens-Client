@@ -30,19 +30,22 @@
                 android:text="Rate this site"
                 android:textSize="22sp"
                 android:textStyle="bold"
+                android:fontFamily="@font/harmonyos_sans_regular"
                 android:textColor="#333333" />
 
             <Button
                 android:id="@+id/cancelButton"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
+                android:layout_gravity="top|end"
                 android:layout_margin="16dp"
-                android:background="@drawable/cancel_button_background"
+                android:background="@android:color/transparent"
+                android:fontFamily="@font/harmonyos_sans_regular"
                 android:text="✕"
                 android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:layout_gravity="top|end" />
+                android:textColor="#333333"
+                android:textSize="16sp" />
+
         </LinearLayout>
 
         <TextView
@@ -51,6 +54,7 @@
             android:layout_height="wrap_content"
             android:text="Site Name"
             android:textSize="18sp"
+            android:fontFamily="@font/harmonyos_sans_regular"
             android:textColor="#666666"
             android:layout_marginBottom="24dp"
             android:layout_gravity="center_horizontal" />
@@ -76,6 +80,7 @@
             android:paddingVertical="10dp"
             android:text="Submit"
             android:textColor="#FFFFFF"
+            android:fontFamily="@font/harmonyos_sans_regular"
             android:textAllCaps="false"
             android:textSize="16sp" />
     </LinearLayout>

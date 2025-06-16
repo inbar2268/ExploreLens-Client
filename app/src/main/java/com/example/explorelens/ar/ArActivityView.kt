@@ -214,6 +214,7 @@ class ArActivityView(
     allFilterOptions: MutableList<FilterOption>,
     dialog: SideSheetDialog
   ) {
+
     // Close button
     binding.btnCloseSideSheet.setOnClickListener {
       dialog.dismiss()
