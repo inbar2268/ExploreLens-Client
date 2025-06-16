@@ -3,6 +3,7 @@ package com.example.explorelens.ar
 import android.content.Context
 import android.util.Log
 import com.example.explorelens.ar.render.LayerLabelRenderer
+import com.example.explorelens.ar.render.LayerLabelTextureCache
 import com.example.explorelens.common.samplerender.SampleRender
 import com.google.ar.core.Frame
 import com.google.ar.core.Pose
@@ -11,9 +12,6 @@ import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import java.util.concurrent.CopyOnWriteArrayList
 
-/**
- * Class for managing AR layer labels for nearby places
- */
 class ARLayerManager(private val context: Context) {
     companion object {
         private const val TAG = "ARLayerManager"
@@ -22,6 +20,8 @@ class ARLayerManager(private val context: Context) {
 
     private val layerLabelRenderer = LayerLabelRenderer()
     private val layerLabels = CopyOnWriteArrayList<LayerLabelInfo>()
+    private val textureCache = LayerLabelTextureCache(context)
+    private val currentlyVisibleLabels = CopyOnWriteArrayList<LayerLabelInfo>()
 
     data class LayerLabelInfo(
         val anchor: Anchor,
@@ -71,8 +71,6 @@ class ARLayerManager(private val context: Context) {
         layerLabels.clear()
     }
 
-
-
     fun drawLayerLabels(
         render: SampleRender,
         viewProjectionMatrix: FloatArray,
@@ -81,6 +79,8 @@ class ARLayerManager(private val context: Context) {
     ) {
         val maxDistanceMeters = 50f
         val fovDegrees = 50f
+
+        currentlyVisibleLabels.clear()
 
         for (label in layerLabels) {
             val anchor = label.anchor
@@ -95,19 +95,21 @@ class ARLayerManager(private val context: Context) {
             val distance = Math.sqrt((dx * dx + dy * dy + dz * dz).toDouble())
 
             if (distance > maxDistanceMeters) {
-                Log.d("AR-Debug", "⛔️ too far, skipping")
+                //Log.d("AR-Debug", "⛔️ too far, skipping")
                 continue
             }
 
             if (!isInFront(cameraPose, pose)) {
-                Log.d("AR-Debug", "⛔️ behind, skipping")
+                //Log.d("AR-Debug", "⛔️ behind, skipping")
                 continue
             }
 
             if (!isWithinFOV(cameraPose, pose, fovDegrees)) {
-                Log.d("AR-Debug", "⛔️ out of FOV, skipping")
+                //Log.d("AR-Debug", "⛔️ out of FOV, skipping")
                 continue
             }
+
+            currentlyVisibleLabels.add(label)
 
             layerLabelRenderer.draw(
                 render,
@@ -182,4 +184,18 @@ class ARLayerManager(private val context: Context) {
     fun getAllLabels(): List<LayerLabelInfo> {
         return layerLabels.toList()
     }
+
+    fun removeLabel(labelToRemove: LayerLabelInfo) {
+        layerLabels.removeAll { it.anchor == labelToRemove.anchor }
+        Log.d(TAG, "Removed layer label: ${labelToRemove.placeInfo["name"]}")
+    }
+
+    fun getTextureCache(): LayerLabelTextureCache {
+        return textureCache
+    }
+
+    fun getCurrentlyVisibleLabels(): List<LayerLabelInfo> {
+        return currentlyVisibleLabels.toList()
+    }
+
 }

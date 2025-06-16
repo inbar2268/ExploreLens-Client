@@ -3,7 +3,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/loginFragment">
+    app:startDestination="@id/landingFragment">
+
+    <!-- Landing Fragment - New opening page -->
+    <fragment
+        android:id="@+id/landingFragment"
+        android:name="com.example.explorelens.ui.landing.LandingFragment"
+        android:label="ExploreLens"
+        tools:layout="@layout/fragment_landing">
+        <action
+            android:id="@+id/action_landingFragment_to_loginFragment"
+            app:destination="@+id/loginFragment" />
+        <action
+            android:id="@+id/action_landingFragment_to_registerFragment"
+            app:destination="@+id/registerFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/loginFragment"
@@ -22,6 +36,9 @@
         <action
             android:id="@+id/action_loginFragment_to_profileFragment"
             app:destination="@+id/profileFragment" />
+        <action
+            android:id="@+id/action_loginFragment_to_landingFragment"
+            app:destination="@+id/landingFragment" />
     </fragment>
     <fragment
         android:id="@+id/changePasswordFragment"
@@ -49,6 +66,9 @@
         <action
             android:id="@+id/action_registerFragment_to_profileFragment"
             app:destination="@+id/profileFragment" />
+        <action
+            android:id="@+id/action_registerFragment_to_landingFragment"
+            app:destination="@+id/landingFragment" />
     </fragment>
 
     <fragment
@@ -142,9 +162,9 @@
         android:name="com.example.explorelens.ui.map.MapFragment"
         android:label="Map"
         tools:layout="@layout/fragment_map">
-    <action
-        android:id="@+id/action_mapFragment_to_siteDetailsFragment"
-        app:destination="@id/siteDetailsFragment"/>
+        <action
+            android:id="@+id/action_mapFragment_to_siteDetailsFragment"
+            app:destination="@id/siteDetailsFragment"/>
     </fragment>
 
     <fragment
@@ -152,10 +172,23 @@
         android:name="com.example.explorelens.ui.site.SiteHistoryFragment"
         android:label="history"
         tools:layout="@layout/fragment_site_history">
-    <action
-        android:id="@+id/action_siteHistoryFragment_to_siteDetailsFragment"
-        app:destination="@id/siteDetailsFragment" />
+        <action
+            android:id="@+id/action_siteHistoryFragment_to_siteDetailsFragment"
+            app:destination="@id/siteDetailsFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/layerDetailFragment"
+        android:name="com.example.explorelens.ui.places.LayerDetailFragment"
+        android:label="Place Details"
+        tools:layout="@layout/fragment_layer_detail">
+
+        <argument
+            android:name="placeId"
+            app:argType="string" />
+
+    </fragment>
+
     <activity
         android:id="@+id/arActivity"
         android:name="com.example.explorelens.ArActivity"

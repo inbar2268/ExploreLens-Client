@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -544,4 +545,88 @@ class ArActivity : AppCompatActivity() {
         super.onDestroy()
         Log.d(TAG, "onDestroy called - Activity being destroyed")
     }
+
+    override fun onBackPressed() {
+        // Check if LayerDetailFragment is currently showing
+        val layerDetailFragment = supportFragmentManager.findFragmentByTag("LayerDetailFragment")
+
+        if (layerDetailFragment != null && layerDetailFragment.isVisible) {
+            Log.d(TAG, "Closing LayerDetailFragment and returning to AR")
+
+            // Remove the fragment
+            supportFragmentManager.beginTransaction()
+                .remove(layerDetailFragment)
+                .commit()
+
+            // Show AR view again
+            showArView()
+
+            // Remove the fragment container if it was dynamically created
+            removeFragmentContainer()
+
+        } else if (supportFragmentManager.backStackEntryCount > 0) {
+            Log.d(TAG, "Popping fragment from back stack")
+            supportFragmentManager.popBackStack()
+
+            // Show AR view again after any fragment is popped
+            showArView()
+
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    private fun showArView() {
+        if (::view.isInitialized) {
+            view.root.visibility = View.VISIBLE
+            Log.d(TAG, "AR view is now visible")
+        }
+    }
+
+    /**
+     * Remove dynamically created fragment container
+     */
+    private fun removeFragmentContainer() {
+        val fragmentContainer = findViewById<ViewGroup>(R.id.fragment_container)
+            ?: findViewById<ViewGroup>(android.R.id.content)?.findViewWithTag<ViewGroup>("fragment_container")
+
+        fragmentContainer?.let { container ->
+            if (container.tag == "fragment_container") {
+                (container.parent as? ViewGroup)?.removeView(container)
+                Log.d(TAG, "Removed dynamic fragment container")
+            }
+        }
+    }
+
+    /**
+     * Set up fragment result listener to handle fragment dismissal
+     */
+    private fun setupFragmentResultListener() {
+        supportFragmentManager.setFragmentResultListener(
+            "layer_detail_closed",
+            this
+        ) { _, bundle ->
+            Log.d(TAG, "LayerDetailFragment closed via result listener")
+            showArView()
+            removeFragmentContainer()
+        }
+    }
+
+    // Call this in your onCreate or setupAr method
+    private fun initializeFragmentSupport() {
+        setupFragmentResultListener()
+    }
+    fun showArViewSafely() {
+        try {
+            if (::view.isInitialized) {
+                view.root.visibility = View.VISIBLE
+                Log.d(TAG, "AR view restored to visible")
+            } else {
+                Log.w(TAG, "AR view not yet initialized")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing AR view: ${e.message}")
+        }
+    }
+
 }

@@ -42,7 +42,6 @@
                 android:contentDescription="Back button"
                 android:scaleType="centerInside"
                 android:layout_margin="10dp"
-                android:focusableInTouchMode="true"
                 app:tint="@color/black"/>
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
@@ -64,13 +63,13 @@
 
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             app:cardCornerRadius="24dp"
             app:cardElevation="8dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:gravity="center"
                 android:orientation="vertical"
                 android:paddingTop="8dp">
@@ -91,6 +90,7 @@
                 <TextView
                     android:id="@+id/labelTextView"
                     android:layout_width="match_parent"
+                    android:fontFamily="@font/harmonyos_sans_black"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="15dp"
                     android:text="Site Name"
@@ -208,6 +208,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
+                    android:fontFamily="@font/harmonyos_sans_regular"
                     android:lineSpacingExtra="6dp"
                     android:textColor="#424242"
                     android:textSize="15sp" />
@@ -248,11 +249,13 @@
                                 android:text="Explore This Site"
                                 android:textColor="#212121"
                                 android:textSize="16sp"
+                                android:fontFamily="@font/harmonyos_sans_black"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:fontFamily="@font/harmonyos_sans_regular"
                                 android:text="Wondering about something? Chat with our guide!"
                                 android:textColor="#757575"
                                 android:textSize="12sp" />

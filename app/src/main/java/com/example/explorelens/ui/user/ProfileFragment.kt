@@ -5,41 +5,21 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.RequestOptions
 import com.example.explorelens.R
 import com.example.explorelens.common.helpers.ToastHelper
-import com.example.explorelens.data.db.User
-import com.example.explorelens.data.repository.AuthRepository
-import com.example.explorelens.data.repository.UserRepository
 import com.example.explorelens.databinding.FragmentProfileBinding
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
-class ProfileFragment : Fragment() {
+class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
 
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
 
-    // UserState sealed class for handling UI states
-    sealed class UserState {
-        object Loading : UserState()
-        data class Success(val user: User) : UserState()
-        data class Error(val message: String) : UserState()
-        object Logout : UserState()
-    }
-
-    // ViewModel code now in the Fragment
-    private val _userState = MutableLiveData<UserState>()
-    val userState: LiveData<UserState> = _userState
-
-    private lateinit var userRepository: UserRepository
-    private lateinit var authRepository: AuthRepository
+    private lateinit var viewModel: ProfileViewModel
+    private lateinit var uiHelper: ProfileUIHelper
+    private lateinit var mapManager: WorldMapManager
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -50,140 +30,130 @@ class ProfileFragment : Fragment() {
         return binding.root
     }
 
-    private fun setupBottomNavigation() {
-        val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation)
-        bottomNav.setOnItemReselectedListener { menuItem ->
-            if (menuItem.itemId == R.id.profileFragment) {
-                val navController = findNavController()
-                val currentDestinationId = navController.currentDestination?.id
-                if (currentDestinationId != R.id.profileFragment) {
-                    navController.popBackStack(R.id.profileFragment, false)
-                } else {
-                    fetchUserData()
-                }
-            }
-        }
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize repositories
-        userRepository = UserRepository(requireActivity().application)
-        authRepository = AuthRepository(requireActivity().application)
-
-        // Initialize user data observer
-        setupUserObserver()
-
+        initializeComponents()
         setupObservers()
-        setupRefreshListener()
+        setupListeners()
         setupBottomNavigation()
 
-        binding.settingsButton.setOnClickListener {
-            findNavController().navigate(R.id.action_profileFragment_to_settingsFragment)
-        }
-
-        // Fetch user data when the fragment is created
-        fetchUserData()
+        // Load initial data
+        viewModel.fetchUserData()
+        // Statistics are automatically loaded via repository LiveData
     }
 
-    private fun setupUserObserver() {
-        viewLifecycleOwner.lifecycle.addObserver(androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    userRepository.observeUser().collectLatest { user ->
-                        if (user != null) {
-                            _userState.value = UserState.Success(user)
-                        }
-                    }
-                }
-            }
-        })
-    }
+    private fun initializeComponents() {
+        viewModel = ViewModelProvider(this)[ProfileViewModel::class.java]
+        uiHelper = ProfileUIHelper(binding)
+        mapManager = WorldMapManager(requireContext(), binding.worldMapWebView)
 
-    // Fetch user data from server
-    fun fetchUserData() {
-        _userState.value = UserState.Loading
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            // First, try to get user from local database
-            val localUser = userRepository.getUserFromDb()
-
-            if (localUser != null) {
-                // If user is found locally, update UI with local data
-                _userState.value = UserState.Success(localUser)
-            } else {
-                // If no user is found locally, fetch user data from server
-                val result = userRepository.fetchAndSaveUser()
-
-                result.fold(
-                    onSuccess = {
-                        // The user data will be updated through the observer once the repository saves it
-                    },
-                    onFailure = { exception ->
-                        // Instead of using Error state, directly use Logout state
-                        _userState.value = UserState.Logout
-
-                        // Show toast and navigate to login page when user ID is not found
-                        ToastHelper.showShortToast(requireContext(), "User not found. Please login again")
-                    }
-                )
-            }
+        mapManager.setMapClickListener(this)
+        mapManager.setupWorldMap {
+            // Map is ready - statistics will update automatically via LiveData
         }
     }
 
     private fun setupObservers() {
-        userState.observe(viewLifecycleOwner) { state ->
-            when (state) {
-                is UserState.Loading -> {
-                    binding.progressBar.visibility = View.VISIBLE
-                    binding.errorMessage.visibility = View.GONE
-                }
-                is UserState.Success -> {
-                    binding.progressBar.visibility = View.GONE
-                    binding.errorMessage.visibility = View.GONE
-
-                    // Update UI with user data
-                    binding.usernameText.text = state.user.username
-                    binding.emailText.text = state.user.email
-
-                    // Load profile picture with Glide
-                    if (!state.user.profilePictureUrl.isNullOrEmpty()) {
-                        Glide.with(this)
-                            .load(state.user.profilePictureUrl)
-                            .apply(RequestOptions.circleCropTransform())
-                            .placeholder(R.drawable.ic_default_profile)
-                            .error(R.drawable.ic_default_profile)
-                            .into(binding.profileImage)
-                    } else {
-                        binding.profileImage.setImageResource(R.drawable.avatar_placeholder)
+        // User state observer
+        viewModel.userState.observe(viewLifecycleOwner) { state ->
+            _binding?.let {
+                when (state) {
+                    is ProfileViewModel.UserState.Loading -> {
+                        uiHelper.showLoading()
+                    }
+                    is ProfileViewModel.UserState.Success -> {
+                        uiHelper.updateUserInfo(state.user, this)
+                    }
+                    is ProfileViewModel.UserState.Error -> {
+                        uiHelper.showError(state.message)
+                        ToastHelper.showShortToast(context, state.message)
+                    }
+                    is ProfileViewModel.UserState.Logout -> {
+                        uiHelper.hideLoading()
+                        uiHelper.hideError()
+                        findNavController().navigate(R.id.action_profileFragment_to_loginFragment)
                     }
                 }
-                is UserState.Error -> {
-                    binding.progressBar.visibility = View.GONE
-                    binding.errorMessage.visibility = View.VISIBLE
-                    binding.errorMessage.text = state.message
+            }
+        }
 
-                    ToastHelper.showShortToast(context, state.message)
+        // Statistics state observer (now reactive from repository)
+        viewModel.statisticsState.observe(viewLifecycleOwner) { state ->
+            _binding?.let {
+                when (state) {
+                    is ProfileViewModel.StatisticsState.Loading -> {
+                        uiHelper.showStatisticsLoading()
+                    }
+                    is ProfileViewModel.StatisticsState.Success -> {
+                        uiHelper.updateStatistics(state.percentage, state.countryCount)
+                        // Always try to update map, even if not ready yet (will be queued)
+                        mapManager.updateCountries(state.countries)
+
+                        // Optionally show a subtle indicator if data is from cache
+                        if (state.isFromCache) {
+                            // You could show a small "cached" indicator if desired
+                            // uiHelper.showCacheIndicator()
+                        }
+                    }
+                    is ProfileViewModel.StatisticsState.Error -> {
+                        uiHelper.showStatisticsError()
+                        if (_binding != null) {
+                            ToastHelper.showShortToast(requireContext(), state.message)
+                        }
+                    }
                 }
-                is UserState.Logout -> {
-                    binding.progressBar.visibility = View.GONE
-                    binding.errorMessage.visibility = View.GONE
-                    findNavController().navigate(R.id.action_profileFragment_to_loginFragment)
+            }
+        }
+
+        // Refresh state observer
+        viewModel.isRefreshing.observe(viewLifecycleOwner) { isRefreshing ->
+            _binding?.let {
+                uiHelper.setRefreshing(isRefreshing)
+            }
+        }
+    }
+
+    private fun setupListeners() {
+        binding.settingsButton.setOnClickListener {
+            if (isAdded) {
+                findNavController().navigate(R.id.action_profileFragment_to_settingsFragment)
+            }
+        }
+
+        binding.swipeRefresh.setOnRefreshListener {
+            viewModel.refreshAllData()
+        }
+    }
+
+    private fun setupBottomNavigation() {
+        val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        bottomNav.setOnItemReselectedListener { menuItem ->
+            if (menuItem.itemId == R.id.profileFragment) {
+                if (isAdded) {
+                    val navController = findNavController()
+                    val currentDestinationId = navController.currentDestination?.id
+                    if (currentDestinationId != R.id.profileFragment) {
+                        navController.popBackStack(R.id.profileFragment, false)
+                    } else {
+                        // Refresh data when user taps profile tab again
+                        viewModel.refreshAllData()
+                    }
                 }
             }
         }
     }
 
-    private fun setupRefreshListener() {
-        binding.swipeRefresh.setOnRefreshListener {
-            fetchUserData()
-            binding.swipeRefresh.isRefreshing = false
-        }
+    override fun onCountryClicked(countryId: String) {
+        // Handle country click - you can add navigation or other actions here
+        // For now, the toast is handled in WorldMapManager
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        mapManager.cleanup() // Clean up map state
         _binding = null
+        val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        bottomNav.setOnItemReselectedListener(null)
     }
 }

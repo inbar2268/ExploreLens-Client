@@ -1,6 +1,5 @@
 package com.example.explorelens.ar
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.ShapeDrawable
@@ -10,14 +9,8 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
-import android.widget.Button
-import android.widget.FrameLayout
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.startActivity
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
@@ -25,7 +18,6 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.MainActivity
 import com.example.explorelens.R
 import com.example.explorelens.common.helpers.FullScreenHelper
@@ -35,12 +27,10 @@ import com.example.explorelens.data.model.FilterOption
 import com.example.explorelens.databinding.ActivityMainBinding
 import com.example.explorelens.databinding.FilterSideSheetBinding
 import com.example.explorelens.adapters.filterOptions.FilterOptionAdapter
+import com.example.explorelens.ar.render.FilterListManager
 import com.example.explorelens.ui.site.SiteDetailsFragment
 import com.google.android.material.sidesheet.SideSheetDialog
 
-/**
- * View class for AR activity that manages UI components and interactions
- */
 class ArActivityView(
   private val activity: FragmentActivity,
   private val renderer: AppRenderer,
@@ -66,6 +56,7 @@ class ArActivityView(
 
   // Selected filters
   private val selectedFilters = mutableSetOf<String>()
+  private var isSideSheetShowing = false
 
   // Site details management
   private var currentSiteDetailsFragment: SiteDetailsFragment? = null
@@ -92,7 +83,9 @@ class ArActivityView(
     // Setup layers/filter button
     binding.layersButton.setOnClickListener {
       Log.d(TAG, "Layers button clicked")
-      showFilterSideSheet()
+      if (!isSideSheetShowing) {
+        showFilterSideSheet()
+      }
     }
 
   }
@@ -117,6 +110,10 @@ class ArActivityView(
    */
   private fun showFilterSideSheet() {
     Log.d(TAG, "All Filter Options in showFilterSideSheet: ${filterOptions.joinToString()}")
+
+    isSideSheetShowing = true
+    binding.layersButton.isEnabled = false
+
     val sideSheetDialog = SideSheetDialog(activity)
     val sideSheetBinding = FilterSideSheetBinding.inflate(activity.layoutInflater)
 
@@ -129,7 +126,8 @@ class ArActivityView(
     val allFilterOptions = filterOptions.map { option ->
       FilterOption(
         name = option.name,
-        isChecked = selectedFilters.contains(option.name),
+        isChecked = FilterListManager.getAllFilters().contains(option.name),
+
         iconResId = option.iconResId
       )
     }.toMutableList()
@@ -148,6 +146,8 @@ class ArActivityView(
     // Handle dismissal to restore UI state
     sideSheetDialog.setOnDismissListener {
       FullScreenHelper.setFullScreenOnWindowFocusChanged(activity, true)
+      isSideSheetShowing = false
+      binding.layersButton.isEnabled = true
     }
 
     sideSheetDialog.setCanceledOnTouchOutside(true)
@@ -227,7 +227,8 @@ class ArActivityView(
       Log.d(TAG, "Selected Filters (on Apply): $selectedFilters")
 
       // Apply filters to renderer
-      renderer.getNearbyPlacesForAR(newSelectedFilters.toList())
+      FilterListManager.setFilters(newSelectedFilters.toList())
+      renderer.getNearbyPlacesForAR()
 
       dialog.dismiss()
     }

@@ -35,11 +35,55 @@
   <color name="gray_light">#E0E0E0</color>
 
 
-  <color name="light_blue">#87BFE0</color>
+  <color name="light_blue">#0091EA</color>
   <color name="black">#FF000000</color>
   <color name="white">#FFFFFFFF</color>
   <color name="red">#FF3B30</color>
   <color name="gray">#F5F5F5</color>
   <color name="light_gray">#FCFCFC</color>
 
+  <color name="continent_visited">#27ae60</color>
+  <color name="continent_unvisited">#ecf0f1</color>
+  <color name="map_background_start">#4a90e2</color>
+  <color name="map_background_end">#1e5f99</color>
+  <color name="map_stroke">#ffffff</color>
+  <color name="map_stroke_hover">#2c3e50</color>
+
+  <!-- Legend Colors -->
+  <color name="legend_background">#ffffff</color>
+  <color name="legend_border">#e9ecef</color>
+  <color name="legend_text_primary">#2c3e50</color>
+  <color name="legend_text_secondary">#7f8c8d</color>
+
+  <!-- Text Colors -->
+  <color name="text_primary">#1F2937</color>
+  <color name="text_secondary">#6B7280</color>
+
+  <!-- Card Colors -->
+  <color name="review_background">#F3F4F6</color>
+
+  <color name="light_gray_divider">#E0E0E0</color>
+  <color name="blue">#007AFF</color>
+
+  <!-- Existing colors maintained for compatibility -->
+  <color name="chip_background">#F0F0F0</color>
+  <color name="background_color">#FFFFFF</color>
+  <color name="surface_background">#FFFBFE</color>
+  <color name="surface">#FFFFFF</color>
+  <color name="surface_variant">#F7F2FA</color>
+  <color name="surface_container_high">#ECE6F0</color>
+
+  <color name="on_surface">#1C1B1F</color>
+  <color name="on_surface_variant">#49454F</color>
+
+  <color name="primary_color">#6750A4</color>
+  <color name="primary_container">#EADDFF</color>
+
+  <color name="success_color">#1B5E20</color>
+  <color name="error_color">#BA1A1A</color>
+  <color name="rating_star">#FF8F00</color>
+  <color name="rating_color">#FF8F00</color>
+
+  <color name="link_color">#007AFF</color>
+  <color name="icon_color">#49454F</color>
 </resources>

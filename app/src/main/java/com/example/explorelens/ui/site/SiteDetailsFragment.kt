@@ -20,7 +20,9 @@ import android.widget.ProgressBar
 import android.widget.RatingBar
 import android.widget.TextView
 import androidx.cardview.widget.CardView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentContainerView
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -92,6 +94,14 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val navHostFragment = activity?.findViewById<FragmentContainerView>(R.id.nav_host_fragment)
+        val layoutParams = navHostFragment?.layoutParams as? ConstraintLayout.LayoutParams
+
+        layoutParams?.let {
+            it.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            it.bottomToTop = ConstraintLayout.LayoutParams.UNSET
+            navHostFragment.layoutParams = it
+        }
 
         // Initialize Text-to-Speech
         textToSpeech = TextToSpeech(requireContext(), this)
@@ -568,8 +578,8 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
             try {
                 Glide.with(requireContext())
                     .load(imageUrl)
-                    .placeholder(R.drawable.eiffel)
-                    .error(R.drawable.eiffel)
+                    .placeholder(R.drawable.placeholder_landmark)
+                    .error(R.drawable.placeholder_landmark)
                     .into(headerBackground)
             } catch (e: Exception) {
                 Log.e("SiteDetailsFragment", "Error loading image: ${e.message}", e)
@@ -806,6 +816,9 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
 
             // Make sure the camera button is visible again
             activity.findViewById<View>(R.id.cameraButtonContainer)?.visibility = View.VISIBLE
+        } else {
+            // For regular fragment navigation, use back press behavior
+            requireActivity().onBackPressedDispatcher.onBackPressed()
         }
     }
     private fun navigateToChatFragment() {

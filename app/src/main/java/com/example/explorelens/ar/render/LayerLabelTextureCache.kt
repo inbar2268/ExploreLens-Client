@@ -1,4 +1,3 @@
-
 package com.example.explorelens.ar.render
 
 import android.content.Context
@@ -25,6 +24,10 @@ import java.nio.ByteBuffer
 class LayerLabelTextureCache(private val context: Context) {
     companion object {
         private const val TAG = "LayerLabelTextureCache"
+
+        // X button dimensions and position constants
+        const val X_BUTTON_SIZE = 60f
+        const val X_BUTTON_MARGIN = 40f
     }
 
     private val cacheMap = mutableMapOf<String, Texture>()
@@ -205,6 +208,33 @@ class LayerLabelTextureCache(private val context: Context) {
         isAntiAlias = true
     }
 
+    // X button background
+    private val xButtonBackgroundPaint = Paint().apply {
+        //color = Color.argb(180, 255, 100, 100) // Semi-transparent red
+        color = Color.argb(180, 50, 50, 50)
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+
+    // X button border
+    private val xButtonBorderPaint = Paint().apply {
+        //color = Color.argb(255, 200, 50, 50) // Darker red border
+        color = Color.argb(255, 0, 0, 0)
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        isAntiAlias = true
+    }
+
+    // X button text
+    private val xButtonTextPaint = Paint().apply {
+        textSize = 60f
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT_BOLD
+    }
+
     private fun generateBitmapFromPlaceInfo(placeInfo: Map<String, Any?>): Bitmap {
         Log.d(TAG, "Generating frosted label for: ${placeInfo["name"]}")
 
@@ -249,7 +279,21 @@ class LayerLabelTextureCache(private val context: Context) {
         // Draw outer frame
         canvas.drawRoundRect(bgRect, 40f, 40f, framePaint)
 
-        // Start position for text
+        // Draw X button in top-right corner
+        val xButtonCenterX = width - X_BUTTON_MARGIN - (X_BUTTON_SIZE / 2f)
+        val xButtonCenterY = X_BUTTON_MARGIN + (X_BUTTON_SIZE / 2f)
+
+        // Draw X button background circle
+        canvas.drawCircle(xButtonCenterX, xButtonCenterY, X_BUTTON_SIZE / 2f, xButtonBackgroundPaint)
+
+        // Draw X button border
+        canvas.drawCircle(xButtonCenterX, xButtonCenterY, X_BUTTON_SIZE / 2f, xButtonBorderPaint)
+
+        // Draw X text
+        val xTextY = xButtonCenterY + (xButtonTextPaint.textSize * 0.35f) // Adjust for text baseline
+        canvas.drawText("×", xButtonCenterX, xTextY, xButtonTextPaint)
+
+        // Start position for text (adjusted to avoid X button)
         var yPosition = 110f
 
         // Draw type icon and place name
@@ -263,8 +307,10 @@ class LayerLabelTextureCache(private val context: Context) {
             60f
         }
 
-        // Draw place name
-        canvas.drawText(name, nameX, yPosition, titlePaint)
+        // Draw place name (truncate if too long to avoid overlapping X button)
+        val maxNameWidth = width - nameX - X_BUTTON_SIZE - X_BUTTON_MARGIN * 2
+        val truncatedName = truncateTextToFit(name, titlePaint, maxNameWidth)
+        canvas.drawText(truncatedName, nameX, yPosition, titlePaint)
         yPosition += 70f
 
         // Draw divider line
@@ -283,8 +329,12 @@ class LayerLabelTextureCache(private val context: Context) {
         // Draw phone number with icon
         phoneIcon?.let {
             canvas.drawBitmap(it, 60f, yPosition - 30f, null)
-            canvas.drawText(phoneNumber, 110f, yPosition, detailPaint)
-        } ?: canvas.drawText("📞 $phoneNumber", 60f, yPosition, detailPaint)
+            val truncatedPhone = truncateTextToFit(phoneNumber, detailPaint, width - 170f)
+            canvas.drawText(truncatedPhone, 110f, yPosition, detailPaint)
+        } ?: run {
+            val truncatedPhone = truncateTextToFit("📞 $phoneNumber", detailPaint, width - 120f)
+            canvas.drawText(truncatedPhone, 60f, yPosition, detailPaint)
+        }
         yPosition += 65f
 
         // Draw rating with star icon
@@ -298,6 +348,15 @@ class LayerLabelTextureCache(private val context: Context) {
         return bitmap
     }
 
+    // Helper function to truncate text to fit within a given width
+    private fun truncateTextToFit(text: String, paint: Paint, maxWidth: Float): String {
+        var truncatedText = text
+        while (paint.measureText(truncatedText) > maxWidth && truncatedText.length > 3) {
+            truncatedText = truncatedText.substring(0, truncatedText.length - 4) + "..."
+        }
+        return truncatedText
+    }
+
     // Helper function to convert drawable to bitmap
     private fun drawableToBitmap(drawable: Drawable?, width: Int, height: Int): Bitmap? {
         if (drawable == null) return null
@@ -307,5 +366,25 @@ class LayerLabelTextureCache(private val context: Context) {
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
         return bitmap
+    }
+
+    /**
+     * Get the X button bounds in texture coordinates (0-1 range)
+     * Returns a RectF with normalized coordinates
+     */
+    fun getXButtonBounds(): RectF {
+        // Fixed dimensions from generateBitmapFromPlaceInfo
+        val width = 720f
+        val height = 500f
+
+        val xButtonCenterX = width - X_BUTTON_MARGIN - (X_BUTTON_SIZE / 2f)
+        val xButtonCenterY = X_BUTTON_MARGIN + (X_BUTTON_SIZE / 2f)
+
+        val left = (xButtonCenterX - X_BUTTON_SIZE / 2f) / width
+        val top = (xButtonCenterY - X_BUTTON_SIZE / 2f) / height
+        val right = (xButtonCenterX + X_BUTTON_SIZE / 2f) / width
+        val bottom = (xButtonCenterY + X_BUTTON_SIZE / 2f) / height
+
+        return RectF(left, top, right, bottom)
     }
 }
