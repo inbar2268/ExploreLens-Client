@@ -69,7 +69,6 @@ class SettingsFragment : Fragment() {
         binding.logoutButton.setOnClickListener {
             showLogoutDialog()
         }
-
         checkGoogleSignInStatus()
 
         return view
@@ -163,21 +162,35 @@ class SettingsFragment : Fragment() {
                         // Call the reset function and handle the Result
                         siteHistoryRepository.resetSiteHistoryForUser(userId).fold(
                             onSuccess = {
-                                ToastHelper.showShortToast(context, "Site history reset successfully ($historyCount items removed)")
+                                ToastHelper.showShortToast(
+                                    context,
+                                    "Site history reset successfully ($historyCount items removed)"
+                                )
                             },
                             onFailure = { exception ->
                                 val errorMessage = when {
-                                    exception.message?.contains("network", ignoreCase = true) == true ->
+                                    exception.message?.contains(
+                                        "network",
+                                        ignoreCase = true
+                                    ) == true ->
                                         "Network error. Please check your connection."
-                                    exception.message?.contains("server", ignoreCase = true) == true ->
+
+                                    exception.message?.contains(
+                                        "server",
+                                        ignoreCase = true
+                                    ) == true ->
                                         "Server error. Please try again later."
+
                                     else -> "Failed to reset site history: ${exception.message}"
                                 }
                                 ToastHelper.showShortToast(context, errorMessage)
                             }
                         )
                     } else {
-                        ToastHelper.showShortToast(context, "Unable to reset history - user not found")
+                        ToastHelper.showShortToast(
+                            context,
+                            "Unable to reset history - user not found"
+                        )
                     }
                 } finally {
                     // Re-enable button and restore text
@@ -226,8 +239,6 @@ class SettingsFragment : Fragment() {
 
         dialog.show()
     }
-
-
 
     override fun onDestroyView() {
         super.onDestroyView()

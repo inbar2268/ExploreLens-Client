@@ -40,7 +40,7 @@ class GeoAnchorManager(
     private val locationCache = mutableMapOf<String, Location>()
     private var lastLocationUpdate = 0L
     private var lastFetchedLocation: Location? = null
-    private val DISTANCE_THRESHOLD_METERS = 300.0
+    private val DISTANCE_THRESHOLD_METERS = 450.0
     private val DISTANCE_CHECK_INTERVAL = 30_000L
 
     // State management
