@@ -24,4 +24,10 @@ interface SiteHistoryDao {
 
     @Query("SELECT * FROM site_history WHERE userId = :userId")
     suspend fun getSiteHistoryByUserIdSync(userId: String): List<SiteHistory>
+
+    @Query("SELECT COUNT(*) FROM site_history WHERE userId = :userId")
+    suspend fun getSiteHistoryCountForUser(userId: String): Int
+
+    @Query("DELETE FROM site_history WHERE userId = :userId")
+    suspend fun clearSiteHistoryForUser(userId: String)
 }

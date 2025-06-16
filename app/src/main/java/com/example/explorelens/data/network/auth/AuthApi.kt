@@ -2,9 +2,9 @@ package com.example.explorelens.data.network.auth
 
 import com.example.explorelens.data.model.*
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.Response
-
 
 interface AuthApi {
     @POST("/auth/register")
@@ -28,4 +28,9 @@ interface AuthApi {
     @POST("auth/reset")
     suspend fun resetPassword(@Body resetPasswordRequest: ResetPasswordRequest): Response<Unit>
 
+    @POST("/auth/change-password")
+    suspend fun changePassword(
+        @Header("Authorization") authorization: String,
+        @Body request: ChangePasswordRequest
+    ): Response<Unit>
 }
