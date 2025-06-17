@@ -306,12 +306,6 @@ class WorldMapManager(
     </head>
     <body>
         <div class="map-container">
-            <div class="zoom-controls">
-                <div class="zoom-btn" id="zoomIn">+</div>
-                <div class="zoom-btn" id="zoomOut">−</div>
-                <div class="zoom-btn" id="zoomReset">⌂</div>
-            </div>
-            
             <div class="map-content" id="mapContent">
                 $svgContent
             </div>

@@ -12,7 +12,7 @@
         android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:textColor="@color/black"
-        android:textSize="15sp"
+        android:textSize="12sp"
         android:fontFamily="@font/harmonyos_sans_black"
         tools:text="Monday" />
 
@@ -22,7 +22,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:textColor="@color/text_primary"
-        android:textSize="15sp"
+        android:textSize="12sp"
         android:fontFamily="@font/harmonyos_sans_regular"
         tools:text="7:00 AM – 6:00 PM" />
 

@@ -163,4 +163,9 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
         val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation)
         bottomNav.setOnItemReselectedListener(null)
     }
+    override fun onResume() {
+        super.onResume()
+        //viewModel.fetchUserData()
+        viewModel.refreshStatistics()
+    }
 }

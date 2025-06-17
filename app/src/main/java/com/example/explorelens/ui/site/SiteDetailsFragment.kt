@@ -38,6 +38,7 @@ import com.example.explorelens.data.repository.ReviewsRepository
 import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.data.repository.UserRepository
 import com.example.explorelens.fragments.ChatFragment
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -509,46 +510,26 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
         val siteId = label.replace(" ", "")
 
         Log.d("SiteDetailsFragment", "Fetching site details for: $siteId")
-
-        loadingIndicator.visibility = View.VISIBLE
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                // First sync from server to Room
-                Log.d("SiteDetailsFragment", "Syncing site details from server to Room...")
-                val syncResult = siteDetailsRepository.syncSiteDetails(siteId)
-
-                if (syncResult.isFailure) {
-                    Log.w(
-                        "SiteDetailsFragment",
-                        "Sync failed: ${syncResult.exceptionOrNull()?.message}"
-                    )
-                    // Continue anyway - we might have cached data
+        siteDetailsRepository.getSiteDetailsLiveData(siteId)
+            .observe(viewLifecycleOwner) { siteDetails ->
+                if (siteDetails != null) {
+                    Log.d("SiteDetailsFragment", "Got site details: ${siteDetails.name}")
+                    handleSiteDetailsSuccess(siteDetails)
+                    // Hide main loading since we have data
+                    loadingIndicator.visibility = View.GONE
                 } else {
-                    Log.d("SiteDetailsFragment", "Sync successful")
+                    Log.d("SiteDetailsFragment", "No site details found, showing loading...")
+                    // Only show main loading if we have no data at all
+                    loadingIndicator.visibility = View.VISIBLE
                 }
+            }
 
-                // Now observe Room data
-                Log.d("SiteDetailsFragment", "Setting up Room observer...")
-                siteDetailsRepository.getSiteDetailsLiveData(siteId)
-                    .observe(viewLifecycleOwner) { siteDetails ->
-                        loadingIndicator.visibility = View.GONE
-
-                        if (siteDetails != null) {
-                            Log.d(
-                                "SiteDetailsFragment",
-                                "Got site details from Room: ${siteDetails.name}"
-                            )
-                            handleSiteDetailsSuccess(siteDetails)
-                        } else {
-                            Log.e("SiteDetailsFragment", "No site details found in Room")
-                            showError("Failed to load details")
-                        }
-                    }
-            } catch (e: Exception) {
-                loadingIndicator.visibility = View.GONE
-                Log.e("SiteDetailsFragment", "Error in fetchSiteDetails: ${e.message}", e)
-                showError("Failed to load details: ${e.message}")
+        // Observe refresh errors
+        siteDetailsRepository.refreshError.observe(viewLifecycleOwner) { error ->
+            if (error != null) {
+                // Show a small snackbar or toast for refresh errors
+                Snackbar.make(requireView(), "Failed to refresh: $error", Snackbar.LENGTH_SHORT).show()
+                siteDetailsRepository.clearRefreshError()
             }
         }
     }
