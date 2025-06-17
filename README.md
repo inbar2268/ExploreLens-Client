@@ -35,9 +35,18 @@ This step is crucial for authenticating with Google services, such as Google Sig
 5. Select **Android** as the application type
 6. Provide your app's package name (e.g., `com.example.explorelens`) and your SHA-1 certificate fingerprint
 
-To obtain your SHA-1 fingerprint, run this command in your terminal:
+You can obtain your SHA-1 fingerprint by running the following command in your terminal from your project's root directory:
+
 ```bash
-keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+./gradlew signingReport
+```
+In the output, look for a section similar to this, and copy the SHA1 value:
+```bash
+Variant: debug
+Config: debug
+Store: /home/username/.android/debug.keystore
+Alias: AndroidDebugKey
+SHA1: A1:B2:C3:D4:E5:F6:78:90:AB:CD:EF:12:34:56:78:90:12:34:56:78
 ```
 
 7. Once created, Google will provide you with a Client ID string
