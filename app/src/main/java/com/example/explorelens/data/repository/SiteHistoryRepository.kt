@@ -86,59 +86,38 @@ class SiteHistoryRepository(context: Context) {
         return try {
             Log.d(TAG, "Resetting site history for user: $userId")
 
-            // First, get all site history for this user from local database
-            val userSiteHistory = siteHistoryDao.getSiteHistoryByUserIdSync(userId)
-            Log.d(TAG, "Found ${userSiteHistory.size} site history items to delete")
+            // First, get count of site history for this user from local database
+            val historyCount = siteHistoryDao.getSiteHistoryCountForUser(userId)
+            Log.d(TAG, "Found $historyCount site history items to delete")
 
-            if (userSiteHistory.isEmpty()) {
+            if (historyCount == 0) {
                 Log.d(TAG, "No site history found for user")
                 return Result.success(Unit)
             }
 
-            // Delete each site history item from server using site info ID
-            var successCount = 0
-            var failureCount = 0
+            // Try to delete all site history from server using the new endpoint
+            val response = siteHistoryApi.deleteAllSiteHistoryForUser(userId)
 
-            userSiteHistory.forEach { siteHistory ->
-                try {
-                    val response = siteHistoryApi.deleteSiteHistoryById(siteHistory.id) // or use siteHistory.siteInfoId
-                    if (response.isSuccessful) {
-                        successCount++
-                        Log.d(TAG, "Successfully deleted site history: ${siteHistory.id}")
-                    } else {
-                        failureCount++
-                        Log.w(TAG, "Failed to delete site history: ${siteHistory.id}, code: ${response.code()}")
-                    }
-                } catch (e: Exception) {
-                    failureCount++
-                    Log.e(TAG, "Exception deleting site history: ${siteHistory.id}", e)
-                }
-            }
+            if (response.isSuccessful) {
+                Log.d(TAG, "Successfully deleted all site history from server for user: $userId")
 
-            // Clear local database regardless of server results
-            siteHistoryDao.clearSiteHistoryForUser(userId)
-            Log.d(TAG, "Local site history cleared successfully")
+                // Only clear local database if server deletion was successful
+                siteHistoryDao.clearSiteHistoryForUser(userId)
+                Log.d(TAG, "Local site history cleared successfully ($historyCount items)")
 
-            // Report results
-            if (failureCount == 0) {
-                Log.d(TAG, "All site history deleted successfully from server ($successCount items)")
                 Result.success(Unit)
             } else {
-                Log.w(TAG, "Partial success: $successCount succeeded, $failureCount failed")
-                Result.success(Unit) // Still success since local was cleared
+                Log.e(TAG, "Failed to delete site history from server. Response code: ${response.code()}, message: ${response.message()}")
+
+                // Don't clear local database if server deletion failed
+                Result.failure(Exception("Server deletion failed: ${response.code()} - ${response.message()}"))
             }
 
         } catch (e: Exception) {
             Log.e(TAG, "Exception during site history reset", e)
 
-            // If everything fails, still try to clear local
-            try {
-                siteHistoryDao.clearSiteHistoryForUser(userId)
-                Log.d(TAG, "Local site history cleared despite server errors")
-                Result.success(Unit)
-            } catch (localException: Exception) {
-                Result.failure(localException)
-            }
+            // Don't clear local database if there was an exception
+            Result.failure(e)
         }
     }
     /**
