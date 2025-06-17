@@ -202,6 +202,7 @@ class GeoAnchorManager(
         val earth = session.earth
         if (shouldPlaceGeoAnchors && earth != null && earth.trackingState == TrackingState.TRACKING) {
             callback?.showSnackbar("Placing nearby locations...")
+
             pendingPlaces?.let { places ->
                 updateARViewWithPlaces(places, session)
                 shouldPlaceGeoAnchors = false
