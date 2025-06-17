@@ -153,7 +153,7 @@ public class ARSceneRenderer(
                 continue
             }
 
-            Log.d(TAG, "Rendering anchor - State: ${anchor.trackingState}, Label: ${arDetectedObject.label}")
+            //Log.d(TAG, "Rendering anchor - State: ${anchor.trackingState}, Label: ${arDetectedObject.label}")
 
             labelRenderer.draw(
                 render,
