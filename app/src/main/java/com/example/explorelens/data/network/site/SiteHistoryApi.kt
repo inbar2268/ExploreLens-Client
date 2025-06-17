@@ -18,4 +18,8 @@ interface SiteHistoryApi {
 
     @DELETE("/siteinfo_history/{id}")
     suspend fun deleteSiteHistoryById(@Path("id") id: String): Response<Unit>
+
+    // New endpoint to delete all site history for a user
+    @DELETE("/siteinfo_history/user/{userId}")
+    suspend fun deleteAllSiteHistoryForUser(@Path("userId") userId: String): Response<Unit>
 }
