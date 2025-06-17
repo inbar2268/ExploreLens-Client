@@ -65,7 +65,7 @@ class SettingsFragment : Fragment() {
         binding.resetHistoryRow.setOnClickListener {
             showResetHistoryDialog()
         }
-
+        
         binding.logoutButton.setOnClickListener {
             showLogoutDialog()
         }
@@ -125,6 +125,7 @@ class SettingsFragment : Fragment() {
             }
         }
         val window = dialog.window
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
         dialog.show()
@@ -202,6 +203,7 @@ class SettingsFragment : Fragment() {
 
         // Set dialog width to match parent
         val window = dialog.window
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
         dialog.show()
@@ -232,6 +234,7 @@ class SettingsFragment : Fragment() {
 
         // Set dialog width to match parent
         val window = dialog.window
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
         dialog.show()
