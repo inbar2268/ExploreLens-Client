@@ -224,22 +224,22 @@ class MapFragment : Fragment() {
     }
 
     private fun loadSiteDetailsForMarker(siteMarker: SiteMarker) {
-        // Use repository to fetch site details
-        siteDetailsRepository.getSiteDetailsLiveData(siteMarker.siteId).observe(viewLifecycleOwner) { siteDetails ->
-            if (siteDetails != null) {
-                // Update marker title
-                siteMarker.marker?.title = siteDetails.name ?: siteMarker.name
+        siteDetailsRepository.getSiteDetailsLiveData(siteMarker.siteId)
+            .observe(viewLifecycleOwner) { siteDetails ->
+                if (siteDetails != null) {
+                    // Update marker title
+                    siteMarker.marker?.title = siteDetails.name ?: siteMarker.name
 
-                // If popup is showing for this marker, update it
-                val currentDialog = popupDialog
-                if (currentDialog != null && currentDialog.isShowing) {
-                    val dialogTag = currentDialog.findViewById<View>(R.id.root_layout)?.tag as? String
-                    if (dialogTag == siteMarker.siteId) {
-                        updateDialogContent(currentDialog, siteMarker.siteId, siteDetails)
+                    // If popup is showing for this marker, update it
+                    val currentDialog = popupDialog
+                    if (currentDialog != null && currentDialog.isShowing) {
+                        val dialogTag = currentDialog.findViewById<View>(R.id.root_layout)?.tag as? String
+                        if (dialogTag == siteMarker.siteId) {
+                            updateDialogContent(currentDialog, siteMarker.siteId, siteDetails)
+                        }
                     }
                 }
             }
-        }
     }
 
     private fun showSitePopupDialog(marker: Marker) {
@@ -302,18 +302,13 @@ class MapFragment : Fragment() {
             params.gravity = Gravity.CENTER
             window.attributes = params
         }
-
-        // Load site details from repository
-        siteDetailsRepository.fetchSiteDetails(
-            siteMarker.siteId,
-            onSuccess = { siteDetails ->
-                updateDialogContent(popupDialog, siteMarker.siteId, siteDetails)
-            },
-            onError = {
-                // Dialog already shows initial data, so no need to do anything on error
-                Log.e(TAG, "Failed to load site details for popup")
+        // Observe site details data (cached + background refresh)
+        siteDetailsRepository.getSiteDetailsLiveData(siteMarker.siteId)
+            .observe(viewLifecycleOwner) { siteDetails ->
+                if (siteDetails != null && popupDialog?.isShowing == true) {
+                    updateDialogContent(popupDialog, siteMarker.siteId, siteDetails)
+                }
             }
-        )
     }
 
     private fun updateDialogContent(dialog: AlertDialog?, siteId: String, siteDetails: com.example.explorelens.data.model.SiteDetails.SiteDetails) {
@@ -398,9 +393,10 @@ class MapFragment : Fragment() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        mapView.onSaveInstanceState(outState)
 
-        // Save map type state
+        if (::mapView.isInitialized) {
+            mapView.onSaveInstanceState(outState)
+        }
         outState.putBoolean("isSatelliteView", isSatelliteView)
     }
 
