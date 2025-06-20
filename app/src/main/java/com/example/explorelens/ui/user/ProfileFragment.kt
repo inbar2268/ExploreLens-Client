@@ -38,8 +38,6 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
         setupListeners()
         setupBottomNavigation()
         setupSwipeRefreshBehavior()
-        // Load initial data
-        viewModel.fetchUserData()
     }
 
     private fun initializeComponents() {
@@ -72,6 +70,21 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
                         uiHelper.hideLoading()
                         uiHelper.hideError()
                         findNavController().navigate(R.id.action_profileFragment_to_loginFragment)
+                    }
+                }
+            }
+        }
+
+        viewModel.userActionState.observe(viewLifecycleOwner) { state ->
+            _binding?.let {
+                when (state) {
+                    is ProfileViewModel.UserState.Error -> {
+                        ToastHelper.showShortToast(context, state.message)
+                    }
+                    is ProfileViewModel.UserState.Logout -> {
+                        findNavController().navigate(R.id.action_profileFragment_to_loginFragment)
+                    }
+                    else -> {
                     }
                 }
             }
@@ -136,7 +149,7 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
                         navController.popBackStack(R.id.profileFragment, false)
                     } else {
                         // Refresh data when user taps profile tab again
-                        viewModel.refreshAllData()
+                        viewModel.refreshStatistics()
                     }
                 }
             }

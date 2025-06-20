@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import com.example.explorelens.data.db.User
@@ -11,7 +12,9 @@ import com.example.explorelens.data.repository.AuthRepository
 import com.example.explorelens.data.repository.Resource
 import com.example.explorelens.data.repository.UserRepository
 import com.example.explorelens.data.repository.UserStatisticsRepository
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
@@ -36,11 +39,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private val userRepository = UserRepository(application)
-    private val authRepository = AuthRepository(application)
     private val userStatisticsRepository = UserStatisticsRepository.getInstance(application)
 
-    private val _userState = MutableLiveData<UserState>()
-    val userState: LiveData<UserState> = _userState
+    private val _userActionState = MutableLiveData<UserState>()
+    val userActionState: LiveData<UserState> = _userActionState
 
     private val _isRefreshing = MutableLiveData<Boolean>()
     val isRefreshing: LiveData<Boolean> = _isRefreshing
@@ -72,47 +74,99 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             liveData
         }
 
-    init {
-        observeUser()
-        // Statistics are automatically loaded via LiveData observation
-    }
-
-    private fun observeUser() {
-        viewModelScope.launch {
-            userRepository.observeUser().collectLatest { user ->
-                if (user != null) {
-                    _userState.value = UserState.Success(user)
+    val userState: LiveData<UserState> = userRepository
+        .observeUser()
+        .map { user ->
+            when {
+                user != null -> UserState.Success(user)
+                else -> {
+                    checkUserAuthentication()
+                    UserState.Loading
                 }
             }
+        }
+        .catch { exception ->
+            emit(UserState.Error(exception.message ?: "Unknown error"))
+        }
+        .asLiveData(viewModelScope.coroutineContext)
+
+
+
+    init {
+        initializeUserData()
+    }
+
+    private fun initializeUserData() {
+        viewModelScope.launch {
+            val localUser = userRepository.getUserFromDb()
+            if (localUser == null) {
+                fetchUserFromServer()
+            }
+        }
+    }
+
+    private suspend fun checkUserAuthentication() {
+        val localUser = userRepository.getUserFromDb()
+        if (localUser == null) {
+            fetchUserFromServer()
         }
     }
 
     fun fetchUserData() {
-        _userState.value = UserState.Loading
+        _userActionState.value = UserState.Loading
 
         viewModelScope.launch {
-            // First, try to get user from local database
             val localUser = userRepository.getUserFromDb()
 
             if (localUser != null) {
-                // If user is found locally, update UI with local data
-                _userState.value = UserState.Success(localUser)
+                _userActionState.value = UserState.Success(localUser)
             } else {
-                // If no user is found locally, fetch user data from server
-                val result = userRepository.fetchAndSaveUser()
-
-                result.fold(
-                    onSuccess = {
-                        // The user data will be updated through the observer once the repository saves it
-                    },
-                    onFailure = { exception ->
-                        // Instead of using Error state, directly use Logout state
-                        _userState.value = UserState.Logout
-                    }
-                )
+                fetchUserFromServer()
             }
         }
     }
+
+    private suspend fun fetchUserFromServer() {
+        val result = userRepository.fetchAndSaveUser()
+        result.fold(
+            onSuccess = {
+                _userActionState.value = UserState.Success(it)
+            },
+            onFailure = { exception ->
+                _userActionState.value = UserState.Logout
+            }
+        )
+    }
+
+    fun updateUserProfile(updatedUser: User) {
+        viewModelScope.launch {
+            try {
+                userRepository.updateUser(updatedUser)
+                // The Flow observer will automatically emit the updated user
+            } catch (e: Exception) {
+                _userActionState.value = UserState.Error("Failed to update profile: ${e.message}")
+            }
+        }
+    }
+
+    fun syncUserFromServer() {
+        viewModelScope.launch {
+            try {
+                val result = userRepository.fetchAndSaveUser()
+                result.fold(
+                    onSuccess = {
+                        // User will be updated through observer when saved to DB
+                    },
+                    onFailure = { exception ->
+                        _userActionState.value = UserState.Error("Failed to sync user data")
+                    }
+                )
+            } catch (e: Exception) {
+                _userActionState.value = UserState.Error("Failed to sync user data")
+            }
+        }
+    }
+
 
     fun refreshAllData() {
         _isRefreshing.value = true
@@ -120,14 +174,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             try {
                 // Refresh user data
-                fetchUserData()
-
+                syncUserFromServer()
                 // Refresh statistics (this will automatically update the LiveData observers)
                 userStatisticsRepository.refreshStatistics()
 
             } catch (e: Exception) {
                 // Handle any errors during refresh
-                _userState.value = UserState.Error("Failed to refresh data")
+                _userActionState.value = UserState.Error("Failed to refresh data")
             } finally {
                 _isRefreshing.value = false
             }
