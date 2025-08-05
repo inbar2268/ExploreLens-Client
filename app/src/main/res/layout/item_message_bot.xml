@@ -29,6 +29,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         app:cardBackgroundColor="#F5F5F5"
+        android:fontFamily="@font/harmonyos_sans_regular"
         app:cardCornerRadius="12dp"
         app:cardElevation="1dp"
         app:cardUseCompatPadding="true"
@@ -41,6 +42,7 @@
             android:layout_height="wrap_content"
             android:maxWidth="280dp"
             android:padding="12dp"
+            android:fontFamily="@font/harmonyos_sans_regular"
             android:text="Bot message goes here with information about historical sites."
             android:textColor="#000000"
             android:textSize="14sp" />
@@ -53,6 +55,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
+        android:fontFamily="@font/harmonyos_sans_regular"
         android:text="12:34 PM"
         android:textColor="#757575"
         android:textSize="10sp"

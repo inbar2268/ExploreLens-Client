@@ -37,10 +37,9 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
         setupObservers()
         setupListeners()
         setupBottomNavigation()
-
+        setupSwipeRefreshBehavior()
         // Load initial data
         viewModel.fetchUserData()
-        // Statistics are automatically loaded via repository LiveData
     }
 
     private fun initializeComponents() {
@@ -149,11 +148,24 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
         // For now, the toast is handled in WorldMapManager
     }
 
+    private fun setupSwipeRefreshBehavior() {
+        val scrollView = binding.mainScrollView
+
+        scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            binding.swipeRefresh.isEnabled = scrollY == 0
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         mapManager.cleanup() // Clean up map state
         _binding = null
         val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation)
         bottomNav.setOnItemReselectedListener(null)
+    }
+    override fun onResume() {
+        super.onResume()
+        //viewModel.fetchUserData()
+        viewModel.refreshStatistics()
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.switchMap
 import com.example.explorelens.data.db.AppDatabase
 import com.example.explorelens.data.db.siteDetails.SiteDetailsDao
@@ -22,11 +23,19 @@ import kotlin.coroutines.resume
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import androidx.lifecycle.map
+
 
 class SiteDetailsRepository(context: Context) {
     private val TAG = "SiteDetailsRepository"
     private val tokenManager: AuthTokenManager = AuthTokenManager.getInstance(context)
     private val siteDetailsDao: SiteDetailsDao = AppDatabase.getInstance(context).siteDetailsDao()
+
+    private val _isRefreshing = MutableLiveData<Boolean>(false)
+    val isRefreshing: LiveData<Boolean> = _isRefreshing
+
+    private val _refreshError = MutableLiveData<String?>()
+    val refreshError: LiveData<String?> = _refreshError
 
     suspend fun addRating(siteId: String, rating: Float): Result<SiteDetails> {
         val userId = tokenManager.getUserId()
@@ -120,11 +129,55 @@ class SiteDetailsRepository(context: Context) {
     fun getSiteDetailsLiveData(siteId: String): LiveData<SiteDetails?> {
         val cleanSiteId = siteId.replace(" ", "")
 
-        return siteDetailsDao.getSiteDetailsById(cleanSiteId).switchMap { cachedEntity: SiteDetailsEntity? ->
-            val result = MutableLiveData<SiteDetails?>()
-            result.value = cachedEntity?.toModel()
-            result
+        // Trigger background refresh (non-blocking)
+        refreshInBackground(cleanSiteId)
+
+        // Let Room emit the current cached value immediately
+        return siteDetailsDao.getSiteDetailsById(cleanSiteId)
+            .map { it?.toModel() }
+            .distinctUntilChanged()
+    }
+
+    private fun refreshInBackground(siteId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Log.d(TAG, "Background refresh started for: $siteId")
+
+                // Notify UI that refresh is starting
+                withContext(Dispatchers.Main) {
+                    _isRefreshing.value = true
+                }
+
+                // Fetch from server
+                val result = syncSiteDetails(siteId)
+
+                // Notify UI when done
+                withContext(Dispatchers.Main) {
+                    _isRefreshing.value = false
+                    if (result.isFailure) {
+                        _refreshError.value = result.exceptionOrNull()?.message
+                    }
+                }
+
+                Log.d(TAG, "Background refresh completed for: $siteId")
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _isRefreshing.value = false
+                    _refreshError.value = e.message
+                }
+                Log.e(TAG, "Background refresh failed: ${e.message}", e)
+            }
         }
+    }
+
+    fun manualRefresh(siteId: String) {
+        refreshInBackground(siteId)
+    }
+
+    // Clear error after it's been shown
+    fun clearRefreshError() {
+        _refreshError.value = null
     }
 
     fun getSiteDetailsNow(siteId: String): SiteDetailsEntity? {

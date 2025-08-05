@@ -32,6 +32,11 @@ android {
         versionCode 1
         versionName "1.0"
 
+        manifestPlaceholders = [
+                googleMapsApiKey: localProperties.getProperty('GOOGLE_API_KEY', ''),
+                googleArApiKey: localProperties.getProperty('GOOGLE_API_KEY', '')
+        ]
+
         buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty('BASE_URL', 'http://localhost:3000')}\"")
         buildConfigField("String", "WEB_CLIENT_ID", "\"${localProperties.getProperty('WEB_CLIENT_ID', 'NONE')}\"")
         buildConfigField("Boolean", "USE_MOCK_DATA", "${project.properties["USE_MOCK_DATA"] ?: "false"}")

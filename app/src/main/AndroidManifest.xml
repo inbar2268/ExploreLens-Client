@@ -18,10 +18,10 @@
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBnjpGXpf78W4JIZGio7Fp7s1O7uHFzayw"/>
+            android:value="${googleMapsApiKey}"/>
         <meta-data
             android:name="com.google.android.ar.API_KEY"
-            android:value="AIzaSyBnjpGXpf78W4JIZGio7Fp7s1O7uHFzayw" />
+            android:value="${googleArApiKey}" />
         <activity
             android:name="com.example.explorelens.ArActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode"            android:exported="true"
@@ -31,7 +31,7 @@
         <activity
             android:name="com.example.explorelens.MainActivity"
             android:exported="true"
-            android:label="Main Activity"
+            android:label="Explore Lens"
             android:launchMode="standard"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" >
             <intent-filter>

@@ -40,7 +40,7 @@ class GeoAnchorManager(
     private val locationCache = mutableMapOf<String, Location>()
     private var lastLocationUpdate = 0L
     private var lastFetchedLocation: Location? = null
-    private val DISTANCE_THRESHOLD_METERS = 300.0
+    private val DISTANCE_THRESHOLD_METERS = 450.0
     private val DISTANCE_CHECK_INTERVAL = 30_000L
 
     // State management
@@ -166,8 +166,8 @@ class GeoAnchorManager(
 
     private fun createMockPointsOfInterest(): List<PointOfInterest> {
         // Using Hod Hasharon coordinates as a base for mock data
-        val baseLat = 32.142845
-        val baseLng = 34.887489
+        val baseLat = 31.928281
+        val baseLng = 34.784952
 
         val mockPlaces = listOf(
             PointOfInterest(
@@ -202,6 +202,7 @@ class GeoAnchorManager(
         val earth = session.earth
         if (shouldPlaceGeoAnchors && earth != null && earth.trackingState == TrackingState.TRACKING) {
             callback?.showSnackbar("Placing nearby locations...")
+
             pendingPlaces?.let { places ->
                 updateARViewWithPlaces(places, session)
                 shouldPlaceGeoAnchors = false

@@ -40,8 +40,8 @@ class ProfileUIHelper(private val binding: FragmentProfileBinding) {
             Glide.with(fragment)
                 .load(user.profilePictureUrl)
                 .apply(RequestOptions.circleCropTransform())
-                .placeholder(R.drawable.ic_default_profile)
-                .error(R.drawable.ic_default_profile)
+                .placeholder(R.drawable.avatar_placeholder)
+                .error(R.drawable.avatar_placeholder)
                 .into(binding.profileImage)
         } else {
             binding.profileImage.setImageResource(R.drawable.avatar_placeholder)

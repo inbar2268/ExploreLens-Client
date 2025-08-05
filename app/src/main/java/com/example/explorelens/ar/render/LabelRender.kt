@@ -275,7 +275,7 @@ class LabelRender {
     cameraPose: Pose,
     label: String
   ) {
-    Log.d(TAG, "Drawing label: $label")
+    //Log.d(TAG, "Drawing label: $label")
 
     // Set the label origin from the pose
     // Adjust Y position slightly upward for better positioning
@@ -294,7 +294,6 @@ class LabelRender {
     // Draw the mesh
     render.draw(mesh, shader)
 
-    Log.d(TAG, "Draw completed for label: $label")
   }
 
   // Method to set the screen size (as a proportion of screen height)

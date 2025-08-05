@@ -57,8 +57,8 @@ class EditProfileFragment : Fragment() {
                 Glide.with(this)
                     .load(uri)
                     .apply(RequestOptions.circleCropTransform())
-                    .placeholder(R.drawable.ic_default_profile)
-                    .error(R.drawable.ic_default_profile)
+                    .placeholder(R.drawable.avatar_placeholder)
+                    .error(R.drawable.avatar_placeholder)
                     .into(binding.profileImage)
             }
         }
@@ -197,8 +197,8 @@ class EditProfileFragment : Fragment() {
                         Glide.with(this)
                             .load(state.user.profilePictureUrl)
                             .apply(RequestOptions.circleCropTransform())
-                            .placeholder(R.drawable.ic_default_profile)
-                            .error(R.drawable.ic_default_profile)
+                            .placeholder(R.drawable.avatar_placeholder)
+                            .error(R.drawable.avatar_placeholder)
                             .into(binding.profileImage)
                     } else {
                         binding.profileImage.setImageResource(R.drawable.avatar_placeholder)
