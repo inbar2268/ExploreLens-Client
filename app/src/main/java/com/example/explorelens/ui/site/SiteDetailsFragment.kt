@@ -60,6 +60,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
     private lateinit var reviewRepository: ReviewsRepository
     private lateinit var siteDetailsRepository: SiteDetailsRepository
     private lateinit var userRepository: UserRepository
+    private var fetchFailed = false
 
     // Enhanced Text-to-Speech components
     private var textToSpeech: TextToSpeech? = null
@@ -165,6 +166,9 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
 
         // Set up comments button click listener
         commentsButton.setOnClickListener {
+            if (fetchFailed) {
+                showError("Load comments failed: Network error")
+            }
             showReviewsDialog()
         }
 
@@ -620,13 +624,15 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
                 if (enrichedReviews != null) {
                     fetchedReviewsWithUsers = enrichedReviews
                 }
+                fetchFailed = false
                 Log.d("SiteDetailsFragment", "Loaded ${fetchedReviews.size} comments")
             } else {
+                fetchFailed = true
                 val error = result.exceptionOrNull()?.message ?: "Unknown error"
                 Log.e("SiteDetailsFragment", "Failed to load comments: $error")
                 if (!isAdded) return@launch
-                showError("Failed to load comments: $error")
-            }
+
+                fetchFailed = true            }
         }
     }
 
@@ -698,13 +704,26 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
                                     emptyView?.visibility = View.GONE
                                 }
                             } else {
+                                val exception = result.exceptionOrNull()
+                                val message = exception?.message ?: ""
+                                val isNetworkError =
+                                    message.contains("network", ignoreCase = true) ||
+                                            message.contains("failed to connect", ignoreCase = true)
+
+                                val errorMessage = if (isNetworkError) {
+                                    "Comment failed: Network error"
+                                } else {
+                                    "Failed to submit comment"
+                                }
+
                                 Log.e(
                                     "SiteDetailsFragment",
-                                    "Failed to submit comment: ${result.exceptionOrNull()?.message}"
+                                    "Failed to submit comment: ${exception?.message}"
                                 )
-                                ToastHelper.showShortToast(ctx, "error sending massage  ")
+                                ToastHelper.showShortToast(ctx, errorMessage)
                             }
                         }
+
                     }
                 }
 
@@ -770,11 +789,14 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
 
                             dialog.dismiss()
                         } else {
-                            Log.e(
-                                "SiteDetailsFragment",
-                                "Failed to submit rating: ${result.exceptionOrNull()?.message}"
-                            )
-                            ToastHelper.showShortToast(ctx, "Failed to submit rating")
+                            val errorMessage = result.exceptionOrNull()?.message.orEmpty()
+                            Log.e("SiteDetailsFragment", "Failed to submit rating: $errorMessage")
+
+                            if (errorMessage.contains("network", ignoreCase = true)) {
+                                ToastHelper.showShortToast(ctx, "Rating failed: Network error")
+                            } else {
+                                ToastHelper.showShortToast(ctx, "Failed to submit rating")
+                            }
                         }
                     }
                 } else {
