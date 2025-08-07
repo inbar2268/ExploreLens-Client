@@ -6,8 +6,8 @@ import android.util.Log
 import android.webkit.MimeTypeMap
 import com.example.explorelens.data.db.AppDatabase
 import com.example.explorelens.data.db.User
-import com.example.explorelens.data.model.UserResponse
-import com.example.explorelens.data.model.UpdateUserRequest
+import com.example.explorelens.data.model.user.UserResponse
+import com.example.explorelens.data.model.user.UpdateUserRequest
 import com.example.explorelens.data.model.user.UploadProfilePictureResponse
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager

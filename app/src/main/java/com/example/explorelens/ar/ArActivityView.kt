@@ -23,7 +23,7 @@ import com.example.explorelens.R
 import com.example.explorelens.common.helpers.FullScreenHelper
 import com.example.explorelens.common.helpers.SnackbarHelper
 import com.example.explorelens.common.samplerender.SampleRender
-import com.example.explorelens.data.model.FilterOption
+import com.example.explorelens.data.model.siteHistory.FilterOption
 import com.example.explorelens.databinding.ActivityMainBinding
 import com.example.explorelens.databinding.FilterSideSheetBinding
 import com.example.explorelens.adapters.filterOptions.FilterOptionAdapter
@@ -209,10 +209,10 @@ class ArActivityView(
    * Setup buttons for the filter side sheet
    */
   private fun setupSideSheetButtons(
-    binding: FilterSideSheetBinding,
-    adapter: FilterOptionAdapter,
-    allFilterOptions: MutableList<FilterOption>,
-    dialog: SideSheetDialog
+      binding: FilterSideSheetBinding,
+      adapter: FilterOptionAdapter,
+      allFilterOptions: MutableList<FilterOption>,
+      dialog: SideSheetDialog
   ) {
 
     // Close button

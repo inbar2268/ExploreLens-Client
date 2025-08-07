@@ -22,7 +22,7 @@ import com.example.explorelens.ar.AppRenderer
 import com.example.explorelens.ar.ArActivityView
 import com.example.explorelens.common.helpers.FullScreenHelper
 import com.example.explorelens.common.helpers.ToastHelper
-import com.example.explorelens.data.model.FilterOption
+import com.example.explorelens.data.model.siteHistory.FilterOption
 import com.example.explorelens.data.repository.SiteHistoryRepository
 import com.example.explorelens.databinding.ActivityMainBinding
 import com.example.explorelens.utils.GeoLocationUtils

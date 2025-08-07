@@ -1,4 +1,4 @@
-package com.example.explorelens.data.network
+package com.example.explorelens.data.network.nearbyPlaces
 
 import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
 import retrofit2.Response

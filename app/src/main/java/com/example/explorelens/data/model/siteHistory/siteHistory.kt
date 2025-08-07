@@ -1,4 +1,4 @@
-package com.example.explorelens.data.model
+package com.example.explorelens.data.model.siteHistory
 
 data class CreateSiteHistoryRequest(val siteInfoId: String, val userId: String, val geohash: String, val latitude: Double, val longitude: Double, val createdAt: String)
 

@@ -1,4 +1,4 @@
-package com.example.explorelens.data.network
+package com.example.explorelens.data.network.siteDetails
 
 import com.example.explorelens.data.model.comments.Review
 import com.example.explorelens.data.model.comments.ReviewRequest

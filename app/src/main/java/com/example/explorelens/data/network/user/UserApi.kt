@@ -1,7 +1,7 @@
 package com.example.explorelens.data.network.user
 
-import com.example.explorelens.data.model.UpdateUserRequest
-import com.example.explorelens.data.model.UserResponse
+import com.example.explorelens.data.model.user.UpdateUserRequest
+import com.example.explorelens.data.model.user.UserResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE

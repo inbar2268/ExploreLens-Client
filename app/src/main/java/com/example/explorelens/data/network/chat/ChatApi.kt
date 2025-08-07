@@ -1,4 +1,4 @@
-package com.example.explorelens.data.network
+package com.example.explorelens.data.network.chat
 
 import com.example.explorelens.data.model.chat.ChatCompletionRequest
 import com.example.explorelens.data.model.chat.ChatCompletionResponse

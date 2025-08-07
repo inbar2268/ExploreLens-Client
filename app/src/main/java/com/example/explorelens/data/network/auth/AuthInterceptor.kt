@@ -2,7 +2,7 @@ package com.example.explorelens.data.network.auth
 
 import android.content.Context
 import android.util.Log
-import com.example.explorelens.data.model.RefreshTokenRequest
+import com.example.explorelens.data.model.auth.RefreshTokenRequest
 import com.example.explorelens.data.network.ExploreLensApiClient
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

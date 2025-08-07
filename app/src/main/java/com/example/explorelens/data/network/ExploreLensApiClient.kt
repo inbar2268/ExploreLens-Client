@@ -8,17 +8,16 @@ import retrofit2.converter.gson.GsonConverterFactory
 import com.example.explorelens.BuildConfig
 import com.example.explorelens.data.network.auth.AuthApi
 import com.example.explorelens.data.network.auth.AuthInterceptor
+import com.example.explorelens.data.network.chat.ChatApi
 import com.example.explorelens.data.network.detectionResult.AnalyzedResultApi
 import com.example.explorelens.data.network.site.SiteHistoryApi
 import com.example.explorelens.data.network.siteDetails.SiteDetailsApi
 import com.example.explorelens.data.network.user.UserApi
-import com.example.explorelens.data.network.ChatApi
+import com.example.explorelens.data.network.nearbyPlaces.NearbyPlacesApi
+import com.example.explorelens.data.network.siteDetails.ReviewsApi
 import com.example.explorelens.data.network.user.UploadProfilePictureApi
 import com.example.explorelens.data.network.user.UserStatisticsApi
 import java.util.concurrent.TimeUnit
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
-import javax.net.ssl.*
 
 object ExploreLensApiClient {
 
