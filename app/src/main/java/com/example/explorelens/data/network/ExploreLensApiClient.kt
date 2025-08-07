@@ -13,6 +13,7 @@ import com.example.explorelens.data.network.site.SiteHistoryApi
 import com.example.explorelens.data.network.siteDetails.SiteDetailsApi
 import com.example.explorelens.data.network.user.UserApi
 import com.example.explorelens.data.network.ChatApi
+import com.example.explorelens.data.network.user.UploadProfilePictureApi
 import com.example.explorelens.data.network.user.UserStatisticsApi
 import java.util.concurrent.TimeUnit
 import java.security.SecureRandom
@@ -67,6 +68,10 @@ object ExploreLensApiClient {
 
     val userApi: UserApi by lazy {
         createRetrofitClient(getOkHttpClient(authenticated = true)).create(UserApi::class.java)
+    }
+
+    val uploadProfilePictureApi: UploadProfilePictureApi by lazy {
+        createRetrofitClient(getOkHttpClient(authenticated = true)).create(UploadProfilePictureApi::class.java)
     }
 
     val siteHistoryApi: SiteHistoryApi by lazy {
