@@ -1,4 +1,4 @@
-package com.example.explorelens.data.model
+package com.example.explorelens.data.model.chat
 
 import java.text.SimpleDateFormat
 import java.util.Date

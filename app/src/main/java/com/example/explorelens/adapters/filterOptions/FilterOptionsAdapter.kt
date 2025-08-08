@@ -9,7 +9,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.R
-import com.example.explorelens.data.model.FilterOption
+import com.example.explorelens.data.model.siteHistory.FilterOption
 
 class FilterOptionAdapter(
     private val options: MutableList<FilterOption>,

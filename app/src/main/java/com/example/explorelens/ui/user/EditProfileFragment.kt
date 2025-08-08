@@ -28,11 +28,11 @@ class EditProfileFragment : Fragment() {
     private var _binding: FragmentEditProfileBinding? = null
     private val binding get() = _binding!!
 
-    // EditProfileState sealed class for handling UI states
     sealed class EditProfileState {
         object Loading : EditProfileState()
         data class Success(val user: User) : EditProfileState()
         data class Error(val message: String) : EditProfileState()
+        object UploadingImage : EditProfileState()
         object Saving : EditProfileState()
         object SaveSuccess : EditProfileState()
         data class SaveError(val message: String) : EditProfileState()
@@ -45,6 +45,7 @@ class EditProfileFragment : Fragment() {
     private lateinit var userRepository: UserRepository
     private var currentUser: User? = null
     private var selectedImageUri: Uri? = null
+    private var uploadedImageUrl: String? = null
 
     // Image picker launcher
     private val imagePickerLauncher = registerForActivityResult(
@@ -60,6 +61,8 @@ class EditProfileFragment : Fragment() {
                     .placeholder(R.drawable.avatar_placeholder)
                     .error(R.drawable.avatar_placeholder)
                     .into(binding.profileImage)
+
+                uploadedImageUrl = null
             }
         }
     }
@@ -105,7 +108,11 @@ class EditProfileFragment : Fragment() {
 
     private fun openImagePicker() {
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+
+        val mimeTypes = arrayOf("image/jpeg", "image/png", "image/gif", "image/webp")
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes)
         intent.type = "image/*"
+
         imagePickerLauncher.launch(intent)
     }
 
@@ -147,33 +154,63 @@ class EditProfileFragment : Fragment() {
 
         val currentUserData = currentUser ?: return
 
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                // Step 1: Upload image if a new one was selected
+                if (selectedImageUri != null && uploadedImageUrl == null) {
+                    _editProfileState.value = EditProfileState.UploadingImage
+
+                    val uploadResult = userRepository.uploadProfileImage(selectedImageUri!!)
+                    uploadResult.fold(
+                        onSuccess = { imageUrl ->
+                            uploadedImageUrl = imageUrl
+                            // Continue with profile update
+                            updateUserProfile(currentUserData, username, imageUrl)
+                        },
+                        onFailure = { exception ->
+                            _editProfileState.value = EditProfileState.SaveError(
+                                "Failed to upload image: ${exception.message}"
+                            )
+                            return@launch
+                        }
+                    )
+                } else {
+                    // No new image selected, use existing or uploaded URL
+                    val imageUrl = uploadedImageUrl ?: currentUserData.profilePictureUrl
+                    updateUserProfile(currentUserData, username, imageUrl)
+                }
+            } catch (e: Exception) {
+                _editProfileState.value = EditProfileState.SaveError(
+                    "An error occurred: ${e.message}"
+                )
+            }
+        }
+    }
+
+    private suspend fun updateUserProfile(currentUserData: User, username: String, imageUrl: String?) {
+        _editProfileState.value = EditProfileState.Saving
+
         // Create updated user object
         val updatedUser = currentUserData.copy(
             username = username,
-            // Note: In a real app, you'd upload the image to server and get URL
-            profilePictureUrl = selectedImageUri?.toString() ?: currentUserData.profilePictureUrl
+            profilePictureUrl = imageUrl
         )
 
-        _editProfileState.value = EditProfileState.Saving
+        //Update user profile
+        val result = userRepository.updateUser(updatedUser)
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            // Update user in repository (both local and server)
-            val result = userRepository.updateUser(updatedUser)
-
-            result.fold(
-                onSuccess = {
-                    _editProfileState.value = EditProfileState.SaveSuccess
-                    ToastHelper.showShortToast(requireContext(), "Profile updated successfully")
-                    // Navigate back after successful save
-                    findNavController().navigateUp()
-                },
-                onFailure = { exception ->
-                    _editProfileState.value = EditProfileState.SaveError(
-                        exception.message ?: "Failed to update profile"
-                    )
-                }
-            )
-        }
+        result.fold(
+            onSuccess = {
+                _editProfileState.value = EditProfileState.SaveSuccess
+                ToastHelper.showShortToast(requireContext(), "Profile updated successfully")
+                findNavController().navigateUp()
+            },
+            onFailure = { exception ->
+                _editProfileState.value = EditProfileState.SaveError(
+                    exception.message ?: "Failed to update profile"
+                )
+            }
+        )
     }
 
     private fun setupObservers() {
@@ -210,6 +247,11 @@ class EditProfileFragment : Fragment() {
                     binding.nameEditText.isEnabled = false
 
                     ToastHelper.showShortToast(requireContext(), state.message)
+                }
+                is EditProfileState.UploadingImage -> {
+                    binding.progressBar.visibility = View.VISIBLE
+                    binding.saveButton.isEnabled = false
+                    binding.nameEditText.isEnabled = false
                 }
                 is EditProfileState.Saving -> {
                     binding.progressBar.visibility = View.VISIBLE

@@ -1,6 +1,14 @@
 package com.example.explorelens.data.network.auth
 
-import com.example.explorelens.data.model.*
+import com.example.explorelens.data.model.auth.ChangePasswordRequest
+import com.example.explorelens.data.model.auth.ForgotPasswordRequest
+import com.example.explorelens.data.model.auth.GoogleSignInRequest
+import com.example.explorelens.data.model.auth.LoginRequest
+import com.example.explorelens.data.model.auth.LoginResponse
+import com.example.explorelens.data.model.auth.LogoutRequest
+import com.example.explorelens.data.model.auth.RefreshTokenRequest
+import com.example.explorelens.data.model.auth.RegisterRequest
+import com.example.explorelens.data.model.auth.ResetPasswordRequest
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST

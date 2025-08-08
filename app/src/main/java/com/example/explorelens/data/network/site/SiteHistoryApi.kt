@@ -1,8 +1,7 @@
 package com.example.explorelens.data.network.site
 
-import com.example.explorelens.data.model.CreateSiteHistoryRequest
-import com.example.explorelens.data.model.SiteHistoryItemResponse
-import com.example.explorelens.data.model.ResetHistoryResponse
+import com.example.explorelens.data.model.siteHistory.CreateSiteHistoryRequest
+import com.example.explorelens.data.model.siteHistory.SiteHistoryItemResponse
 import retrofit2.Response
 import retrofit2.http.*
 

@@ -6,8 +6,8 @@ import androidx.lifecycle.LiveData
 import com.example.explorelens.data.db.AppDatabase
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.db.siteHistory.SiteHistory
-import com.example.explorelens.data.model.CreateSiteHistoryRequest
-import com.example.explorelens.data.model.SiteHistoryItemResponse
+import com.example.explorelens.data.model.siteHistory.CreateSiteHistoryRequest
+import com.example.explorelens.data.model.siteHistory.SiteHistoryItemResponse
 import com.example.explorelens.data.network.auth.AuthTokenManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,7 +15,6 @@ import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.UUID
-import com.google.gson.Gson
 
 
 class SiteHistoryRepository(context: Context) {

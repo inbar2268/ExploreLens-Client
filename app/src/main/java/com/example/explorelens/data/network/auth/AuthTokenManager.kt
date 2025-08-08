@@ -7,10 +7,9 @@ import android.security.keystore.KeyProperties
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.example.explorelens.data.model.LoginResponse
-import com.example.explorelens.data.model.RefreshTokenRequest
+import com.example.explorelens.data.model.auth.LoginResponse
+import com.example.explorelens.data.model.auth.RefreshTokenRequest
 import com.example.explorelens.data.network.ExploreLensApiClient
-import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import java.security.GeneralSecurityException
 

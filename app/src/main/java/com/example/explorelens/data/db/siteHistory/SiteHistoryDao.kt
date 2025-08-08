@@ -2,8 +2,6 @@ package com.example.explorelens.data.db.siteHistory
 
 import androidx.lifecycle.LiveData
 import androidx.room.*
-import com.example.explorelens.data.model.SiteHistoryItemResponse
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SiteHistoryDao {

@@ -14,7 +14,7 @@ import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
 import com.example.explorelens.adapters.ChatAdapter
 import com.example.explorelens.databinding.FragmentChatBinding
-import com.example.explorelens.data.model.ChatMessage
+import com.example.explorelens.data.model.chat.ChatMessage
 import com.example.explorelens.data.model.chat.ChatCompletionRequest
 import com.example.explorelens.data.repository.ChatRepository
 import com.example.explorelens.data.repository.UserRepository

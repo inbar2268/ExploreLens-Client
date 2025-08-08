@@ -1,4 +1,4 @@
-package com.example.explorelens.data.model
+package com.example.explorelens.data.model.siteHistory
 
 
 data class FilterOption(

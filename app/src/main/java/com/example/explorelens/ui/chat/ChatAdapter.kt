@@ -2,7 +2,6 @@ package com.example.explorelens.adapters
 
 import android.animation.ObjectAnimator
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -14,7 +13,7 @@ import com.example.explorelens.R
 import com.example.explorelens.databinding.ItemMessageBotBinding
 import com.example.explorelens.databinding.ItemMessageBotTypingBinding
 import com.example.explorelens.databinding.ItemMessageUserBinding
-import com.example.explorelens.data.model.ChatMessage
+import com.example.explorelens.data.model.chat.ChatMessage
 
 class ChatAdapter : ListAdapter<ChatMessage, RecyclerView.ViewHolder>(ChatDiffCallback()) {
 
