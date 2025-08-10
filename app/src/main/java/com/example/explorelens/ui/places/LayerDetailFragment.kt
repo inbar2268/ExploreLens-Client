@@ -378,7 +378,7 @@ class LayerDetailFragment : Fragment() {
     }
     private fun setupArActivityCommunication() {
         // If you don't have a toolbar, add a close button to your layout
-        binding.closeButton?.setOnClickListener {
+        binding.backButton.setOnClickListener {
             closeFragment()
         }
 
