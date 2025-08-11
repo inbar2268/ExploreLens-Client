@@ -65,10 +65,11 @@ class SettingsFragment : Fragment() {
         binding.resetHistoryRow.setOnClickListener {
             showResetHistoryDialog()
         }
-        
+
         binding.logoutButton.setOnClickListener {
             showLogoutDialog()
         }
+
         checkGoogleSignInStatus()
 
         return view
@@ -115,11 +116,23 @@ class SettingsFragment : Fragment() {
                         ToastHelper.showShortToast(context, "Account deleted")
                     }
                     result?.onFailure { exception ->
-                        ToastHelper.showShortToast(context, "Failed to delete account")
+                        val message = when {
+                            exception.message?.contains("failed to connect", ignoreCase = true) == true ||
+                                    exception.message?.contains("network", ignoreCase = true) == true ->
+                                "Delete account failed: Network error"
+                            else -> "Failed to delete account"
+                        }
+                        ToastHelper.showShortToast(context, message)
                         dialog.dismiss()
                     }
-                } catch (e: Exception) {
-                    ToastHelper.showShortToast(context, "Failed to delete account")
+                }  catch (e: Exception) {
+                    val message = when {
+                        e.message?.contains("failed to connect", ignoreCase = true) == true ||
+                                e.message?.contains("network", ignoreCase = true) == true ->
+                            "Delete account failed: Network error"
+                        else -> "Failed to delete account"
+                    }
+                    ToastHelper.showShortToast(context, message)
                     dialog.dismiss()
                 }
             }
@@ -169,18 +182,11 @@ class SettingsFragment : Fragment() {
                             },
                             onFailure = { exception ->
                                 val errorMessage = when {
-                                    exception.message?.contains(
-                                        "network",
-                                        ignoreCase = true
-                                    ) == true ->
-                                        "Network error. Please check your connection."
-
-                                    exception.message?.contains(
-                                        "server",
-                                        ignoreCase = true
-                                    ) == true ->
+                                    exception.message?.contains("failed to connect", ignoreCase = true) == true ||
+                                    exception.message?.contains("network", ignoreCase = true) == true ->
+                                        "Reset sites failed: network error"
+                                    exception.message?.contains("server", ignoreCase = true) == true ->
                                         "Server error. Please try again later."
-
                                     else -> "Failed to reset site history: ${exception.message}"
                                 }
                                 ToastHelper.showShortToast(context, errorMessage)

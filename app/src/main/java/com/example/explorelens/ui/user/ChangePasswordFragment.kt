@@ -185,7 +185,7 @@ class ChangePasswordFragment : Fragment() {
                         exception.message?.contains("current password", ignoreCase = true) == true ->
                             "Current password is incorrect"
                         exception.message?.contains("network", ignoreCase = true) == true ->
-                            "Network error. Please check your connection."
+                            "Changing password failed: Network error"
                         else -> exception.message ?: "Failed to change password"
                     }
                     ToastHelper.showShortToast(context, errorMessage)

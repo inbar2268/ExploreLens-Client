@@ -186,14 +186,26 @@ class UserRepository(private val context: Context) {
                     Result.failure(NullPointerException("Response body is null"))
                 }
             } else {
-                val errorMsg = response.errorBody()?.string() ?: "Unknown error"
+                val errorBody = response.errorBody()?.string()
+                val errorMsg = if (errorBody != null) {
+                    try {
+                        val jsonObj = org.json.JSONObject(errorBody)
+                        jsonObj.optString("error", "Unknown error")
+                    } catch (e: Exception) {
+                        // fallback to raw string if parsing fails
+                        errorBody
+                    }
+                } else {
+                    "Unknown error"
+                }
+
                 Log.e(TAG, "Error updating user: $errorMsg")
                 Result.failure(Exception("Error updating user: $errorMsg"))
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception during user update - no server connection", e)
             // Return failure without updating locally
-            Result.failure(Exception("Cannot update profile without server connection"))
+            Result.failure(Exception("Update user failed: Network error"))
         }
     }
 
