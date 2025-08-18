@@ -16,7 +16,7 @@
         android:layout_marginEnd="8dp"
         android:background="@drawable/circle_background"
         android:scaleType="centerCrop"
-        android:src="@drawable/ic_bot_avatar"
+        android:src="@drawable/logo_chat"
         android:contentDescription="Bot avatar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/cardViewBotMessage"

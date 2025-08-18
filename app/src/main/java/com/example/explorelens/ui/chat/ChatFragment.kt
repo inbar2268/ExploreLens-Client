@@ -1,11 +1,14 @@
 package com.example.explorelens.fragments
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import android.view.inputmethod.InputMethodManager
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -95,6 +98,9 @@ class ChatFragment : Fragment() {
         // Setup keyboard detection and bottom navigation handling
         setupKeyboardDetection()
 
+        // Setup touch to dismiss keyboard
+        setupTouchToDismissKeyboard()
+
         setupRecyclerView()
         setupClickListeners()
 
@@ -104,6 +110,29 @@ class ChatFragment : Fragment() {
         view.post {
             binding.root.requestLayout()
         }
+    }
+
+    private fun setupTouchToDismissKeyboard() {
+        binding.root.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                hideKeyboard()
+                binding.editTextMessage.clearFocus()
+            }
+            false
+        }
+
+        binding.recyclerView.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                hideKeyboard()
+                binding.editTextMessage.clearFocus()
+            }
+            false
+        }
+    }
+
+    private fun hideKeyboard() {
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(binding.editTextMessage.windowToken, 0)
     }
 
     private fun setupKeyboardDetection() {
@@ -146,7 +175,9 @@ class ChatFragment : Fragment() {
         }
 
         binding.root.viewTreeObserver.addOnGlobalLayoutListener(keyboardListener)
-    }    private fun loadUserDataAndShowWelcome() {
+    }
+
+    private fun loadUserDataAndShowWelcome() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val user = userRepository.getUserFromDb()
@@ -262,6 +293,8 @@ class ChatFragment : Fragment() {
             if (messageText.isNotEmpty()) {
                 sendMessage(messageText)
                 binding.editTextMessage.text.clear()
+                hideKeyboard()
+                binding.editTextMessage.clearFocus()
             }
         }
     }
@@ -338,22 +371,18 @@ class ChatFragment : Fragment() {
                         content = botResponse
                     ))
 
-                    // Display the response by splitting into parts
-                    val responseParts = splitIntoParts(botResponse)
+                    // Display the response as a single message (no splitting)
+                    val botMessage = ChatMessage(
+                        id = UUID.randomUUID().toString(),
+                        message = botResponse.trim(),
+                        sentByUser = false
+                    )
+                    chatMessages.add(botMessage)
+                    chatAdapter.submitList(ArrayList(chatMessages))
 
-                    for (part in responseParts) {
-                        val botMessage = ChatMessage(
-                            id = UUID.randomUUID().toString(),
-                            message = part.trim(),
-                            sentByUser = false
-                        )
-                        chatMessages.add(botMessage)
-                        chatAdapter.submitList(ArrayList(chatMessages))
-
-                        // Ensure we scroll after each message is added
-                        binding.recyclerView.post {
-                            scrollToBottomImmediately()
-                        }
+                    // Ensure we scroll after the message is added
+                    binding.recyclerView.post {
+                        scrollToBottomImmediately()
                     }
                 } else {
                     // Handle error
@@ -419,22 +448,6 @@ class ChatFragment : Fragment() {
                 Log.e("ChatFragment", "Error scrolling to bottom: ${e.message}")
             }
         }
-    }
-
-    private fun splitIntoParts(text: String): List<String> {
-        val paragraphs = text.split("\n\n")
-        if (paragraphs.size > 1) {
-            return paragraphs
-        }
-
-        val sentences = text.split(". ")
-        if (sentences.size > 1) {
-            return sentences.map {
-                if (!it.endsWith(".")) "$it." else it
-            }
-        }
-
-        return listOf(text)
     }
 
     override fun onDestroyView() {
