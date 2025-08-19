@@ -1,4 +1,5 @@
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    android:fontFamily="@font/harmonyos_sans_regular">
     <item
         android:id="@+id/siteHistoryFragment"
         android:icon="@drawable/ic_history_selector"

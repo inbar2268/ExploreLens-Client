@@ -3,17 +3,18 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
+    android:fontFamily="@font/harmonyos_sans_regular"
     android:gravity="center_vertical"
+    android:orientation="horizontal"
     android:paddingVertical="4dp">
 
     <TextView
         android:id="@+id/dayText"
         android:layout_width="100dp"
         android:layout_height="wrap_content"
+        android:fontFamily="@font/harmonyos_sans_black"
         android:textColor="@color/black"
         android:textSize="12sp"
-        android:fontFamily="@font/harmonyos_sans_black"
         tools:text="Monday" />
 
     <TextView
@@ -21,9 +22,9 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
+        android:fontFamily="@font/harmonyos_sans_regular"
         android:textColor="@color/text_primary"
         android:textSize="12sp"
-        android:fontFamily="@font/harmonyos_sans_regular"
         tools:text="7:00 AM – 6:00 PM" />
 
 </LinearLayout>

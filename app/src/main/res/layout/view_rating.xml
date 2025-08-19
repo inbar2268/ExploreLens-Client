@@ -3,8 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    tools:parentTag="android.widget.LinearLayout"
-    tools:orientation="horizontal">
+    android:fontFamily="@font/harmonyos_sans_regular"
+    tools:orientation="horizontal"
+    tools:parentTag="android.widget.LinearLayout">
 
     <ImageView
         android:id="@+id/star1"
@@ -50,9 +51,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="6dp"
+        android:textColor="#333333"
         android:textSize="14sp"
         android:textStyle="bold"
-        android:textColor="#333333"
         tools:text="4.5" />
 
 </merge>

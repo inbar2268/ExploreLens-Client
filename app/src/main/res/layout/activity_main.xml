@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/coordinatorLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fontFamily="@font/harmonyos_sans_regular">
 
     <android.opengl.GLSurfaceView
         android:id="@+id/surfaceview"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent" />
 
-<!--    <androidx.appcompat.widget.AppCompatButton-->
-<!--        android:id="@+id/cameraButton"-->
-<!--        android:layout_width="80dp"-->
-<!--        android:layout_height="80dp"-->
-<!--        android:layout_gravity="bottom|center_horizontal"-->
-<!--        android:layout_marginBottom="40dp"-->
-<!--        android:background="@drawable/ic_camera_shutter_btn"-->
-<!--        android:elevation="4dp" />-->
+    <!--    <androidx.appcompat.widget.AppCompatButton-->
+    <!--        android:id="@+id/cameraButton"-->
+    <!--        android:layout_width="80dp"-->
+    <!--        android:layout_height="80dp"-->
+    <!--        android:layout_gravity="bottom|center_horizontal"-->
+    <!--        android:layout_marginBottom="40dp"-->
+    <!--        android:background="@drawable/ic_camera_shutter_btn"-->
+    <!--        android:elevation="4dp" />-->
 
     <FrameLayout
         android:id="@+id/cameraButtonContainer"
         android:layout_width="80dp"
         android:layout_height="80dp"
-        android:layout_marginBottom="40dp"
         android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="40dp"
         android:background="@drawable/camera_outer_ring">
 
         <View
@@ -40,35 +40,34 @@
         android:id="@+id/closeButton"
         android:layout_width="28dp"
         android:layout_height="28dp"
-        android:layout_margin="20dp"
         android:layout_gravity="top|start"
+        android:layout_margin="20dp"
         android:background="@android:color/transparent"
-        android:src="@drawable/ic_close"
         android:contentDescription="Back button"
         android:scaleType="centerInside"
-        app:tint="#FFFFFF"/>
+        android:src="@drawable/ic_close"
+        app:tint="#FFFFFF" />
 
     <ImageButton
         android:id="@+id/layersButton"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:background="@drawable/rounded_button_background"
-        android:src="@drawable/ic_layers"
-        android:contentDescription="Layers"
         android:layout_gravity="top|end"
         android:layout_margin="20dp"
+        android:background="@drawable/rounded_button_background"
+        android:contentDescription="Layers"
         android:padding="8dp"
         android:scaleType="fitCenter"
-        app:tint="@color/black"/>
+        android:src="@drawable/ic_layers"
+        app:tint="@color/black" />
 
 
     <FrameLayout
         android:id="@+id/siteDetailsContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone"
-        android:background="@color/white">
-    </FrameLayout>
+        android:background="@color/white"
+        android:visibility="gone"></FrameLayout>
 
     <FrameLayout
         android:id="@+id/fragment_container"
