@@ -172,8 +172,8 @@
                 app:layout_constraintTop_toBottomOf="@+id/tv_or">
 
                 <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="11dp"
+                    android:layout_height="2dp"
                     android:contentDescription="Google logo"
                     android:src="@drawable/ic_google" />
 

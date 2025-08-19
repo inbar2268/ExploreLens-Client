@@ -20,6 +20,7 @@ class ReviewsAdapter(private val reviewsWithUser: List<ReviewWithUser>) :
         val profilePic: ImageView = view.findViewById(R.id.profileImageView)
         val username: TextView = view.findViewById(R.id.usernameTextView)
         val reviewText: TextView = view.findViewById(R.id.commentTextView)
+        val googleSign: ImageView = view.findViewById(R.id.googleImage)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -31,6 +32,12 @@ class ReviewsAdapter(private val reviewsWithUser: List<ReviewWithUser>) :
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val reviewWithUser = reviewsWithUser[position]
         holder.username.text = reviewWithUser.user?.username ?: reviewWithUser.review.user
+        if (reviewWithUser.user?.username==null){
+            holder.googleSign.visibility=View.VISIBLE
+        }
+        else{
+            holder.googleSign.visibility=View.INVISIBLE
+        }
         holder.reviewText.text = reviewWithUser.review.content
 
 
