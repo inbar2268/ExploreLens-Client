@@ -145,7 +145,6 @@ class GeoAnchorManager(
             withContext(Dispatchers.Main) {
                 result.onSuccess { places ->
                     Log.d(TAG, "Received ${places.size} places")
-                    callback?.showSnackbar("Received ${places.size} places")
                     callback?.onPlacesReceived(places)
                     lastFetchedLocation = currentLocation
 
