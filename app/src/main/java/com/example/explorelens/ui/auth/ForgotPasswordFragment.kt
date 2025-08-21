@@ -5,6 +5,7 @@ import android.text.method.PasswordTransformationMethod
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -63,7 +64,8 @@ class ForgotPasswordFragment : Fragment() {
             result.fold(
                 onSuccess = {
                     ToastHelper.showShortToast(context, "Password reset email sent.")
-                    findNavController().navigate(R.id.action_forgotPasswordFragment_to_resetPasswordFragment)
+                    val bundle = bundleOf("email" to email)
+                    findNavController().navigate(R.id.action_forgotPasswordFragment_to_resetPasswordFragment, bundle)
                 },
                 onFailure = { exception ->
                     val errorMessage = exception.message ?: "Failed to send password reset email"
