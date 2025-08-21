@@ -5,12 +5,13 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    app:cardCornerRadius="14dp"
-    android:layout_marginEnd="0dp"
     android:layout_marginStart="0dp"
     android:layout_marginTop="8dp"
-    app:cardElevation="4dp"
-    app:cardBackgroundColor="#FFFFFF">
+    android:layout_marginEnd="0dp"
+    android:fontFamily="@font/harmonyos_sans_regular"
+    app:cardBackgroundColor="#FFFFFF"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -22,9 +23,9 @@
             android:id="@+id/siteImageView"
             android:layout_width="match_parent"
             android:layout_height="150dp"
-            android:scaleType="centerCrop"
             android:adjustViewBounds="true"
             android:contentDescription="Site image"
+            android:scaleType="centerCrop"
             app:shapeAppearanceOverlay="@style/RoundedImageStyle"
             tools:src="@drawable/noimage" />
 
@@ -32,28 +33,28 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:gravity="center_vertical"
+            android:orientation="horizontal"
             android:paddingStart="16dp"
-            android:paddingEnd="16dp"
             android:paddingTop="16dp"
+            android:paddingEnd="16dp"
             android:paddingBottom="4dp">
 
             <ImageView
                 android:layout_width="12dp"
                 android:layout_height="12dp"
+                android:contentDescription="Location icon"
                 android:src="@drawable/ic_location"
-                app:tint="@color/light_blue"
-            android:contentDescription="Location icon" />
+                app:tint="@color/light_blue" />
 
             <TextView
                 android:id="@+id/siteNameTextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
                 android:ellipsize="end"
                 android:fontFamily="@font/harmonyos_sans_black"
                 android:maxLines="1"
-                android:layout_marginStart="5dp"
                 android:textColor="#000000"
                 android:textSize="12sp"
                 android:textStyle="bold"
@@ -66,8 +67,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingStart="16dp"
-            android:paddingEnd="16dp"
             android:paddingTop="1dp"
+            android:paddingEnd="16dp"
             android:paddingBottom="16dp">
 
             <TextView

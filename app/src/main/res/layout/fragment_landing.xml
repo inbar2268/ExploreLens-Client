@@ -5,31 +5,32 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
+    android:fontFamily="@font/harmonyos_sans_regular"
     tools:context=".ui.landing.LandingFragment">
 
     <ImageView
         android:id="@+id/bgImage"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:scaleType="fitXY"
         android:adjustViewBounds="true"
+        android:scaleType="fitXY"
         android:src="@drawable/explore_lens_background"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Content Container -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:orientation="vertical"
         android:gravity="center"
+        android:orientation="vertical"
         android:paddingHorizontal="32dp"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
             android:id="@+id/logo"
@@ -43,18 +44,18 @@
             android:id="@+id/tvtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Discover The World Through Your Lens"
-            android:textColor="@android:color/white"
-            android:textSize="26sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:textAlignment="center"
             android:layout_gravity="center_horizontal"
-            android:fontFamily="@font/harmonyos_sans_black"
             android:layout_marginBottom="16dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
             android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:fontFamily="@font/harmonyos_sans_black"
+            android:gravity="center"
+            android:text="Discover The World Through Your Lens"
+            android:textAlignment="center"
+            android:textColor="@android:color/white"
+            android:textSize="26sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvsmalltitle"
@@ -80,20 +81,20 @@
             android:layout_width="200dp"
             android:layout_height="56dp"
             android:layout_marginBottom="16dp"
-            android:text="Login"
             android:background="@drawable/bg_button_primary"
             android:backgroundTint="@color/white"
+            android:fontFamily="@font/harmonyos_sans_medium"
+            android:text="Login"
             android:textColor="@color/primary"
             android:textSize="16sp"
-            android:fontFamily="@font/harmonyos_sans_medium"
             android:textStyle="bold" />
 
         <!-- Sign Up Text -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
+            android:gravity="center"
+            android:orientation="horizontal">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -106,14 +107,14 @@
                 android:id="@+id/tvSignUp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="8dp"
                 android:text="Register"
                 android:textColor="@android:color/white"
                 android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="8dp"
-                android:clickable="true"
-                android:focusable="true" />
+                android:textStyle="bold" />
 
         </LinearLayout>
 

@@ -5,13 +5,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#99000000"
+    android:fontFamily="@font/harmonyos_sans_regular"
     android:visibility="gone">
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="24dp"
         android:layout_gravity="center"
+        android:layout_margin="24dp"
         app:cardCornerRadius="16dp"
         app:cardElevation="8dp">
 
@@ -57,8 +58,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:visibility="gone"
-                android:layout_margin="16dp" />
+                android:layout_margin="16dp"
+                android:visibility="gone" />
 
             <ScrollView
                 android:layout_width="match_parent"
@@ -75,45 +76,45 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginBottom="16dp">
+                        android:layout_marginBottom="16dp"
+                        android:orientation="vertical">
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
+                            android:layout_marginBottom="8dp"
                             android:gravity="center_vertical"
-                            android:layout_marginBottom="8dp">
+                            android:orientation="horizontal">
 
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
-                                android:src="@android:drawable/ic_menu_info_details"
                                 android:layout_marginEnd="8dp"
+                                android:src="@android:drawable/ic_menu_info_details"
                                 app:tint="#4285F4" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="About"
+                                android:textColor="#333333"
                                 android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:textColor="#333333" />
+                                android:textStyle="bold" />
                         </LinearLayout>
 
                         <View
                             android:layout_width="60dp"
                             android:layout_height="2dp"
-                            android:background="#4285F4"
-                            android:layout_marginBottom="12dp" />
+                            android:layout_marginBottom="12dp"
+                            android:background="#4285F4" />
 
                         <TextView
                             android:id="@+id/descriptionTextView"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:textSize="14sp"
+                            android:lineSpacingExtra="4dp"
                             android:textColor="#444444"
-                            android:lineSpacingExtra="4dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Actions section -->
@@ -128,34 +129,34 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center"
                             android:background="@drawable/rating_button_background"
-                            android:padding="8dp"
                             android:clickable="true"
-                            android:focusable="true">
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_marginBottom="4dp"
                                 android:text="Rate"
-                                android:textSize="14sp"
-                                android:textStyle="bold"
                                 android:textColor="#333333"
-                                android:layout_marginBottom="4dp"/>
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
 
                             <com.example.explorelens.ui.site.RatingView
                                 android:id="@+id/ratingView"
                                 android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"/>
+                                android:layout_height="wrap_content" />
                         </LinearLayout>
 
                         <!-- Divider -->
                         <View
                             android:layout_width="1dp"
                             android:layout_height="match_parent"
-                            android:background="#E0E0E0"
-                            android:layout_marginHorizontal="8dp"/>
+                            android:layout_marginHorizontal="8dp"
+                            android:background="#E0E0E0" />
 
                         <!-- Comments Button -->
                         <LinearLayout
@@ -163,26 +164,26 @@
                             android:layout_width="0dp"
                             android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center"
+                            android:background="?attr/selectableItemBackground"
                             android:clickable="true"
                             android:focusable="true"
-                            android:background="?attr/selectableItemBackground"
+                            android:gravity="center"
+                            android:orientation="vertical"
                             android:padding="8dp">
 
                             <ImageView
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
-                                android:src="@drawable/icon_comments"
-                                android:layout_marginBottom="4dp"/>
+                                android:layout_marginBottom="4dp"
+                                android:src="@drawable/icon_comments" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Comments"
+                                android:textColor="#333333"
                                 android:textSize="14sp"
-                                android:textStyle="bold"
-                                android:textColor="#333333"/>
+                                android:textStyle="bold" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
