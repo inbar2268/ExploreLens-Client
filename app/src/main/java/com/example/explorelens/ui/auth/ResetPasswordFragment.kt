@@ -98,15 +98,13 @@ class ResetPasswordFragment : Fragment() {
 
     private fun validateResetPasswordFields(): Boolean {
         val token = binding.etToken.text.toString().trim()
-        val newPassword = binding.etNewPassword.text.toString()
-        val confirmPassword = binding.etConfirmPassword.text.toString()
+        val newPassword = binding.etNewPassword.text.toString().trim()
+        val confirmPassword = binding.etConfirmPassword.text.toString().trim()
         var isValid = true
 
         if (token.isEmpty()) {
             binding.etToken.error = "Token is required"
             isValid = false
-        } else {
-            binding.etToken.error = null
         }
 
         if (newPassword.isEmpty()) {
@@ -118,7 +116,6 @@ class ResetPasswordFragment : Fragment() {
             binding.tvShowNewPassword.visibility = View.INVISIBLE
             isValid = false
         } else {
-            binding.etNewPassword.error = null
             binding.tvShowNewPassword.visibility = View.VISIBLE
         }
 
@@ -126,15 +123,12 @@ class ResetPasswordFragment : Fragment() {
             binding.etConfirmPassword.error = "Confirm password is required"
             binding.tvShowConfirmPassword.visibility = View.INVISIBLE
             isValid = false
-        } else {
-            binding.etConfirmPassword.error = null
-            binding.tvShowConfirmPassword.visibility = View.VISIBLE
-        }
-
-        if (newPassword != confirmPassword && newPassword.isNotEmpty() && confirmPassword.isNotEmpty()) {
+        } else if (newPassword != confirmPassword) {
             binding.etConfirmPassword.error = "Passwords do not match"
             binding.tvShowConfirmPassword.visibility = View.INVISIBLE
             isValid = false
+        } else {
+            binding.tvShowConfirmPassword.visibility = View.VISIBLE
         }
 
         return isValid
@@ -142,7 +136,7 @@ class ResetPasswordFragment : Fragment() {
 
     private fun performPasswordReset() {
         val token = binding.etToken.text.toString().trim()
-        val newPassword = binding.etNewPassword.text.toString()
+        val newPassword = binding.etNewPassword.text.toString().trim()
 
         LoadingManager.showLoading(requireActivity())
 
@@ -158,7 +152,6 @@ class ResetPasswordFragment : Fragment() {
                 onFailure = { exception ->
                     val errorMessage = exception.message ?: "Failed to reset password"
                     ToastHelper.showShortToast(context, errorMessage)
-                    // Visibility of show/hide is handled in validation
                 }
             )
         }
