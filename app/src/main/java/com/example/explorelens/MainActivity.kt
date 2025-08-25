@@ -170,6 +170,35 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
                 navController.navigate(fragmentId)
             }
         }
+        val currentDestination = navController.currentDestination
+        currentDestination?.let { destination ->
+            updateBottomNavigationVisibility(destination.id)
+        }
+        handleNavigationFromAR()
+    }
+    private fun handleNavigationFromAR() {
+        // Check if we're supposed to navigate to site details from AR
+        if (intent.hasExtra("NAVIGATE_TO") && intent.getStringExtra("NAVIGATE_TO") == "siteDetailsFragment") {
+            val label = intent.getStringExtra("LABEL_KEY")
+            val description = intent.getStringExtra("DESCRIPTION_KEY")
+
+            if (label != null) {
+                val bundle = Bundle().apply {
+                    putString("LABEL_KEY", label)
+                    description?.let { putString("DESCRIPTION_KEY", it) }
+                }
+
+                navController.navigate(R.id.siteDetailsFragment, bundle)
+
+                // Force show bottom navigation for site details
+                bottomNavigationView.visibility = View.VISIBLE
+
+                // Remove the extras so they don't trigger again
+                intent.removeExtra("NAVIGATE_TO")
+                intent.removeExtra("LABEL_KEY")
+                intent.removeExtra("DESCRIPTION_KEY")
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent?) {
