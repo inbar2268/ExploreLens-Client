@@ -21,6 +21,9 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
     private lateinit var uiHelper: ProfileUIHelper
     private lateinit var mapManager: WorldMapManager
 
+    // Flag to choose between combined or individual loading
+    private val useIndividualLoading = false // Set to true to use individual loading states
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -77,7 +80,22 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
             }
         }
 
-        // Statistics state observer (now reactive from repository)
+        if (useIndividualLoading) {
+            setupIndividualObservers()
+        } else {
+            setupCombinedObservers()
+        }
+
+        // Refresh state observer
+        viewModel.isRefreshing.observe(viewLifecycleOwner) { isRefreshing ->
+            _binding?.let {
+                uiHelper.setRefreshing(isRefreshing)
+            }
+        }
+    }
+
+    private fun setupCombinedObservers() {
+        // Combined statistics state observer (your existing code)
         viewModel.statisticsState.observe(viewLifecycleOwner) { state ->
             _binding?.let {
                 when (state) {
@@ -104,11 +122,54 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
                 }
             }
         }
+    }
 
-        // Refresh state observer
-        viewModel.isRefreshing.observe(viewLifecycleOwner) { isRefreshing ->
+    private fun setupIndividualObservers() {
+        // Individual percentage state observer
+        viewModel.percentageState.observe(viewLifecycleOwner) { state ->
             _binding?.let {
-                uiHelper.setRefreshing(isRefreshing)
+                when (state) {
+                    is ProfileViewModel.PercentageState.Loading -> {
+                        uiHelper.showPercentageLoading()
+                    }
+                    is ProfileViewModel.PercentageState.Success -> {
+                        uiHelper.updatePercentage(state.percentage)
+                        if (state.isFromCache) {
+                            // Show cache indicator for percentage if needed
+                        }
+                    }
+                    is ProfileViewModel.PercentageState.Error -> {
+                        uiHelper.showPercentageError()
+                        if (_binding != null) {
+                            ToastHelper.showShortToast(requireContext(), "Failed to load percentage: ${state.message}")
+                        }
+                    }
+                }
+            }
+        }
+
+        // Individual country state observer
+        viewModel.countryState.observe(viewLifecycleOwner) { state ->
+            _binding?.let {
+                when (state) {
+                    is ProfileViewModel.CountryState.Loading -> {
+                        uiHelper.showCountryLoading()
+                    }
+                    is ProfileViewModel.CountryState.Success -> {
+                        uiHelper.updateCountryCount(state.countryCount)
+                        // Update map with countries
+                        mapManager.updateCountries(state.countries)
+                        if (state.isFromCache) {
+                            // Show cache indicator for countries if needed
+                        }
+                    }
+                    is ProfileViewModel.CountryState.Error -> {
+                        uiHelper.showCountryError()
+                        if (_binding != null) {
+                            ToastHelper.showShortToast(requireContext(), "Failed to load countries: ${state.message}")
+                        }
+                    }
+                }
             }
         }
     }
@@ -122,6 +183,17 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
 
         binding.swipeRefresh.setOnRefreshListener {
             viewModel.refreshAllData()
+        }
+
+        // Example: Add click listeners for individual refresh (optional)
+        if (useIndividualLoading) {
+            binding.percentageCard.setOnClickListener {
+                viewModel.refreshPercentage()
+            }
+
+            binding.countryCard.setOnClickListener {
+                viewModel.refreshCountries()
+            }
         }
     }
 
@@ -163,6 +235,7 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
         val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation)
         bottomNav.setOnItemReselectedListener(null)
     }
+
     override fun onResume() {
         super.onResume()
         //viewModel.fetchUserData()

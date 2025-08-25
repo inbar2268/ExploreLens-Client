@@ -34,32 +34,42 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         ) : StatisticsState()
         data class Error(val message: String) : StatisticsState()
     }
+
+    // Individual states for each statistic
     sealed class PercentageState {
         object Loading : PercentageState()
-        data class Success(val percentage: String) : PercentageState()
+        data class Success(val percentage: String, val isFromCache: Boolean = false) : PercentageState()
         data class Error(val message: String) : PercentageState()
     }
 
     sealed class CountryState {
         object Loading : CountryState()
-        data class Success(val countryCount: Int, val countries: List<String>) : CountryState()
+        data class Success(
+            val countryCount: Int,
+            val countries: List<String>,
+            val isFromCache: Boolean = false
+        ) : CountryState()
         data class Error(val message: String) : CountryState()
     }
+
     private val userRepository = UserRepository(application)
     private val authRepository = AuthRepository(application)
     private val userStatisticsRepository = UserStatisticsRepository.getInstance(application)
-    private val _percentageState = MutableLiveData<PercentageState>()
-    val percentageState: LiveData<PercentageState> = _percentageState
 
-    private val _countryState = MutableLiveData<CountryState>()
-    val countryState: LiveData<CountryState> = _countryState
     private val _userState = MutableLiveData<UserState>()
     val userState: LiveData<UserState> = _userState
 
     private val _isRefreshing = MutableLiveData<Boolean>()
     val isRefreshing: LiveData<Boolean> = _isRefreshing
 
-    // Use the reactive LiveData from repository (Single Source of Truth)
+    // Individual state LiveData
+    private val _percentageState = MutableLiveData<PercentageState>()
+    val percentageState: LiveData<PercentageState> = _percentageState
+
+    private val _countryState = MutableLiveData<CountryState>()
+    val countryState: LiveData<CountryState> = _countryState
+
+    // Combined statistics state (for backward compatibility)
     val statisticsState: LiveData<StatisticsState> = userStatisticsRepository
         .getUserStatisticsLiveData()
         .switchMap { resource ->
@@ -67,20 +77,36 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
             when (resource) {
                 is Resource.Loading -> {
+                    liveData.value = StatisticsState.Loading
+                    // Also update individual states
                     _percentageState.value = PercentageState.Loading
                     _countryState.value = CountryState.Loading
                 }
                 is Resource.Success -> {
                     val statistics = resource.data!!
-                    _percentageState.value = PercentageState.Success(statistics.percentageVisited)
+                    liveData.value = StatisticsState.Success(
+                        percentage = statistics.percentageVisited,
+                        countryCount = statistics.countryCount,
+                        countries = statistics.countries ?: emptyList(),
+                        isFromCache = resource.isFromCache
+                    )
+                    // Also update individual states
+                    _percentageState.value = PercentageState.Success(
+                        percentage = statistics.percentageVisited,
+                        isFromCache = resource.isFromCache
+                    )
                     _countryState.value = CountryState.Success(
                         countryCount = statistics.countryCount,
-                        countries = statistics.countries ?: emptyList()
+                        countries = statistics.countries ?: emptyList(),
+                        isFromCache = resource.isFromCache
                     )
                 }
                 is Resource.Error -> {
-                    _percentageState.value = PercentageState.Error(resource.message ?: "Unknown error")
-                    _countryState.value = CountryState.Error(resource.message ?: "Unknown error")
+                    val errorMessage = resource.message ?: "Unknown error"
+                    liveData.value = StatisticsState.Error(errorMessage)
+                    // Also update individual states
+                    _percentageState.value = PercentageState.Error(errorMessage)
+                    _countryState.value = CountryState.Error(errorMessage)
                 }
             }
 
@@ -151,6 +177,21 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     fun refreshStatistics() {
         viewModelScope.launch {
+            userStatisticsRepository.refreshStatistics()
+        }
+    }
+
+    // Individual refresh methods (if you want to refresh only one statistic)
+    fun refreshPercentage() {
+        viewModelScope.launch {
+            _percentageState.value = PercentageState.Loading
+            userStatisticsRepository.refreshStatistics()
+        }
+    }
+
+    fun refreshCountries() {
+        viewModelScope.launch {
+            _countryState.value = CountryState.Loading
             userStatisticsRepository.refreshStatistics()
         }
     }

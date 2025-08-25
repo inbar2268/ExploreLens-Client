@@ -149,7 +149,7 @@
                     app:layout_constraintTop_toBottomOf="@+id/emailText" />
 
                 <!-- Statistics Section -->
-                <androidx.constraintlayout.widget.ConstraintLayout
+                <FrameLayout
                     android:id="@+id/statisticsSection"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -160,176 +160,192 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/statisticsLabel">
 
-                    <!-- Percentage Visited Card with Individual Progress Bar -->
-                    <androidx.cardview.widget.CardView
-                        android:id="@+id/percentageCard"
-                        android:layout_width="0dp"
-                        android:layout_height="150dp"
-                        android:layout_marginEnd="4dp"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="4dp"
-                        app:layout_constraintEnd_toStartOf="@+id/countryCard"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent">
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:id="@+id/statisticsContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
 
-                        <FrameLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent">
+                        <!-- Percentage Visited Card with Individual Progress Bar -->
+                        <androidx.cardview.widget.CardView
+                            android:id="@+id/percentageCard"
+                            android:layout_width="0dp"
+                            android:layout_height="150dp"
+                            android:layout_marginEnd="4dp"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="4dp"
+                            app:layout_constraintEnd_toStartOf="@+id/countryCard"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent">
 
-                            <RelativeLayout
-                                android:id="@+id/percentageCardContent"
+                            <FrameLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent">
 
-                                <!-- Background Image for Percentage -->
-                                <ImageView
+                                <RelativeLayout
+                                    android:id="@+id/percentageCardContent"
                                     android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:scaleType="centerCrop"
-                                    android:src="@drawable/percentage_background"
-                                    android:alpha="0.9" />
+                                    android:layout_height="match_parent">
 
-                                <!-- Dark overlay for better text visibility -->
-                                <View
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:background="@drawable/gradient_overlay" />
+                                    <!-- Background Image for Percentage -->
+                                    <ImageView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent"
+                                        android:scaleType="centerCrop"
+                                        android:src="@drawable/percentage_background"
+                                        android:alpha="0.9" />
 
-                                <!-- Percentage Text positioned at bottom center -->
-                                <LinearLayout
+                                    <!-- Dark overlay for better text visibility -->
+                                    <View
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent"
+                                        android:background="@drawable/gradient_overlay" />
+
+                                    <!-- Percentage Text positioned at bottom center -->
+                                    <LinearLayout
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_alignParentBottom="true"
+                                        android:layout_centerHorizontal="true"
+                                        android:layout_marginBottom="16dp"
+                                        android:orientation="vertical"
+                                        android:gravity="center">
+
+                                        <TextView
+                                            android:id="@+id/percentageValue"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="--"
+                                            android:textColor="#FFFFFF"
+                                            android:fontFamily="@font/harmonyos_sans_black"
+                                            android:textSize="28sp"
+                                            android:textStyle="bold"
+                                            android:shadowColor="#000000"
+                                            android:shadowDx="1"
+                                            android:shadowDy="1"
+                                            android:shadowRadius="3" />
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="of the world"
+                                            android:fontFamily="@font/harmonyos_sans_regular"
+                                            android:textColor="#FFFFFF"
+                                            android:textSize="12sp"
+                                            android:shadowColor="#000000"
+                                            android:shadowDx="1"
+                                            android:shadowDy="1"
+                                            android:shadowRadius="2" />
+                                    </LinearLayout>
+                                </RelativeLayout>
+
+                                <!-- Individual Progress Bar for Percentage Card -->
+                                <ProgressBar
+                                    android:id="@+id/percentageProgressBar"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_alignParentBottom="true"
-                                    android:layout_centerHorizontal="true"
-                                    android:layout_marginBottom="16dp"
-                                    android:orientation="vertical"
-                                    android:gravity="center">
+                                    android:layout_gravity="center"
+                                    android:visibility="gone"
+                                    android:elevation="8dp" />
 
-                                    <TextView
-                                        android:id="@+id/percentageValue"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="--"
-                                        android:textColor="#FFFFFF"
-                                        android:fontFamily="@font/harmonyos_sans_black"
-                                        android:textSize="28sp"
-                                        android:textStyle="bold"
-                                        android:shadowColor="#000000"
-                                        android:shadowDx="1"
-                                        android:shadowDy="1"
-                                        android:shadowRadius="3" />
+                            </FrameLayout>
+                        </androidx.cardview.widget.CardView>
 
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="of the world"
-                                        android:fontFamily="@font/harmonyos_sans_regular"
-                                        android:textColor="#FFFFFF"
-                                        android:textSize="12sp"
-                                        android:shadowColor="#000000"
-                                        android:shadowDx="1"
-                                        android:shadowDy="1"
-                                        android:shadowRadius="2" />
-                                </LinearLayout>
-                            </RelativeLayout>
+                        <!-- Country Count Card with Individual Progress Bar -->
+                        <androidx.cardview.widget.CardView
+                            android:id="@+id/countryCard"
+                            android:layout_width="0dp"
+                            android:layout_height="150dp"
+                            android:layout_marginStart="4dp"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="4dp"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@+id/percentageCard"
+                            app:layout_constraintTop_toTopOf="parent">
 
-                            <!-- Individual Progress Bar for Percentage Card -->
-                            <ProgressBar
-                                android:id="@+id/percentageProgressBar"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center"
-                                android:visibility="gone"
-                                android:elevation="8dp" />
-
-                        </FrameLayout>
-                    </androidx.cardview.widget.CardView>
-
-                    <!-- Country Count Card with Individual Progress Bar -->
-                    <androidx.cardview.widget.CardView
-                        android:id="@+id/countryCard"
-                        android:layout_width="0dp"
-                        android:layout_height="150dp"
-                        android:layout_marginStart="4dp"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="4dp"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toEndOf="@+id/percentageCard"
-                        app:layout_constraintTop_toTopOf="parent">
-
-                        <FrameLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent">
-
-                            <RelativeLayout
-                                android:id="@+id/countryCardContent"
+                            <FrameLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent">
 
-                                <!-- Background Image for Countries -->
-                                <ImageView
+                                <RelativeLayout
+                                    android:id="@+id/countryCardContent"
                                     android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:scaleType="centerCrop"
-                                    android:src="@drawable/countries_background"
-                                    android:alpha="0.9" />
+                                    android:layout_height="match_parent">
 
-                                <!-- Dark overlay for better text visibility -->
-                                <View
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:background="@drawable/gradient_overlay" />
+                                    <!-- Background Image for Countries -->
+                                    <ImageView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent"
+                                        android:scaleType="centerCrop"
+                                        android:src="@drawable/countries_background"
+                                        android:alpha="0.9" />
 
-                                <!-- Country Count Text positioned at bottom center -->
-                                <LinearLayout
+                                    <!-- Dark overlay for better text visibility -->
+                                    <View
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent"
+                                        android:background="@drawable/gradient_overlay" />
+
+                                    <!-- Country Count Text positioned at bottom center -->
+                                    <LinearLayout
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_alignParentBottom="true"
+                                        android:layout_centerHorizontal="true"
+                                        android:layout_marginBottom="16dp"
+                                        android:orientation="vertical"
+                                        android:gravity="center">
+
+                                        <TextView
+                                            android:id="@+id/countryValue"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="--"
+                                            android:textColor="#FFFFFF"
+                                            android:textSize="28sp"
+                                            android:textStyle="bold"
+                                            android:fontFamily="@font/harmonyos_sans_black"
+                                            android:shadowColor="#000000"
+                                            android:shadowDx="1"
+                                            android:shadowDy="1"
+                                            android:shadowRadius="3" />
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="countries visited"
+                                            android:textColor="#FFFFFF"
+                                            android:textSize="12sp"
+                                            android:shadowColor="#000000"
+                                            android:fontFamily="@font/harmonyos_sans_regular"
+                                            android:shadowDx="1"
+                                            android:shadowDy="1"
+                                            android:shadowRadius="2" />
+                                    </LinearLayout>
+                                </RelativeLayout>
+
+                                <!-- Individual Progress Bar for Country Card -->
+                                <ProgressBar
+                                    android:id="@+id/countryProgressBar"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_alignParentBottom="true"
-                                    android:layout_centerHorizontal="true"
-                                    android:layout_marginBottom="16dp"
-                                    android:orientation="vertical"
-                                    android:gravity="center">
+                                    android:layout_gravity="center"
+                                    android:visibility="gone"
+                                    android:elevation="8dp" />
 
-                                    <TextView
-                                        android:id="@+id/countryValue"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="--"
-                                        android:textColor="#FFFFFF"
-                                        android:textSize="28sp"
-                                        android:textStyle="bold"
-                                        android:fontFamily="@font/harmonyos_sans_black"
-                                        android:shadowColor="#000000"
-                                        android:shadowDx="1"
-                                        android:shadowDy="1"
-                                        android:shadowRadius="3" />
+                            </FrameLayout>
+                        </androidx.cardview.widget.CardView>
+                    </androidx.constraintlayout.widget.ConstraintLayout>
 
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="countries visited"
-                                        android:textColor="#FFFFFF"
-                                        android:textSize="12sp"
-                                        android:shadowColor="#000000"
-                                        android:fontFamily="@font/harmonyos_sans_regular"
-                                        android:shadowDx="1"
-                                        android:shadowDy="1"
-                                        android:shadowRadius="2" />
-                                </LinearLayout>
-                            </RelativeLayout>
+                    <!-- Loading indicator for statistics - Centered over the statistics cards -->
+                    <ProgressBar
+                        android:id="@+id/statisticsProgressBar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:visibility="gone"
+                        android:elevation="8dp" />
 
-                            <!-- Individual Progress Bar for Country Card -->
-                            <ProgressBar
-                                android:id="@+id/countryProgressBar"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center"
-                                android:visibility="gone"
-                                android:elevation="8dp" />
-
-                        </FrameLayout>
-                    </androidx.cardview.widget.CardView>
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                </FrameLayout>
 
                 <!-- World Map Section -->
                 <TextView

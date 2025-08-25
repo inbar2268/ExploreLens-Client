@@ -51,35 +51,41 @@ class ProfileUIHelper(private val binding: FragmentProfileBinding) {
     // Individual loading states for percentage card
     fun showPercentageLoading() {
         binding.percentageProgressBar.visibility = View.VISIBLE
-        binding.percentageCardContent.visibility = View.GONE
+        binding.percentageValue.visibility = View.GONE
     }
 
     fun hidePercentageLoading() {
         binding.percentageProgressBar.visibility = View.GONE
-        binding.percentageCardContent.visibility = View.VISIBLE
+        binding.percentageValue.visibility = View.VISIBLE
     }
 
     // Individual loading states for country card
     fun showCountryLoading() {
         binding.countryProgressBar.visibility = View.VISIBLE
-        binding.countryCardContent.visibility = View.GONE
+        binding.countryValue.visibility = View.GONE
     }
 
     fun hideCountryLoading() {
         binding.countryProgressBar.visibility = View.GONE
-        binding.countryCardContent.visibility = View.VISIBLE
+        binding.countryValue.visibility = View.VISIBLE
     }
 
-    // Show loading for both statistics (if you want to load both at the same time)
+    // Show loading for both statistics (keeps your existing code working)
     fun showStatisticsLoading() {
-        showPercentageLoading()
-        showCountryLoading()
+        binding.statisticsProgressBar.visibility = View.VISIBLE
+        binding.statisticsContainer.visibility = View.GONE
+        // Also show individual loading if you want
+        // showPercentageLoading()
+        // showCountryLoading()
     }
 
     // Hide loading for both statistics
     fun hideStatisticsLoading() {
-        hidePercentageLoading()
-        hideCountryLoading()
+        binding.statisticsProgressBar.visibility = View.GONE
+        binding.statisticsContainer.visibility = View.VISIBLE
+        // Also hide individual loading
+        // hidePercentageLoading()
+        // hideCountryLoading()
     }
 
     // Update individual statistics
@@ -95,8 +101,9 @@ class ProfileUIHelper(private val binding: FragmentProfileBinding) {
 
     // Update both statistics at once (for backward compatibility)
     fun updateStatistics(percentage: String, countryCount: Int) {
-        updatePercentage(percentage)
-        updateCountryCount(countryCount)
+        hideStatisticsLoading()
+        binding.percentageValue.text = percentage
+        binding.countryValue.text = countryCount.toString()
     }
 
     // Show error states for individual cards
@@ -112,8 +119,9 @@ class ProfileUIHelper(private val binding: FragmentProfileBinding) {
 
     // Show error for both statistics
     fun showStatisticsError() {
-        showPercentageError()
-        showCountryError()
+        hideStatisticsLoading()
+        binding.percentageValue.text = "--"
+        binding.countryValue.text = "--"
     }
 
     fun setRefreshing(isRefreshing: Boolean) {

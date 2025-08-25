@@ -532,7 +532,7 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
         siteDetailsRepository.refreshError.observe(viewLifecycleOwner) { error ->
             if (error != null) {
                 // Show a small snackbar or toast for refresh errors
-                Snackbar.make(requireView(), "Failed to refresh: $error", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(requireView(), "Failed to refresh", Snackbar.LENGTH_SHORT).show()
                 siteDetailsRepository.clearRefreshError()
             }
         }
