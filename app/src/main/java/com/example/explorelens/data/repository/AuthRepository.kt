@@ -111,8 +111,8 @@ class AuthRepository(private val context: Context) {
         }
     }
 
-    suspend fun resetPassword(token: String, newPassword: String): Result<Unit> {
-        val resetPasswordRequest = ResetPasswordRequest(token, newPassword)
+    suspend fun resetPassword(email: String, token: String, newPassword: String): Result<Unit> {
+        val resetPasswordRequest = ResetPasswordRequest(email, token, newPassword)
         return try {
             val response = authApi.resetPassword(resetPasswordRequest)
             if (response.isSuccessful) {
