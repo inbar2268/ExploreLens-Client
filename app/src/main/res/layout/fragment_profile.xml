@@ -148,8 +148,8 @@
                     app:layout_constraintStart_toEndOf="@+id/statisticsIcon"
                     app:layout_constraintTop_toBottomOf="@+id/emailText" />
 
-                <!-- Statistics Section with Progress Bar -->
-                <FrameLayout
+                <!-- Statistics Section -->
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/statisticsSection"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -160,25 +160,24 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/statisticsLabel">
 
-                    <!-- Statistics Container with background images -->
-                    <androidx.constraintlayout.widget.ConstraintLayout
-                        android:id="@+id/statisticsContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
+                    <!-- Percentage Visited Card with Individual Progress Bar -->
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/percentageCard"
+                        android:layout_width="0dp"
+                        android:layout_height="150dp"
+                        android:layout_marginEnd="4dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="4dp"
+                        app:layout_constraintEnd_toStartOf="@+id/countryCard"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent">
 
-                        <!-- Percentage Visited Card with Background Image -->
-                        <androidx.cardview.widget.CardView
-                            android:id="@+id/percentageCard"
-                            android:layout_width="0dp"
-                            android:layout_height="150dp"
-                            android:layout_marginEnd="4dp"
-                            app:cardCornerRadius="16dp"
-                            app:cardElevation="4dp"
-                            app:layout_constraintEnd_toStartOf="@+id/countryCard"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent">
+                        <FrameLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
 
                             <RelativeLayout
+                                android:id="@+id/percentageCardContent"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent">
 
@@ -196,7 +195,7 @@
                                     android:layout_height="match_parent"
                                     android:background="@drawable/gradient_overlay" />
 
-                                <!-- Percentage Text positioned at bottom center (like countries) -->
+                                <!-- Percentage Text positioned at bottom center -->
                                 <LinearLayout
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -233,21 +232,37 @@
                                         android:shadowRadius="2" />
                                 </LinearLayout>
                             </RelativeLayout>
-                        </androidx.cardview.widget.CardView>
 
-                        <!-- Country Count Card with Background Image -->
-                        <androidx.cardview.widget.CardView
-                            android:id="@+id/countryCard"
-                            android:layout_width="0dp"
-                            android:layout_height="150dp"
-                            android:layout_marginStart="4dp"
-                            app:cardCornerRadius="16dp"
-                            app:cardElevation="4dp"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toEndOf="@+id/percentageCard"
-                            app:layout_constraintTop_toTopOf="parent">
+                            <!-- Individual Progress Bar for Percentage Card -->
+                            <ProgressBar
+                                android:id="@+id/percentageProgressBar"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:visibility="gone"
+                                android:elevation="8dp" />
+
+                        </FrameLayout>
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- Country Count Card with Individual Progress Bar -->
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/countryCard"
+                        android:layout_width="0dp"
+                        android:layout_height="150dp"
+                        android:layout_marginStart="4dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="4dp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/percentageCard"
+                        app:layout_constraintTop_toTopOf="parent">
+
+                        <FrameLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
 
                             <RelativeLayout
+                                android:id="@+id/countryCardContent"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent">
 
@@ -302,19 +317,19 @@
                                         android:shadowRadius="2" />
                                 </LinearLayout>
                             </RelativeLayout>
-                        </androidx.cardview.widget.CardView>
-                    </androidx.constraintlayout.widget.ConstraintLayout>
 
-                    <!-- Loading indicator for statistics - Centered over the statistics cards -->
-                    <ProgressBar
-                        android:id="@+id/statisticsProgressBar"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:visibility="gone"
-                        android:elevation="8dp" />
+                            <!-- Individual Progress Bar for Country Card -->
+                            <ProgressBar
+                                android:id="@+id/countryProgressBar"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:visibility="gone"
+                                android:elevation="8dp" />
 
-                </FrameLayout>
+                        </FrameLayout>
+                    </androidx.cardview.widget.CardView>
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
                 <!-- World Map Section -->
                 <TextView

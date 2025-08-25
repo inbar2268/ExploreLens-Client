@@ -48,28 +48,72 @@ class ProfileUIHelper(private val binding: FragmentProfileBinding) {
         }
     }
 
+    // Individual loading states for percentage card
+    fun showPercentageLoading() {
+        binding.percentageProgressBar.visibility = View.VISIBLE
+        binding.percentageCardContent.visibility = View.GONE
+    }
+
+    fun hidePercentageLoading() {
+        binding.percentageProgressBar.visibility = View.GONE
+        binding.percentageCardContent.visibility = View.VISIBLE
+    }
+
+    // Individual loading states for country card
+    fun showCountryLoading() {
+        binding.countryProgressBar.visibility = View.VISIBLE
+        binding.countryCardContent.visibility = View.GONE
+    }
+
+    fun hideCountryLoading() {
+        binding.countryProgressBar.visibility = View.GONE
+        binding.countryCardContent.visibility = View.VISIBLE
+    }
+
+    // Show loading for both statistics (if you want to load both at the same time)
     fun showStatisticsLoading() {
-        binding.statisticsProgressBar.visibility = View.VISIBLE
-        binding.statisticsContainer.visibility = View.GONE
+        showPercentageLoading()
+        showCountryLoading()
     }
 
+    // Hide loading for both statistics
     fun hideStatisticsLoading() {
-        binding.statisticsProgressBar.visibility = View.GONE
-        binding.statisticsContainer.visibility = View.VISIBLE
+        hidePercentageLoading()
+        hideCountryLoading()
     }
 
-    fun updateStatistics(percentage: String, countryCount: Int) {
-        hideStatisticsLoading()
-
+    // Update individual statistics
+    fun updatePercentage(percentage: String) {
+        hidePercentageLoading()
         binding.percentageValue.text = percentage
+    }
+
+    fun updateCountryCount(countryCount: Int) {
+        hideCountryLoading()
         binding.countryValue.text = countryCount.toString()
     }
 
-    fun showStatisticsError() {
-        hideStatisticsLoading()
+    // Update both statistics at once (for backward compatibility)
+    fun updateStatistics(percentage: String, countryCount: Int) {
+        updatePercentage(percentage)
+        updateCountryCount(countryCount)
+    }
 
+    // Show error states for individual cards
+    fun showPercentageError() {
+        hidePercentageLoading()
         binding.percentageValue.text = "--"
+    }
+
+    fun showCountryError() {
+        hideCountryLoading()
         binding.countryValue.text = "--"
+    }
+
+    // Show error for both statistics
+    fun showStatisticsError() {
+        showPercentageError()
+        showCountryError()
     }
 
     fun setRefreshing(isRefreshing: Boolean) {

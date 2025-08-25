@@ -34,11 +34,25 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         ) : StatisticsState()
         data class Error(val message: String) : StatisticsState()
     }
+    sealed class PercentageState {
+        object Loading : PercentageState()
+        data class Success(val percentage: String) : PercentageState()
+        data class Error(val message: String) : PercentageState()
+    }
 
+    sealed class CountryState {
+        object Loading : CountryState()
+        data class Success(val countryCount: Int, val countries: List<String>) : CountryState()
+        data class Error(val message: String) : CountryState()
+    }
     private val userRepository = UserRepository(application)
     private val authRepository = AuthRepository(application)
     private val userStatisticsRepository = UserStatisticsRepository.getInstance(application)
+    private val _percentageState = MutableLiveData<PercentageState>()
+    val percentageState: LiveData<PercentageState> = _percentageState
 
+    private val _countryState = MutableLiveData<CountryState>()
+    val countryState: LiveData<CountryState> = _countryState
     private val _userState = MutableLiveData<UserState>()
     val userState: LiveData<UserState> = _userState
 
@@ -53,19 +67,20 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
             when (resource) {
                 is Resource.Loading -> {
-                    liveData.value = StatisticsState.Loading
+                    _percentageState.value = PercentageState.Loading
+                    _countryState.value = CountryState.Loading
                 }
                 is Resource.Success -> {
                     val statistics = resource.data!!
-                    liveData.value = StatisticsState.Success(
-                        percentage = statistics.percentageVisited,
+                    _percentageState.value = PercentageState.Success(statistics.percentageVisited)
+                    _countryState.value = CountryState.Success(
                         countryCount = statistics.countryCount,
-                        countries = statistics.countries ?: emptyList(),
-                        isFromCache = resource.isFromCache
+                        countries = statistics.countries ?: emptyList()
                     )
                 }
                 is Resource.Error -> {
-                    liveData.value = StatisticsState.Error(resource.message ?: "Unknown error")
+                    _percentageState.value = PercentageState.Error(resource.message ?: "Unknown error")
+                    _countryState.value = CountryState.Error(resource.message ?: "Unknown error")
                 }
             }
 
