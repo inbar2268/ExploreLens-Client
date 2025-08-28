@@ -4,7 +4,7 @@ import android.view.View
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.explorelens.R
-import com.example.explorelens.data.db.User
+import com.example.explorelens.data.db.user.UserEntity
 import com.example.explorelens.databinding.FragmentProfileBinding
 
 class ProfileUIHelper(private val binding: FragmentProfileBinding) {
@@ -28,7 +28,7 @@ class ProfileUIHelper(private val binding: FragmentProfileBinding) {
         binding.errorMessage.visibility = View.GONE
     }
 
-    fun updateUserInfo(user: User, fragment: ProfileFragment) {
+    fun updateUserInfo(user: UserEntity, fragment: ProfileFragment) {
         hideLoading()
         hideError()
 

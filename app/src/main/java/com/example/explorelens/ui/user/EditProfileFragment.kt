@@ -18,7 +18,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.explorelens.R
 import com.example.explorelens.common.helpers.ToastHelper
-import com.example.explorelens.data.db.User
+import com.example.explorelens.data.db.user.UserEntity
 import com.example.explorelens.data.repository.UserRepository
 import com.example.explorelens.databinding.FragmentEditProfileBinding
 import kotlinx.coroutines.launch
@@ -30,7 +30,7 @@ class EditProfileFragment : Fragment() {
 
     sealed class EditProfileState {
         object Loading : EditProfileState()
-        data class Success(val user: User) : EditProfileState()
+        data class Success(val user: UserEntity) : EditProfileState()
         data class Error(val message: String) : EditProfileState()
         object UploadingImage : EditProfileState()
         object Saving : EditProfileState()
@@ -43,7 +43,7 @@ class EditProfileFragment : Fragment() {
     val editProfileState: LiveData<EditProfileState> = _editProfileState
 
     private lateinit var userRepository: UserRepository
-    private var currentUser: User? = null
+    private var currentUser: UserEntity? = null
     private var selectedImageUri: Uri? = null
     private var uploadedImageUrl: String? = null
 
@@ -187,7 +187,7 @@ class EditProfileFragment : Fragment() {
         }
     }
 
-    private suspend fun updateUserProfile(currentUserData: User, username: String, imageUrl: String?) {
+    private suspend fun updateUserProfile(currentUserData: UserEntity, username: String, imageUrl: String?) {
         _editProfileState.value = EditProfileState.Saving
 
         // Create updated user object

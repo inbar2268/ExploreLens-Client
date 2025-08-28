@@ -2,13 +2,12 @@ package com.example.explorelens.ar
 
 import android.content.Context
 import android.util.Log
-import com.example.explorelens.ar.render.LayerLabelRenderer
-import com.example.explorelens.ar.render.LayerLabelTextureCache
+import com.example.explorelens.ar.render.POILabelRenderer
+import com.example.explorelens.ar.render.POILabelTextureCache
 import com.example.explorelens.common.samplerender.SampleRender
 import com.google.ar.core.Frame
 import com.google.ar.core.Pose
 import com.google.ar.core.Anchor
-import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -18,9 +17,9 @@ class ARLayerManager(private val context: Context) {
         private const val MINIMUM_DISTANCE = 10.0 // Minimum distance in meters
     }
 
-    private val layerLabelRenderer = LayerLabelRenderer()
+    private val layerLabelRenderer = POILabelRenderer()
     private val layerLabels = CopyOnWriteArrayList<LayerLabelInfo>()
-    private val textureCache = LayerLabelTextureCache(context)
+    private val textureCache = POILabelTextureCache(context)
     private val currentlyVisibleLabels = CopyOnWriteArrayList<LayerLabelInfo>()
 
     data class LayerLabelInfo(
@@ -43,28 +42,6 @@ class ARLayerManager(private val context: Context) {
         return layerLabel
     }
 
-    fun addLayerLabel(
-        session: Session,
-        worldPosition: FloatArray,
-        placeInfo: Map<String, Any>
-    ): LayerLabelInfo? {
-        return try {
-            Log.d(TAG, "Adding layer label for: ${placeInfo["name"]} at position")
-            val pose = Pose.makeTranslation(worldPosition[0], worldPosition[1], worldPosition[2])
-            val anchor = session.createAnchor(pose)
-            val layerLabel = LayerLabelInfo(anchor, placeInfo)
-            layerLabels.add(layerLabel)
-            layerLabel
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to add layer label", e)
-            null
-        }
-    }
-
-    fun removeLayerLabel(label: LayerLabelInfo) {
-        layerLabels.remove(label)
-        label.anchor.detach()
-    }
 
     fun clearLayerLabels() {
         layerLabels.forEach { it.anchor.detach() }
@@ -180,17 +157,12 @@ class ARLayerManager(private val context: Context) {
         return layerLabels.mapNotNull { it.placeInfo["place_id"] }.toSet()
     }
 
-
-    fun getAllLabels(): List<LayerLabelInfo> {
-        return layerLabels.toList()
-    }
-
     fun removeLabel(labelToRemove: LayerLabelInfo) {
         layerLabels.removeAll { it.anchor == labelToRemove.anchor }
         Log.d(TAG, "Removed layer label: ${labelToRemove.placeInfo["name"]}")
     }
 
-    fun getTextureCache(): LayerLabelTextureCache {
+    fun getTextureCache(): POILabelTextureCache {
         return textureCache
     }
 

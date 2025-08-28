@@ -1,7 +1,7 @@
 package com.example.explorelens.data.db
 
 import androidx.room.TypeConverter
-import com.example.explorelens.data.db.places.Review
+import com.example.explorelens.data.db.pointOfInterest.Review
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 

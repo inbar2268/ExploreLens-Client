@@ -27,45 +27,6 @@ class GeoLocationUtils(private val context: Context) {
     private var userLongitude: Double? = null
     private var geoHash: String? = null
 
-    fun getCurrentLocationFlow(): Flow<Location?> = callbackFlow {
-        if (ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            trySend(null)
-            close()
-            return@callbackFlow
-        }
-
-        val locationRequest = LocationRequest.create().apply {
-            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-            interval = 10000
-            fastestInterval = 5000
-        }
-
-        val locationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                locationResult.lastLocation?.let { location ->
-                    trySend(location).isSuccess
-                }
-            }
-        }
-
-        fusedLocationClient.requestLocationUpdates(
-            locationRequest,
-            locationCallback,
-            Looper.getMainLooper()
-        )
-
-        awaitClose {
-            fusedLocationClient.removeLocationUpdates(locationCallback)
-        }
-    }
-
     suspend fun getSingleCurrentLocation(): Location? {
         return try {
             if (ActivityCompat.checkSelfPermission(
@@ -85,65 +46,6 @@ class GeoLocationUtils(private val context: Context) {
         }
     }
 
-    suspend fun getCurrentLocation(): Location? {
-        if (ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return null
-        }
-
-        return try {
-            fusedLocationClient.lastLocation.await()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    suspend fun requestNewLocationData(): Location? {
-        val locationRequest = LocationRequest.create().apply {
-            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-            interval = 5000
-            fastestInterval = 2000
-            numUpdates = 1
-        }
-
-        if (ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return null
-        }
-
-        return try {
-            // Use a LocationCallback and an Executor.
-            val executor = Executors.newSingleThreadExecutor() // Create an Executor
-            val locationResult =  fusedLocationClient.requestLocationUpdates(locationRequest, executor, object : LocationCallback() {
-                override fun onLocationResult(p0: LocationResult) {
-                    //  I moved the return logic here.
-                    executor.shutdown() // shutdown the executor.
-                }
-            }).await()
-
-            fusedLocationClient.lastLocation.await()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        } finally {
-            // It's important to remove updates if you requested a specific number of updates
-            // However, 'requestLocationUpdates' with await might behave differently.
-            // Consider using a callback-based approach if fine-grained control is needed.
-        }
-    }
 
     fun updateLocation(location: Location) {
         userLatitude = location.latitude
@@ -151,7 +53,5 @@ class GeoLocationUtils(private val context: Context) {
         val geoHashObj = GeoHash.geoHashStringWithCharacterPrecision(userLatitude!!, userLongitude!!, 9) // Adjust precision
         geoHash = geoHashObj    }
 
-    fun getUserLatitude(): Double? = userLatitude
-    fun getUserLongitude(): Double? = userLongitude
     fun getGeoHash(): String? = geoHash
 }

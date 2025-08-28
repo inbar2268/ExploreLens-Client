@@ -79,7 +79,7 @@ class SiteHistoryRepository(context: Context) {
         // Safety check for null or blank userId
         if (userId.isNullOrBlank()) {
             Log.e(TAG, "resetSiteHistoryForUser called with null or blank userId")
-            return Result.failure(IllegalArgumentException("User ID cannot be null or blank"))
+            return Result.failure(IllegalArgumentException("UserEntity ID cannot be null or blank"))
         }
 
         return try {

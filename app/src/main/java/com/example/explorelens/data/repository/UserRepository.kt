@@ -5,7 +5,7 @@ import android.net.Uri
 import android.util.Log
 import android.webkit.MimeTypeMap
 import com.example.explorelens.data.db.AppDatabase
-import com.example.explorelens.data.db.User
+import com.example.explorelens.data.db.user.UserEntity
 import com.example.explorelens.data.model.user.UserResponse
 import com.example.explorelens.data.model.user.UpdateUserRequest
 import com.example.explorelens.data.model.user.UploadProfilePictureResponse
@@ -122,8 +122,8 @@ class UserRepository(private val context: Context) {
     }
 
     // Fetch user from API and save to database
-    suspend fun fetchAndSaveUser(): Result<User> {
-        val userId = tokenManager.getUserId() ?: return Result.failure(IllegalStateException("User ID not found"))
+    suspend fun fetchAndSaveUser(): Result<UserEntity> {
+        val userId = tokenManager.getUserId() ?: return Result.failure(IllegalStateException("UserEntity ID not found"))
 
         return try {
             val response: Response<UserResponse> = userApiService.getUserById(userId)
@@ -132,7 +132,7 @@ class UserRepository(private val context: Context) {
                 val userResponse = response.body()
                 if (userResponse != null) {
                     // Convert API response to Room entity
-                    val user = User(
+                    val user = UserEntity(
                         id = userResponse._id,
                         username = userResponse.username,
                         email = userResponse.email,
@@ -157,7 +157,7 @@ class UserRepository(private val context: Context) {
     }
 
     // Update user both locally and on server
-    suspend fun updateUser(user: User): Result<User> {
+    suspend fun updateUser(user: UserEntity): Result<UserEntity> {
         return try {
             // First update on server
             val updateRequest = UpdateUserRequest(
@@ -172,7 +172,7 @@ class UserRepository(private val context: Context) {
                 val userResponse = response.body()
                 if (userResponse != null) {
                     // Convert API response to Room entity
-                    val updatedUser = User(
+                    val updatedUser = UserEntity(
                         id = userResponse._id,
                         username = userResponse.username,
                         email = userResponse.email,
@@ -214,7 +214,7 @@ class UserRepository(private val context: Context) {
         val userId = tokenManager.getUserId() ?: return null
         if (userId.isNullOrBlank()) {
             Log.e(TAG, "deleteUser called with null or blank userId")
-            return Result.failure(IllegalArgumentException("User ID cannot be null or blank"))
+            return Result.failure(IllegalArgumentException("UserEntity ID cannot be null or blank"))
         }
 
         return try {
@@ -222,9 +222,9 @@ class UserRepository(private val context: Context) {
             val response = userApiService.deleteUser(userId)
 
             if (response.isSuccessful) {
-                Log.d(TAG, "User deleted from server successfully: $userId")
+                Log.d(TAG, "UserEntity deleted from server successfully: $userId")
                 userDao.deleteUser(userId)
-                Log.d(TAG, "User deleted from local database successfully: $userId")
+                Log.d(TAG, "UserEntity deleted from local database successfully: $userId")
                 Result.success(Unit)
             } else {
                 val errorMsg = response.errorBody()?.string() ?: "Unknown error"
@@ -238,13 +238,13 @@ class UserRepository(private val context: Context) {
     }
 
     // Get user from local database
-    suspend fun getUserFromDb(): User? {
+    suspend fun getUserFromDb(): UserEntity? {
         val userId = tokenManager.getUserId() ?: return null
         return userDao.getUserById(userId)
     }
 
     // Observe user from local database
-    fun observeUser(): Flow<User?> {
+    fun observeUser(): Flow<UserEntity?> {
         val userId = tokenManager.getUserId() ?: return flowOf(null)
         return userDao.observeUserById(userId)
     }
@@ -255,11 +255,11 @@ class UserRepository(private val context: Context) {
     }
 
     // Get user by ID from server
-    suspend fun getUserById(userId: String): Result<User> {
+    suspend fun getUserById(userId: String): Result<UserEntity> {
         // Safety check for null or blank userId
         if (userId.isNullOrBlank()) {
             Log.e(TAG, "getUserById called with null or blank userId")
-            return Result.failure(IllegalArgumentException("User ID cannot be null or blank"))
+            return Result.failure(IllegalArgumentException("UserEntity ID cannot be null or blank"))
         }
 
         return try {
@@ -267,7 +267,7 @@ class UserRepository(private val context: Context) {
             if (response.isSuccessful) {
                 val userResponse = response.body()
                 if (userResponse != null) {
-                    val user = User(
+                    val user = UserEntity(
                         id = userResponse._id,
                         username = userResponse.username,
                         email = userResponse.email,

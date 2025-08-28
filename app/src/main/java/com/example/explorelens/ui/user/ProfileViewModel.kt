@@ -6,7 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
-import com.example.explorelens.data.db.User
+import com.example.explorelens.data.db.user.UserEntity
 import com.example.explorelens.data.repository.AuthRepository
 import com.example.explorelens.data.repository.Resource
 import com.example.explorelens.data.repository.UserRepository
@@ -19,7 +19,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     // UserState sealed class for handling UI states
     sealed class UserState {
         object Loading : UserState()
-        data class Success(val user: User) : UserState()
+        data class Success(val user: UserEntity) : UserState()
         data class Error(val message: String) : UserState()
         object Logout : UserState()
     }

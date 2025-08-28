@@ -6,16 +6,16 @@ import androidx.room.*
 @Dao
 interface UserStatisticsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertUserStatistics(userStatistics: UserStatistics)
+    suspend fun insertUserStatistics(userStatistics: UserStatisticsEntity)
 
     @Query("SELECT * FROM user_statistics WHERE userId = :userId")
-    fun getUserStatistics(userId: String): LiveData<UserStatistics?>
+    fun getUserStatistics(userId: String): LiveData<UserStatisticsEntity?>
 
     @Query("SELECT * FROM user_statistics WHERE userId = :userId")
-    suspend fun getUserStatisticsSync(userId: String): UserStatistics?
+    suspend fun getUserStatisticsSync(userId: String): UserStatisticsEntity?
 
     @Delete
-    suspend fun deleteUserStatistics(userStatistics: UserStatistics)
+    suspend fun deleteUserStatistics(userStatistics: UserStatisticsEntity)
 
     @Query("DELETE FROM user_statistics WHERE userId = :userId")
     suspend fun deleteUserStatisticsByUserId(userId: String)

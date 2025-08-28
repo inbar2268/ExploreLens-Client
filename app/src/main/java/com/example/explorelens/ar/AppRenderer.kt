@@ -1,12 +1,11 @@
 package com.example.explorelens.ar
-import android.location.Location
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.example.explorelens.ArActivity
-import com.example.explorelens.model.Snapshot
+import com.example.explorelens.data.model.siteDetectionData.Snapshot
 import com.google.ar.core.Frame
 import com.google.ar.core.TrackingState
 import com.example.explorelens.common.helpers.DisplayRotationHelper
@@ -17,16 +16,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
+import com.example.explorelens.ui.siteHistory.SiteHistoryViewModel
 import com.example.explorelens.ar.components.ARSceneRenderer
 import com.example.explorelens.ar.components.ARTouchInteractionManager
-import com.example.explorelens.ar.components.AnchorManager
-import com.example.explorelens.ar.components.GeoAnchorManager
-import com.example.explorelens.ar.components.SiteHistoryHelper
+import com.example.explorelens.ar.components.ARAnchorManager
+import com.example.explorelens.ar.components.PointOfInterestAnchorManager
+import com.example.explorelens.ui.siteHistory.SiteHistoryHelper
 import com.example.explorelens.ar.components.SnapshotManager
 import com.example.explorelens.ar.render.FilterListManager
-import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
-import com.example.explorelens.model.ARLabeledAnchor
+import com.example.explorelens.data.model.pointOfInterest.PointOfInterest
+import com.example.explorelens.data.model.arLabel.ARLabeledAnchor
 import com.example.explorelens.utils.GeoLocationUtils
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -52,11 +51,11 @@ class AppRenderer(
     var serverResult: ImageAnalyzedResult? = null
     private var lastSnapshotData: Snapshot? = null
 
-    private lateinit var anchorManager: AnchorManager
+    private lateinit var anchorManager: ARAnchorManager
     private lateinit var arTouchInteractionManager: ARTouchInteractionManager
     private lateinit var snapshotManager: SnapshotManager
     private lateinit var arSceneRenderer: ARSceneRenderer
-    private lateinit var geoAnchorManager: GeoAnchorManager
+    private lateinit var geoAnchorManager: PointOfInterestAnchorManager
     private lateinit var siteHistoryHelper: SiteHistoryHelper
 
     override fun onResume(owner: LifecycleOwner) {
@@ -88,7 +87,7 @@ class AppRenderer(
     fun bindView(view: ArActivityView) {
         this.view = view
         arSceneRenderer = ARSceneRenderer(activity, displayRotationHelper)
-        anchorManager = AnchorManager(activity, view, networkScope)
+        anchorManager = ARAnchorManager(activity, view, networkScope)
         arTouchInteractionManager = ARTouchInteractionManager(activity, view, anchorManager)
         siteHistoryHelper = SiteHistoryHelper(siteHistoryViewModel, geoLocationUtils, networkScope)
         snapshotManager = SnapshotManager(
@@ -98,7 +97,7 @@ class AppRenderer(
             networkScope,
             backgroundScope
         )
-        geoAnchorManager = GeoAnchorManager(
+        geoAnchorManager = PointOfInterestAnchorManager(
             activity,
             view,
             geoLocationUtils,
@@ -149,10 +148,10 @@ class AppRenderer(
             }
         })
 
-        // Updated GeoAnchorManager callback with all required methods
-        geoAnchorManager.setCallback(object : GeoAnchorManager.GeoAnchorCallback {
+        // Updated PointOfInterestAnchorManager callback with all required methods
+        geoAnchorManager.setCallback(object : PointOfInterestAnchorManager.GeoAnchorCallback {
             override fun onPlacesReceived(places: List<PointOfInterest>) {
-                Log.d(TAG, "Received ${places.size} places from GeoAnchorManager")
+                Log.d(TAG, "Received ${places.size} places from PointOfInterestAnchorManager")
             }
 
             override fun onPlacesError(message: String) {
@@ -175,7 +174,7 @@ class AppRenderer(
             override fun navigateToPlaceDetails(placeId: String) {
                 Log.d(TAG, "AppRenderer: Delegating navigation to ArActivity for place: $placeId")
                 // Delegate to the ArActivity which implements the actual navigation
-                (activity as? GeoAnchorManager.GeoAnchorCallback)?.navigateToPlaceDetails(placeId)
+                (activity as? PointOfInterestAnchorManager.GeoAnchorCallback)?.navigateToPlaceDetails(placeId)
             }
         })
 

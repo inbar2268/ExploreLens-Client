@@ -8,12 +8,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.onNavDestinationSelected
 import androidx.navigation.ui.setupWithNavController
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.utils.LoadingManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.example.explorelens.ui.site.SiteDetailsFragment
+import com.example.explorelens.ui.siteDetails.SiteDetailsFragment
 import androidx.activity.OnBackPressedCallback
 import com.example.explorelens.utils.FragmentNavigationManager
 import com.example.explorelens.data.repository.AuthRepository
@@ -101,10 +100,10 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
         val isLoggedIn = authRepository.isLoggedIn() || isUserAuthenticatedWithGoogle(this)
 
         if (!isLoggedIn) {
-            // User is not logged in, navigate to landing page
+            // UserEntity is not logged in, navigate to landing page
             navController.navigate(R.id.landingFragment)
         } else {
-            // User is logged in, navigate to main app (profile or AR activity)
+            // UserEntity is logged in, navigate to main app (profile or AR activity)
             navController.navigate(R.id.profileFragment)
         }
     }

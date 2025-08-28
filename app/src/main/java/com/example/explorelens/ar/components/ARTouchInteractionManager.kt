@@ -10,7 +10,7 @@ import com.example.explorelens.R
 import com.example.explorelens.ArActivity
 import com.example.explorelens.ar.ARLayerManager
 import com.example.explorelens.ar.ArActivityView
-import com.example.explorelens.model.ARLabeledAnchor
+import com.example.explorelens.data.model.arLabel.ARLabeledAnchor
 import com.google.ar.core.Frame
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
@@ -20,7 +20,7 @@ import kotlin.math.sqrt
 public class ARTouchInteractionManager(
     private val activity: ArActivity,
     private val view: ArActivityView,
-    private val anchorManager: AnchorManager
+    private val anchorManager: ARAnchorManager
 ) {
     companion object {
         private const val TAG = "ARTouchInteractionManager"
@@ -234,7 +234,7 @@ public class ARTouchInteractionManager(
             val labelPose = layerLabel.anchor.pose
             val worldPos = floatArrayOf(
                 labelPose.tx(),
-                labelPose.ty() + 0.1f, // Same offset as in LayerLabelRenderer
+                labelPose.ty() + 0.1f, // Same offset as in POILabelRenderer
                 labelPose.tz(),
                 1.0f
             )
@@ -404,11 +404,11 @@ public class ARTouchInteractionManager(
         camera: com.google.ar.core.Camera
     ): LabelBounds? {
         try {
-            // Get the layer label position (with Y offset matching LayerLabelRenderer)
+            // Get the layer label position (with Y offset matching POILabelRenderer)
             val labelPose = layerLabel.anchor.pose
             val worldPos = floatArrayOf(
                 labelPose.tx(),
-                labelPose.ty() + 0.1f, // Same offset as in LayerLabelRenderer
+                labelPose.ty() + 0.1f, // Same offset as in POILabelRenderer
                 labelPose.tz(),
                 1.0f
             )

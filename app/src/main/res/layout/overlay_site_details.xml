@@ -145,7 +145,7 @@
                                 android:textSize="14sp"
                                 android:textStyle="bold" />
 
-                            <com.example.explorelens.ui.site.RatingView
+                            <com.example.explorelens.ui.siteDetails.RatingView
                                 android:id="@+id/ratingView"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content" />

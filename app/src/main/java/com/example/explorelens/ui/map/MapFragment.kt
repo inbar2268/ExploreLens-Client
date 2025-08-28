@@ -22,7 +22,7 @@ import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.network.auth.AuthTokenManager
 import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.data.repository.SiteHistoryRepository
-import com.example.explorelens.ui.site.SiteDetailsFragment
+import com.example.explorelens.ui.siteDetails.SiteDetailsFragment
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView

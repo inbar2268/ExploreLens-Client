@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.map
 import com.example.explorelens.data.db.AppDatabase
-import com.example.explorelens.data.db.statistics.UserStatistics
+import com.example.explorelens.data.db.statistics.UserStatisticsEntity
 import com.example.explorelens.data.model.statistics.UserStatisticsResponse
 import com.example.explorelens.data.network.ExploreLensApiClient
 import com.example.explorelens.data.network.auth.AuthTokenManager
@@ -19,14 +19,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
-/**
- * Repository following Android best practices:
- * - Single Source of Truth (Room database)
- * - Offline-first approach
- * - Reactive data with Flow/LiveData
- * - Proper error handling
- * - Cache strategy with TTL
- */
 class UserStatisticsRepository(context: Context) {
 
     companion object {
@@ -54,7 +46,7 @@ class UserStatisticsRepository(context: Context) {
      * Get user statistics as LiveData (reactive, single source of truth)
      * This is the main method UI should observe
      */
-    fun getUserStatisticsLiveData(): LiveData<Resource<UserStatistics>> {
+    fun getUserStatisticsLiveData(): LiveData<Resource<UserStatisticsEntity>> {
         val userId = tokenManager.getUserId()
 
         return if (userId != null) {
@@ -71,8 +63,8 @@ class UserStatisticsRepository(context: Context) {
             }
         } else {
             // Return error LiveData if no user ID
-            androidx.lifecycle.MutableLiveData<Resource<UserStatistics>>().apply {
-                value = Resource.Error("User not authenticated")
+            androidx.lifecycle.MutableLiveData<Resource<UserStatisticsEntity>>().apply {
+                value = Resource.Error("UserEntity not authenticated")
             }
         }
     }
@@ -80,11 +72,11 @@ class UserStatisticsRepository(context: Context) {
     /**
      * Get user statistics as Flow (for more complex reactive scenarios)
      */
-    fun getUserStatisticsFlow(): Flow<Resource<UserStatistics>> = flow {
+    fun getUserStatisticsFlow(): Flow<Resource<UserStatisticsEntity>> = flow {
         val userId = tokenManager.getUserId()
 
         if (userId == null) {
-            emit(Resource.Error("User not authenticated"))
+            emit(Resource.Error("UserEntity not authenticated"))
             return@flow
         }
 
@@ -134,7 +126,7 @@ class UserStatisticsRepository(context: Context) {
     /**
      * Force refresh statistics from server
      */
-    suspend fun refreshStatistics(): Resource<UserStatistics> {
+    suspend fun refreshStatistics(): Resource<UserStatisticsEntity> {
         val userId = tokenManager.getUserId()
 
         return if (userId != null) {
@@ -166,14 +158,14 @@ class UserStatisticsRepository(context: Context) {
                 Resource.Error(e.message ?: "Refresh failed")
             }
         } else {
-            Resource.Error("User not authenticated")
+            Resource.Error("UserEntity not authenticated")
         }
     }
 
     /**
      * Get only cached statistics (useful for offline scenarios)
      */
-    suspend fun getCachedStatistics(): Resource<UserStatistics> {
+    suspend fun getCachedStatistics(): Resource<UserStatisticsEntity> {
         val userId = tokenManager.getUserId()
 
         return if (userId != null) {
@@ -186,7 +178,7 @@ class UserStatisticsRepository(context: Context) {
                 }
             }
         } else {
-            Resource.Error("User not authenticated")
+            Resource.Error("UserEntity not authenticated")
         }
     }
 
@@ -229,7 +221,7 @@ class UserStatisticsRepository(context: Context) {
 
     // Private helper methods
 
-    private suspend fun fetchFromNetwork(userId: String): Result<UserStatistics> {
+    private suspend fun fetchFromNetwork(userId: String): Result<UserStatisticsEntity> {
         return withContext(Dispatchers.IO) {
             try {
                 Log.d(TAG, "Fetching statistics from network for user: $userId")
@@ -276,8 +268,8 @@ class UserStatisticsRepository(context: Context) {
         }
     }
 
-    private fun mapResponseToEntity(response: UserStatisticsResponse): UserStatistics {
-        return UserStatistics(
+    private fun mapResponseToEntity(response: UserStatisticsResponse): UserStatisticsEntity {
+        return UserStatisticsEntity(
             userId = response.userId,
             percentageVisited = response.percentageVisited,
             countryCount = response.countryCount,

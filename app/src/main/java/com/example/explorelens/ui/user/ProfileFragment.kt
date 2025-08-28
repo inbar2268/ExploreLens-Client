@@ -54,7 +54,7 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
     }
 
     private fun setupObservers() {
-        // User state observer
+        // UserEntity state observer
         viewModel.userState.observe(viewLifecycleOwner) { state ->
             _binding?.let {
                 when (state) {

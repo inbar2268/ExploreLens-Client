@@ -131,7 +131,7 @@
 
     <fragment
         android:id="@+id/siteDetailsFragment"
-        android:name="com.example.explorelens.ui.site.SiteDetailsFragment"
+        android:name="com.example.explorelens.ui.siteDetails.SiteDetailsFragment"
         android:label="Site Details"
         tools:layout="@layout/fragment_site_details">
         <argument
@@ -169,7 +169,7 @@
 
     <fragment
         android:id="@+id/siteHistoryFragment"
-        android:name="com.example.explorelens.ui.site.SiteHistoryFragment"
+        android:name="com.example.explorelens.ui.siteHistory.SiteHistoryFragment"
         android:label="history"
         tools:layout="@layout/fragment_site_history">
         <action
@@ -179,7 +179,7 @@
 
     <fragment
         android:id="@+id/layerDetailFragment"
-        android:name="com.example.explorelens.ui.places.LayerDetailFragment"
+        android:name="com.example.explorelens.ui.pointOfInterest.PointOfInterestDetailFragment"
         android:label="Place Details"
         tools:layout="@layout/fragment_layer_detail">
 

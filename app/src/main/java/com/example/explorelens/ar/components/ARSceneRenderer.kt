@@ -9,8 +9,8 @@ import com.example.explorelens.ar.render.PointCloudRender
 import com.example.explorelens.common.helpers.DisplayRotationHelper
 import com.example.explorelens.common.samplerender.SampleRender
 import com.example.explorelens.common.samplerender.arcore.BackgroundRenderer
-import com.example.explorelens.model.ARLabeledAnchor
-import com.example.explorelens.model.Snapshot
+import com.example.explorelens.data.model.arLabel.ARLabeledAnchor
+import com.example.explorelens.data.model.siteDetectionData.Snapshot
 import com.google.ar.core.Frame
 import com.google.ar.core.TrackingState
 import com.google.ar.core.exceptions.CameraNotAvailableException

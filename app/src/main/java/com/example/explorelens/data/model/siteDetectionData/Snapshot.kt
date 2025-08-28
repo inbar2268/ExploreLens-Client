@@ -1,0 +1,8 @@
+package com.example.explorelens.data.model.siteDetectionData
+
+import com.google.ar.core.Pose
+
+class Snapshot (
+    val timestamp: Long,
+    val cameraPose: Pose,
+)

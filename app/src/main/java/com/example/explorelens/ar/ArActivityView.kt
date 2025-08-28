@@ -28,7 +28,7 @@ import com.example.explorelens.databinding.ActivityMainBinding
 import com.example.explorelens.databinding.FilterSideSheetBinding
 import com.example.explorelens.adapters.filterOptions.FilterOptionAdapter
 import com.example.explorelens.ar.render.FilterListManager
-import com.example.explorelens.ui.site.SiteDetailsFragment
+import com.example.explorelens.ui.siteDetails.SiteDetailsFragment
 import com.google.android.material.sidesheet.SideSheetDialog
 
 class ArActivityView(

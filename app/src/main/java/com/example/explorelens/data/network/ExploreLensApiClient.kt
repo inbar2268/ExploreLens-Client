@@ -10,10 +10,10 @@ import com.example.explorelens.data.network.auth.AuthApi
 import com.example.explorelens.data.network.auth.AuthInterceptor
 import com.example.explorelens.data.network.chat.ChatApi
 import com.example.explorelens.data.network.detectionResult.AnalyzedResultApi
-import com.example.explorelens.data.network.site.SiteHistoryApi
+import com.example.explorelens.data.network.siteHistory.SiteHistoryApi
 import com.example.explorelens.data.network.siteDetails.SiteDetailsApi
 import com.example.explorelens.data.network.user.UserApi
-import com.example.explorelens.data.network.nearbyPlaces.NearbyPlacesApi
+import com.example.explorelens.data.network.pointOfInterest.PointOfInterestApi
 import com.example.explorelens.data.network.siteDetails.ReviewsApi
 import com.example.explorelens.data.network.user.UploadProfilePictureApi
 import com.example.explorelens.data.network.user.UserStatisticsApi
@@ -89,8 +89,8 @@ object ExploreLensApiClient {
         createRetrofitClient(getOkHttpClient(authenticated = true)).create(ReviewsApi::class.java)
     }
 
-    val nearbyPlacesApi: NearbyPlacesApi by lazy {
-        createRetrofitClient(getOkHttpClient(authenticated = true)).create(NearbyPlacesApi::class.java)
+    val nearbyPlacesApi: PointOfInterestApi by lazy {
+        createRetrofitClient(getOkHttpClient(authenticated = true)).create(PointOfInterestApi::class.java)
     }
 
     val chatApi: ChatApi by lazy {

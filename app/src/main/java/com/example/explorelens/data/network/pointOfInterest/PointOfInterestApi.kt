@@ -1,0 +1,18 @@
+package com.example.explorelens.data.network.pointOfInterest
+
+import com.example.explorelens.data.model.pointOfInterest.PointOfInterest
+import retrofit2.Response
+import retrofit2.http.GET
+import retrofit2.http.Query
+
+interface PointOfInterestApi {
+    @GET("/places/nearby")
+    suspend fun getNearbyPlaces(
+        @Query("lat") latitude: Double,
+        @Query("lng") longitude: Double,
+        @Query("categories") categories: List<String>
+    ): Response<List<PointOfInterest>>
+
+}
+
+

@@ -9,7 +9,7 @@
     android:paddingEnd="16dp"
     android:paddingBottom="4dp">
 
-    <!-- User message card - Aligned to the right -->
+    <!-- UserEntity message card - Aligned to the right -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cardViewUserMessage"
         android:layout_width="wrap_content"
@@ -34,7 +34,7 @@
 
     </androidx.cardview.widget.CardView>
 
-    <!-- User avatar on the right side - CENTERED vertically with message card -->
+    <!-- UserEntity avatar on the right side - CENTERED vertically with message card -->
     <ImageView
         android:id="@+id/imageViewUserAvatar"
         android:layout_width="32dp"

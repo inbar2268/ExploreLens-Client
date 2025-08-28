@@ -5,13 +5,13 @@ import android.util.Log
 import com.example.explorelens.BuildConfig
 import com.example.explorelens.ar.ArActivityView
 import com.example.explorelens.common.helpers.DisplayRotationHelper
-import com.example.explorelens.ar.classification.utils.ImageUtils
+import com.example.explorelens.ar.image.ImageUtils
 import com.example.explorelens.data.model.siteDetectionData.ImageAnalyzedResult
 import com.example.explorelens.data.model.siteDetectionData.SiteInformation
 import com.example.explorelens.data.repository.DetectionResultRepository
-import com.example.explorelens.extensions.convertYuv
-import com.example.explorelens.extensions.toFile
-import com.example.explorelens.model.Snapshot
+import com.example.explorelens.ar.image.convertYuv
+import com.example.explorelens.ar.image.toFile
+import com.example.explorelens.data.model.siteDetectionData.Snapshot
 import com.google.ar.core.Frame
 import com.google.ar.core.Session
 import com.google.ar.core.exceptions.NotYetAvailableException

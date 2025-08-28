@@ -16,7 +16,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
-import com.example.explorelens.adapters.siteHistory.SiteHistoryViewModel
+import com.example.explorelens.ui.siteHistory.SiteHistoryViewModel
 import com.example.explorelens.ar.ARCoreSessionLifecycleHelper
 import com.example.explorelens.ar.AppRenderer
 import com.example.explorelens.ar.ArActivityView
@@ -183,7 +183,7 @@ class ArActivity : AppCompatActivity() {
         )
 
         if (shouldShowLocationRationale || shouldShowCameraRationale) {
-            // User has denied before, show rationale
+            // UserEntity has denied before, show rationale
             AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(message)
@@ -335,7 +335,7 @@ class ArActivity : AppCompatActivity() {
                 openAppSettings()
             }
             .setNegativeButton("Exit") { _, _ ->
-                Log.d(TAG, "User declined to grant permissions through settings")
+                Log.d(TAG, "UserEntity declined to grant permissions through settings")
                 navigateToProfile()
             }
             .setCancelable(false)
@@ -438,10 +438,10 @@ class ArActivity : AppCompatActivity() {
                             this, Manifest.permission.ACCESS_FINE_LOCATION
                         )
                     ) {
-                        // User selected "Don't ask again"
+                        // UserEntity selected "Don't ask again"
                         showPermissionRequiredDialog()
                     } else {
-                        // User simply denied
+                        // UserEntity simply denied
                         checkAndRequestPermissions() // Continue with permission flow
                     }
                 }
@@ -459,10 +459,10 @@ class ArActivity : AppCompatActivity() {
                             this, Manifest.permission.CAMERA
                         )
                     ) {
-                        // User selected "Don't ask again"
+                        // UserEntity selected "Don't ask again"
                         showPermissionRequiredDialog()
                     } else {
-                        // User simply denied
+                        // UserEntity simply denied
                         checkAndRequestPermissions() // Continue with permission flow
                     }
                 }
@@ -547,11 +547,11 @@ class ArActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        // Check if LayerDetailFragment is currently showing
-        val layerDetailFragment = supportFragmentManager.findFragmentByTag("LayerDetailFragment")
+        // Check if PointOfInterestDetailFragment is currently showing
+        val layerDetailFragment = supportFragmentManager.findFragmentByTag("PointOfInterestDetailFragment")
 
         if (layerDetailFragment != null && layerDetailFragment.isVisible) {
-            Log.d(TAG, "Closing LayerDetailFragment and returning to AR")
+            Log.d(TAG, "Closing PointOfInterestDetailFragment and returning to AR")
 
             // Remove the fragment
             supportFragmentManager.beginTransaction()
@@ -606,7 +606,7 @@ class ArActivity : AppCompatActivity() {
             "layer_detail_closed",
             this
         ) { _, bundle ->
-            Log.d(TAG, "LayerDetailFragment closed via result listener")
+            Log.d(TAG, "PointOfInterestDetailFragment closed via result listener")
             showArView()
             removeFragmentContainer()
         }
