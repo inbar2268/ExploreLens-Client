@@ -77,29 +77,75 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
             }
         }
 
-        // Statistics state observer (now reactive from repository)
+        // Individual percentage state observer
+        viewModel.percentageState.observe(viewLifecycleOwner) { state ->
+            _binding?.let {
+                when (state) {
+                    is ProfileViewModel.PercentageState.Loading -> {
+                        uiHelper.showPercentageLoading()
+                    }
+                    is ProfileViewModel.PercentageState.Success -> {
+                        uiHelper.hidePercentageLoading()
+                        uiHelper.updatePercentage(state.percentage)
+
+                        // Optionally show cache indicator
+                        if (state.isFromCache) {
+                            // You could show a small "cached" indicator if desired
+                        }
+                    }
+                    is ProfileViewModel.PercentageState.Error -> {
+                        uiHelper.hidePercentageLoading()
+                        uiHelper.showPercentageError()
+                        if (_binding != null) {
+                            ToastHelper.showShortToast(requireContext(), "Failed to load percentage: ${state.message}")
+                        }
+                    }
+                }
+            }
+        }
+
+        // Individual country state observer
+        viewModel.countryState.observe(viewLifecycleOwner) { state ->
+            _binding?.let {
+                when (state) {
+                    is ProfileViewModel.CountryState.Loading -> {
+                        uiHelper.showCountryLoading()
+                    }
+                    is ProfileViewModel.CountryState.Success -> {
+                        uiHelper.hideCountryLoading()
+                        uiHelper.updateCountryCount(state.countryCount)
+                        // Update map with countries
+                        mapManager.updateCountries(state.countries)
+
+                        // Optionally show cache indicator
+                        if (state.isFromCache) {
+                            // You could show a small "cached" indicator if desired
+                        }
+                    }
+                    is ProfileViewModel.CountryState.Error -> {
+                        uiHelper.hideCountryLoading()
+                        uiHelper.showCountryError()
+                        if (_binding != null) {
+                            ToastHelper.showShortToast(requireContext(), "Failed to load countries: ${state.message}")
+                        }
+                    }
+                }
+            }
+        }
+
+        // Keep the combined statistics observer for backward compatibility
+        // (You can remove this if you don't need it anymore)
         viewModel.statisticsState.observe(viewLifecycleOwner) { state ->
             _binding?.let {
                 when (state) {
                     is ProfileViewModel.StatisticsState.Loading -> {
-                        uiHelper.showStatisticsLoading()
+                        // Individual loading is now handled by separate observers
                     }
                     is ProfileViewModel.StatisticsState.Success -> {
-                        uiHelper.updateStatistics(state.percentage, state.countryCount)
-                        // Always try to update map, even if not ready yet (will be queued)
-                        mapManager.updateCountries(state.countries)
-
-                        // Optionally show a subtle indicator if data is from cache
-                        if (state.isFromCache) {
-                            // You could show a small "cached" indicator if desired
-                            // uiHelper.showCacheIndicator()
-                        }
+                        // Individual updates are now handled by separate observers
                     }
                     is ProfileViewModel.StatisticsState.Error -> {
-                        uiHelper.showStatisticsError()
-                        if (_binding != null) {
-                            ToastHelper.showShortToast(requireContext(), state.message)
-                        }
+                        // Individual errors are now handled by separate observers
                     }
                 }
             }
@@ -122,6 +168,15 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
 
         binding.swipeRefresh.setOnRefreshListener {
             viewModel.refreshAllData()
+        }
+
+        // Optional: Add individual refresh listeners for each card
+        binding.percentageCard.setOnClickListener {
+            viewModel.refreshPercentage()
+        }
+
+        binding.countryCard.setOnClickListener {
+            viewModel.refreshCountries()
         }
     }
 
@@ -163,9 +218,9 @@ class ProfileFragment : Fragment(), WorldMapManager.MapClickListener {
         val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation)
         bottomNav.setOnItemReselectedListener(null)
     }
+
     override fun onResume() {
         super.onResume()
-        //viewModel.fetchUserData()
         viewModel.refreshStatistics()
     }
 }

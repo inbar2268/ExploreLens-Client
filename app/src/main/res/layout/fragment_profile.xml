@@ -197,8 +197,9 @@
                                     android:layout_height="match_parent"
                                     android:background="@drawable/gradient_overlay" />
 
-                                <!-- Percentage Text positioned at bottom center (like countries) -->
+                                <!-- Percentage Text positioned at bottom center -->
                                 <LinearLayout
+                                    android:id="@+id/percentageContent"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentBottom="true"
@@ -233,6 +234,14 @@
                                         android:textColor="#FFFFFF"
                                         android:textSize="12sp" />
                                 </LinearLayout>
+
+                                <!-- Individual Progress Bar for Percentage -->
+                                <ProgressBar
+                                    android:id="@+id/percentageProgressBar"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_centerInParent="true"
+                                    android:visibility="gone" />
                             </RelativeLayout>
                         </androidx.cardview.widget.CardView>
 
@@ -268,6 +277,7 @@
 
                                 <!-- Country Count Text positioned at bottom center -->
                                 <LinearLayout
+                                    android:id="@+id/countryContent"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentBottom="true"
@@ -302,11 +312,19 @@
                                         android:textColor="#FFFFFF"
                                         android:textSize="12sp" />
                                 </LinearLayout>
+
+                                <!-- Individual Progress Bar for Country Count -->
+                                <ProgressBar
+                                    android:id="@+id/countryProgressBar"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_centerInParent="true"
+                                    android:visibility="gone" />
                             </RelativeLayout>
                         </androidx.cardview.widget.CardView>
                     </androidx.constraintlayout.widget.ConstraintLayout>
 
-                    <!-- Loading indicator for statistics - Centered over the statistics cards -->
+                    <!-- Keep the original progress bar for backward compatibility -->
                     <ProgressBar
                         android:id="@+id/statisticsProgressBar"
                         android:layout_width="wrap_content"

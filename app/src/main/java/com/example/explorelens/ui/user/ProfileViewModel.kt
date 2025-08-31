@@ -24,6 +24,20 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         object Logout : UserState()
     }
 
+    // Separate states for each statistic
+    sealed class PercentageState {
+        object Loading : PercentageState()
+        data class Success(val percentage: String, val isFromCache: Boolean = false) : PercentageState()
+        data class Error(val message: String) : PercentageState()
+    }
+
+    sealed class CountryState {
+        object Loading : CountryState()
+        data class Success(val countryCount: Int, val countries: List<String>, val isFromCache: Boolean = false) : CountryState()
+        data class Error(val message: String) : CountryState()
+    }
+
+    // Keep the combined state for backward compatibility
     sealed class StatisticsState {
         object Loading : StatisticsState()
         data class Success(
@@ -45,7 +59,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _isRefreshing = MutableLiveData<Boolean>()
     val isRefreshing: LiveData<Boolean> = _isRefreshing
 
-    // Use the reactive LiveData from repository (Single Source of Truth)
+    // Separate LiveData for each statistic
+    private val _percentageState = MutableLiveData<PercentageState>()
+    val percentageState: LiveData<PercentageState> = _percentageState
+
+    private val _countryState = MutableLiveData<CountryState>()
+    val countryState: LiveData<CountryState> = _countryState
+
+    // Keep the combined statistics state for backward compatibility
     val statisticsState: LiveData<StatisticsState> = userStatisticsRepository
         .getUserStatisticsLiveData()
         .switchMap { resource ->
@@ -54,6 +75,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             when (resource) {
                 is Resource.Loading -> {
                     liveData.value = StatisticsState.Loading
+                    // Update individual states
+                    _percentageState.value = PercentageState.Loading
+                    _countryState.value = CountryState.Loading
                 }
                 is Resource.Success -> {
                     val statistics = resource.data!!
@@ -63,9 +87,23 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                         countries = statistics.countries ?: emptyList(),
                         isFromCache = resource.isFromCache
                     )
+                    // Update individual states
+                    _percentageState.value = PercentageState.Success(
+                        percentage = statistics.percentageVisited,
+                        isFromCache = resource.isFromCache
+                    )
+                    _countryState.value = CountryState.Success(
+                        countryCount = statistics.countryCount,
+                        countries = statistics.countries ?: emptyList(),
+                        isFromCache = resource.isFromCache
+                    )
                 }
                 is Resource.Error -> {
-                    liveData.value = StatisticsState.Error(resource.message ?: "Unknown error")
+                    val errorMessage = resource.message ?: "Unknown error"
+                    liveData.value = StatisticsState.Error(errorMessage)
+                    // Update individual states
+                    _percentageState.value = PercentageState.Error(errorMessage)
+                    _countryState.value = CountryState.Error(errorMessage)
                 }
             }
 
@@ -135,6 +173,21 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun refreshStatistics() {
+        viewModelScope.launch {
+            userStatisticsRepository.refreshStatistics()
+        }
+    }
+
+    // Methods to refresh individual statistics (if you want to implement this)
+    fun refreshPercentage() {
+        _percentageState.value = PercentageState.Loading
+        viewModelScope.launch {
+            userStatisticsRepository.refreshStatistics()
+        }
+    }
+
+    fun refreshCountries() {
+        _countryState.value = CountryState.Loading
         viewModelScope.launch {
             userStatisticsRepository.refreshStatistics()
         }

@@ -48,30 +48,78 @@ class ProfileUIHelper(private val binding: FragmentProfileBinding) {
         }
     }
 
+    // ========== PERCENTAGE METHODS ==========
+    fun showPercentageLoading() {
+        binding.percentageProgressBar.visibility = View.VISIBLE
+        binding.percentageContent.visibility = View.GONE
+    }
+
+    fun hidePercentageLoading() {
+        binding.percentageProgressBar.visibility = View.GONE
+        binding.percentageContent.visibility = View.VISIBLE
+    }
+
+    fun updatePercentage(percentage: String) {
+        hidePercentageLoading()
+        binding.percentageValue.text = percentage
+    }
+
+    fun showPercentageError() {
+        hidePercentageLoading()
+        binding.percentageValue.text = "--"
+    }
+
+    // ========== COUNTRY METHODS ==========
+    fun showCountryLoading() {
+        binding.countryProgressBar.visibility = View.VISIBLE
+        binding.countryContent.visibility = View.GONE
+    }
+
+    fun hideCountryLoading() {
+        binding.countryProgressBar.visibility = View.GONE
+        binding.countryContent.visibility = View.VISIBLE
+    }
+
+    fun updateCountryCount(countryCount: Int) {
+        hideCountryLoading()
+        binding.countryValue.text = countryCount.toString()
+    }
+
+    fun showCountryError() {
+        hideCountryLoading()
+        binding.countryValue.text = "--"
+    }
+
+    // ========== COMBINED METHODS (for backward compatibility) ==========
     fun showStatisticsLoading() {
         binding.statisticsProgressBar.visibility = View.VISIBLE
         binding.statisticsContainer.visibility = View.GONE
+        // Also show individual loading
+        showPercentageLoading()
+        showCountryLoading()
     }
 
     fun hideStatisticsLoading() {
         binding.statisticsProgressBar.visibility = View.GONE
         binding.statisticsContainer.visibility = View.VISIBLE
+        // Also hide individual loading
+        hidePercentageLoading()
+        hideCountryLoading()
     }
 
     fun updateStatistics(percentage: String, countryCount: Int) {
         hideStatisticsLoading()
-
-        binding.percentageValue.text = percentage
-        binding.countryValue.text = countryCount.toString()
+        updatePercentage(percentage)
+        updateCountryCount(countryCount)
     }
 
     fun showStatisticsError() {
         hideStatisticsLoading()
-
-        binding.percentageValue.text = "--"
-        binding.countryValue.text = "--"
+        showPercentageError()
+        showCountryError()
     }
 
+    // ========== REFRESH METHODS ==========
     fun setRefreshing(isRefreshing: Boolean) {
         binding.swipeRefresh.isRefreshing = isRefreshing
     }
