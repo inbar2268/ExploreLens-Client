@@ -10,7 +10,7 @@ import com.example.explorelens.R
 import com.example.explorelens.ArActivity
 import com.example.explorelens.ar.ARLayerManager
 import com.example.explorelens.ar.ArActivityView
-import com.example.explorelens.model.ARLabeledAnchor
+import com.example.explorelens.data.model.siteDetectionData.ARLabeledAnchor
 import com.google.ar.core.Frame
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
@@ -514,7 +514,6 @@ public class ARTouchInteractionManager(
         Log.d(TAG, "handleLayerLabelClick called for place: $placeName")
 
         activity.runOnUiThread {
-            view.snackbarHelper.showMessage(activity, "Tapped on: $placeName") // Show a simple message
             layerLabel?.let {
                 listener?.onLayerLabelClicked(it) // Notify external listener, passing the full LayerLabelInfo
             }
@@ -527,7 +526,6 @@ public class ARTouchInteractionManager(
 
         activity.runOnUiThread {
             layerManager?.removeLabel(layerLabel)
-            view.snackbarHelper.showMessage(activity, "Closed: $placeName")
             listener?.onLayerLabelClosed(layerLabel)
         }
     }

@@ -1,12 +1,11 @@
 package com.example.explorelens.ar
-import android.location.Location
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.example.explorelens.ArActivity
-import com.example.explorelens.model.Snapshot
+import com.example.explorelens.data.model.siteDetectionData.Snapshot
 import com.google.ar.core.Frame
 import com.google.ar.core.TrackingState
 import com.example.explorelens.common.helpers.DisplayRotationHelper
@@ -26,7 +25,7 @@ import com.example.explorelens.ar.components.SiteHistoryHelper
 import com.example.explorelens.ar.components.SnapshotManager
 import com.example.explorelens.ar.render.FilterListManager
 import com.example.explorelens.data.model.PointOfIntrests.PointOfInterest
-import com.example.explorelens.model.ARLabeledAnchor
+import com.example.explorelens.data.model.siteDetectionData.ARLabeledAnchor
 import com.example.explorelens.utils.GeoLocationUtils
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel

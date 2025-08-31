@@ -1,4 +1,4 @@
-package com.example.explorelens.model
+package com.example.explorelens.data.model.siteDetectionData
 import com.google.ar.core.Anchor
 
 data class ARLabeledAnchor(

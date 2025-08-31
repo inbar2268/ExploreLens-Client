@@ -87,6 +87,7 @@ Before your app can use Google services, enable the necessary APIs:
     - **Places API**
     - **Maps SDK for Android**
     - **ARCore API**
+    - **Maps Elevation API**
 
 ### 4. Create OpenAI API Key
 

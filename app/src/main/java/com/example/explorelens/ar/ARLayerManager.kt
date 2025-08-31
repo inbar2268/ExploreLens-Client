@@ -187,7 +187,6 @@ class ARLayerManager(private val context: Context) {
 
     fun removeLabel(labelToRemove: LayerLabelInfo) {
         layerLabels.removeAll { it.anchor == labelToRemove.anchor }
-        Log.d(TAG, "Removed layer label: ${labelToRemove.placeInfo["name"]}")
     }
 
     fun getTextureCache(): LayerLabelTextureCache {

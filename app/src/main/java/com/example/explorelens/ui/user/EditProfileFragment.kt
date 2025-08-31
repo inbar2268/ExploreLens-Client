@@ -18,7 +18,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.explorelens.R
 import com.example.explorelens.common.helpers.ToastHelper
-import com.example.explorelens.data.db.User
+import com.example.explorelens.data.db.user.User
 import com.example.explorelens.data.repository.UserRepository
 import com.example.explorelens.databinding.FragmentEditProfileBinding
 import kotlinx.coroutines.launch
