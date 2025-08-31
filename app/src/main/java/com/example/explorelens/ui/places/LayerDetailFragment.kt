@@ -151,7 +151,8 @@ class LayerDetailFragment : Fragment() {
     }
 
     private fun displayPlaceDetails(place: Place) {
-        Log.d("LayerDetailFragment", "displayPlaceDetails called for: ${place.name}")
+//        Log.d("LayerDetailFragment", "displayPlaceDetails called for: ${place.name}")
+        Log.d("LayerDetailFragment", "Displaying place details: $place")
 
         _binding?.let { binding ->
             binding.apply {

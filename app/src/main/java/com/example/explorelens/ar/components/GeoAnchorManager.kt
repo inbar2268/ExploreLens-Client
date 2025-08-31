@@ -148,8 +148,8 @@ class GeoAnchorManager(
                     callback?.onPlacesReceived(places)
                     lastFetchedLocation = currentLocation
 
-                    val mockPlaces = createMockPointsOfInterest()
-                    val combinedPlaces = places.toMutableList().apply { addAll(mockPlaces) }
+                    //val mockPlaces = createMockPointsOfInterest()
+                    val combinedPlaces = places.toMutableList().apply {  }
                     pendingPlaces = combinedPlaces
                     shouldPlaceGeoAnchors = true
                 }
@@ -163,39 +163,39 @@ class GeoAnchorManager(
         }
     }
 
-    private fun createMockPointsOfInterest(): List<PointOfInterest> {
-        // Using Hod Hasharon coordinates as a base for mock data
-        val baseLat = 32.142924
-        val baseLng = 34.887320
-
-        val mockPlaces = listOf(
-            PointOfInterest(
-                id = "mock_cafe_123",
-                name = "Mock Coffee Corner",
-                location = GeoLocation(lat = baseLat + 0.000008, lng = baseLng + 0.000008),
-                rating = 4.2F,
-                type = "cafe",
-                address = "1 Mock Road, Hod Hasharon",
-                phoneNumber = "050-1112233",
-                businessStatus = "OPERATIONAL",
-                openingHours = OpeningHours(true, listOf("Mon-Fri: 7 AM - 6 PM", "Sat: 9 AM - 2 PM")),
-                elevation = 15.0
-            ),
-            PointOfInterest(
-                id = "mock_museum_456",
-                name = "Virtual History Museum",
-                location = GeoLocation(lat = baseLat, lng = baseLng),
-                rating = 4.8F,
-                type = "museum",
-                address = "789 Pixel Lane, Hod Hasharon",
-                phoneNumber = "null",
-                businessStatus = "OPERATIONAL",
-                openingHours = OpeningHours(false, listOf("Mon-Sun: 10 AM - 5 PM (Closed on holidays)")),
-                elevation = 15.0
-            )
-        )
-        return mockPlaces
-    }
+//    private fun createMockPointsOfInterest(): List<PointOfInterest> {
+//        // Using Hod Hasharon coordinates as a base for mock data
+//        val baseLat = 32.142924
+//        val baseLng = 34.887320
+//
+//        val mockPlaces = listOf(
+//            PointOfInterest(
+//                id = "mock_cafe_123",
+//                name = "Mock Coffee Corner",
+//                location = GeoLocation(lat = baseLat + 0.000008, lng = baseLng + 0.000008),
+//                rating = 4.2F,
+//                type = "cafe",
+//                address = "1 Mock Road, Hod Hasharon",
+//                phoneNumber = "050-1112233",
+//                businessStatus = "OPERATIONAL",
+//                openingHours = OpeningHours(true, listOf("Mon-Fri: 7 AM - 6 PM", "Sat: 9 AM - 2 PM")),
+//                elevation = 15.0
+//            ),
+//            PointOfInterest(
+//                id = "mock_museum_456",
+//                name = "Virtual History Museum",
+//                location = GeoLocation(lat = baseLat, lng = baseLng),
+//                rating = 4.8F,
+//                type = "museum",
+//                address = "789 Pixel Lane, Hod Hasharon",
+//                phoneNumber = "null",
+//                businessStatus = "OPERATIONAL",
+//                openingHours = OpeningHours(false, listOf("Mon-Sun: 10 AM - 5 PM (Closed on holidays)")),
+//                elevation = 15.0
+//            )
+//        )
+//        return mockPlaces
+//    }
 
     fun handleGeoAnchorPlacement(session: Session): Boolean {
         val earth = session.earth
@@ -259,6 +259,10 @@ class GeoAnchorManager(
             layerManager.addLayerLabel(anchor, placeMap)
 
             callback?.onGeoAnchorPlaced(point.id, point.name)
+
+        }
+        places.firstOrNull()?.let { firstPlace ->
+            showLayerDetailAsFullScreen(firstPlace.id)
         }
     }
 
