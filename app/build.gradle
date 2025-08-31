@@ -18,7 +18,7 @@ android {
         compose true
         viewBinding true
     }
-    compileSdkVersion 36
+    compileSdkVersion 35
     buildToolsVersion "30.0.3"
 
     namespace "com.example.explorelens"
