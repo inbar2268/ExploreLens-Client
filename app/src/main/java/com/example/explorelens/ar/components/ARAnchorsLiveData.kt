@@ -2,6 +2,7 @@ package com.example.explorelens.model
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.example.explorelens.data.model.siteDetectionData.ARLabeledAnchor
 import java.util.concurrent.CopyOnWriteArrayList
 
 object ARAnchorsManager {
