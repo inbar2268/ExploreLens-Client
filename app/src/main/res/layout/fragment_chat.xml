@@ -1,12 +1,17 @@
-<?xml version="1.0" encoding="utf-8"?><!-- Save as: res/layout/fragment_chat.xml -->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Save as: res/layout/fragment_chat.xml -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white"
-    android:fitsSystemWindows="false"
-    android:fontFamily="@font/harmonyos_sans_regular">
+    android:fontFamily="@font/harmonyos_sans_regular"
+    android:clickable="true"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:fitsSystemWindows="false">
 
     <!-- Top Bar - Settings Style -->
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -46,14 +51,14 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:ellipsize="end"
-            android:fontFamily="@font/harmonyos_sans_medium"
-            android:gravity="center"
-            android:maxLines="1"
             android:text="Chat"
             android:textColor="@color/black"
             android:textSize="16sp"
             android:textStyle="bold"
+            android:fontFamily="@font/harmonyos_sans_medium"
+            android:gravity="center"
+            android:ellipsize="end"
+            android:maxLines="1"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/endSpacer"
             app:layout_constraintStart_toEndOf="@+id/backButton"
@@ -73,6 +78,8 @@
         android:paddingTop="12dp"
         android:paddingEnd="16dp"
         android:paddingBottom="12dp"
+        android:clickable="true"
+        android:focusable="true"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
@@ -156,6 +163,8 @@
         android:clipToPadding="false"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
+        android:clickable="true"
+        android:focusable="true"
         app:layout_constraintBottom_toTopOf="@+id/inputContainer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

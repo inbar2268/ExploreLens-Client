@@ -16,12 +16,12 @@
         android:layout_height="32dp"
         android:layout_marginEnd="8dp"
         android:background="@drawable/circle_background"
-        android:contentDescription="Bot avatar"
         android:scaleType="centerCrop"
-        android:src="@drawable/ic_bot_avatar"
-        app:layout_constraintBottom_toBottomOf="@+id/cardViewBotMessage"
+        android:src="@drawable/logo_chat"
+        android:contentDescription="Bot avatar"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/cardViewBotMessage" />
+        app:layout_constraintTop_toTopOf="@+id/cardViewBotMessage"
+        app:layout_constraintBottom_toBottomOf="@+id/cardViewBotMessage" />
 
     <!-- Bot message card - Aligned to the left/start but after the avatar -->
     <androidx.cardview.widget.CardView
@@ -29,8 +29,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:fontFamily="@font/harmonyos_sans_regular"
         app:cardBackgroundColor="#F5F5F5"
+        android:fontFamily="@font/harmonyos_sans_regular"
         app:cardCornerRadius="12dp"
         app:cardElevation="1dp"
         app:cardUseCompatPadding="true"
@@ -41,9 +41,9 @@
             android:id="@+id/textViewBotMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/harmonyos_sans_regular"
             android:maxWidth="280dp"
             android:padding="12dp"
+            android:fontFamily="@font/harmonyos_sans_regular"
             android:text="Bot message goes here with information about historical sites."
             android:textColor="#000000"
             android:textSize="14sp" />

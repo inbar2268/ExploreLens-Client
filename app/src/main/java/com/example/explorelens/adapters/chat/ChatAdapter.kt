@@ -118,7 +118,7 @@ class ChatAdapter : ListAdapter<ChatMessage, RecyclerView.ViewHolder>(ChatDiffCa
             binding.textViewBotTime.text = message.getFormattedTime()
 
             // Set bot avatar image
-            binding.imageViewBotAvatar.setImageResource(R.drawable.ic_bot_avatar)
+            binding.imageViewBotAvatar.setImageResource(R.drawable.logo_chat)
         }
     }
 
@@ -129,7 +129,7 @@ class ChatAdapter : ListAdapter<ChatMessage, RecyclerView.ViewHolder>(ChatDiffCa
 
         fun bind(message: ChatMessage) {
             // Set bot avatar image
-            binding.imageViewBotAvatar.setImageResource(R.drawable.ic_bot_avatar)
+            binding.imageViewBotAvatar.setImageResource(R.drawable.logo_chat)
 
             // Start typing animation
             startTypingAnimation()
