@@ -312,7 +312,7 @@ class WorldMapManager(
         </div>
         
         <script>
-            var currentZoom = 1;
+            var currentZoom = 1.2;  // Changed from 1 to 1.2 for slightly bigger default zoom
             var minZoom = 0.5;
             var maxZoom = 3;
             var zoomStep = 0.3;
@@ -323,7 +323,7 @@ class WorldMapManager(
             var translateX = 0;
             var translateY = 0;
             var initialDistance = 0;
-            var initialZoom = 1;
+            var initialZoom = 1.2;  // Changed from 1 to 1.2 to match currentZoom
             var isZooming = false;
             var lastTouchTime = 0;
             var touchStartTime = 0;
@@ -491,7 +491,7 @@ class WorldMapManager(
             }
 
             function resetZoom() {
-                currentZoom = 1;
+                currentZoom = 1.2;  // Changed from 1 to 1.2 for slightly bigger default zoom
                 translateX = 0;
                 translateY = 0;
                 updateTransform();
@@ -638,6 +638,9 @@ class WorldMapManager(
 
             function initializeMap() {
                 mapContent = document.getElementById('mapContent');
+                
+                // Apply initial zoom
+                updateTransform();
                 
                 setupZoomControls();
                 setupTouchControls();

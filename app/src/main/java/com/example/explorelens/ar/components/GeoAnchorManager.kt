@@ -166,8 +166,8 @@ class GeoAnchorManager(
 
     private fun createMockPointsOfInterest(): List<PointOfInterest> {
         // Using Hod Hasharon coordinates as a base for mock data
-        val baseLat = 31.928281
-        val baseLng = 34.784952
+        val baseLat = 32.004256
+        val baseLng = 34.788149
 
         val mockPlaces = listOf(
             PointOfInterest(

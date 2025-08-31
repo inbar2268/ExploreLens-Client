@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.explorelens.ArActivity
 import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
 import com.example.explorelens.adapters.ChatAdapter
@@ -44,6 +45,9 @@ class ChatFragment : Fragment() {
     // Keyboard detection variables
     private var bottomNavigationView: BottomNavigationView? = null
     private var keyboardListener: ViewTreeObserver.OnGlobalLayoutListener? = null
+
+    // Track if we're in AR mode (no bottom navigation)
+    private var isInArMode = false
 
     private val defaultWelcomeMessage = "Welcome to HistoryGuide! I can provide information about historical sites and monuments. What would you like to know about?"
     private val siteSpecificWelcomeMessage = "Welcome to HistoryGuide! I'm your virtual guide for %s. What would you like to know about this historical site?"
@@ -88,6 +92,10 @@ class ChatFragment : Fragment() {
 
         Log.d("ChatFragment", "Site name: $siteName")
 
+        // Check if we're in AR mode
+        isInArMode = activity is ArActivity
+        Log.d("ChatFragment", "AR mode detected: $isInArMode")
+
         // Set title based on site name
         if (!siteName.isNullOrEmpty()) {
             binding.titleText.text = siteName
@@ -106,10 +114,29 @@ class ChatFragment : Fragment() {
 
         loadUserDataAndShowWelcome()
 
+        // Set initial bottom margin based on mode
+        setInitialBottomMargin()
+
         // Force a layout pass to ensure everything is sized correctly
         view.post {
             binding.root.requestLayout()
         }
+    }
+
+    private fun setInitialBottomMargin() {
+        val layoutParams = binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+
+        if (isInArMode) {
+            // In AR mode, no bottom navigation, so no bottom margin needed
+            layoutParams.bottomMargin = 0
+            Log.d("ChatFragment", "Set bottom margin to 0 for AR mode")
+        } else {
+            // Regular mode with bottom navigation
+            layoutParams.bottomMargin = (56 * resources.displayMetrics.density).toInt()
+            Log.d("ChatFragment", "Set bottom margin to 56dp for regular mode")
+        }
+
+        binding.inputContainer.layoutParams = layoutParams
     }
 
     private fun setupTouchToDismissKeyboard() {
@@ -136,14 +163,17 @@ class ChatFragment : Fragment() {
     }
 
     private fun setupKeyboardDetection() {
-        bottomNavigationView = activity?.findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        if (!isInArMode) {
+            // Only manage bottom navigation if we're not in AR mode
+            bottomNavigationView = activity?.findViewById<BottomNavigationView>(R.id.bottom_navigation)
 
-        // Debug: Check if bottom nav is found
-        Log.d("ChatFragment", "Bottom nav found: ${bottomNavigationView != null}")
-        Log.d("ChatFragment", "Bottom nav initial visibility: ${bottomNavigationView?.visibility}")
+            // Debug: Check if bottom nav is found
+            Log.d("ChatFragment", "Bottom nav found: ${bottomNavigationView != null}")
+            Log.d("ChatFragment", "Bottom nav initial visibility: ${bottomNavigationView?.visibility}")
 
-        // Force show bottom navigation when fragment starts
-        bottomNavigationView?.visibility = View.VISIBLE
+            // Force show bottom navigation when fragment starts
+            bottomNavigationView?.visibility = View.VISIBLE
+        }
 
         keyboardListener = ViewTreeObserver.OnGlobalLayoutListener {
             if (_binding == null) return@OnGlobalLayoutListener
@@ -155,21 +185,37 @@ class ChatFragment : Fragment() {
             Log.d("ChatFragment", "Height diff: $heightDiff")
 
             // Increase threshold and add more robust detection
-            if (heightDiff > 300) { // Increased from 200 to 300
-                // Keyboard is shown
-                Log.d("ChatFragment", "Keyboard shown - hiding bottom nav")
-                bottomNavigationView?.visibility = View.GONE
+            if (heightDiff > 300) { // Keyboard is shown
+                Log.d("ChatFragment", "Keyboard shown")
+
+                if (!isInArMode) {
+                    // Only hide bottom nav if we're not in AR mode
+                    bottomNavigationView?.visibility = View.GONE
+                }
+
+                // Remove bottom margin when keyboard is shown (for both modes)
                 (binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
                     bottomMargin = 0
                     binding.inputContainer.layoutParams = this
                 }
-            } else {
-                // Keyboard is hidden
-                Log.d("ChatFragment", "Keyboard hidden - showing bottom nav")
-                bottomNavigationView?.visibility = View.VISIBLE
-                (binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
-                    bottomMargin = (56 * resources.displayMetrics.density).toInt()
-                    binding.inputContainer.layoutParams = this
+            } else { // Keyboard is hidden
+                Log.d("ChatFragment", "Keyboard hidden")
+
+                if (!isInArMode) {
+                    // Only show bottom nav if we're not in AR mode
+                    bottomNavigationView?.visibility = View.VISIBLE
+
+                    // Restore bottom margin for bottom navigation
+                    (binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
+                        bottomMargin = (56 * resources.displayMetrics.density).toInt()
+                        binding.inputContainer.layoutParams = this
+                    }
+                } else {
+                    // In AR mode, keep margin at 0
+                    (binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
+                        bottomMargin = 0
+                        binding.inputContainer.layoutParams = this
+                    }
                 }
             }
         }
@@ -283,8 +329,10 @@ class ChatFragment : Fragment() {
 
     private fun setupClickListeners() {
         binding.backButton.setOnClickListener {
-            // Ensure bottom navigation is visible when going back
-            bottomNavigationView?.visibility = View.VISIBLE
+            // Ensure bottom navigation is visible when going back (only if not in AR mode)
+            if (!isInArMode) {
+                bottomNavigationView?.visibility = View.VISIBLE
+            }
             requireActivity().onBackPressed()
         }
 
@@ -459,8 +507,10 @@ class ChatFragment : Fragment() {
         }
         keyboardListener = null
 
-        // Ensure bottom navigation is visible when leaving the fragment
-        bottomNavigationView?.visibility = View.VISIBLE
+        // Ensure bottom navigation is visible when leaving the fragment (only if not in AR mode)
+        if (!isInArMode) {
+            bottomNavigationView?.visibility = View.VISIBLE
+        }
         bottomNavigationView = null
 
         _binding = null
