@@ -20,104 +20,112 @@
         android:layout_marginBottom="10dp"
         app:cardElevation="8dp">
 
-        <LinearLayout
+        <!-- Frame layout to allow absolute positioning of close button -->
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingBottom="12dp">
+            android:layout_height="wrap_content">
 
-            <!-- Row: image + info + close -->
             <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="12dp"
-                android:gravity="center_vertical">
-
-                <com.google.android.material.imageview.ShapeableImageView
-                    android:id="@+id/siteImageView"
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:scaleType="centerCrop"
-                    app:shapeAppearanceOverlay="@style/RoundedImageView14dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="#EEEEEE"
-                    android:src="@drawable/noimage" />
-
-                <!-- Site info with closeButton inside -->
-                <RelativeLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="12dp">
-
-                    <!-- Site name -->
-                    <TextView
-                        android:id="@+id/siteNameTextView"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Eiffel Tower"
-                        android:textColor="#333333"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:fontFamily="@font/harmonyos_sans_black"
-                        android:maxLines="1"
-                        android:ellipsize="end" />
-
-                    <!-- Close button aligned to top end -->
-                    <ImageView
-                        android:id="@+id/closeButton"
-                        android:layout_width="12dp"
-                        android:layout_height="12dp"
-                        android:layout_alignParentEnd="true"
-                        android:layout_alignTop="@id/siteNameTextView"
-                        android:src="@drawable/ic_close"
-                        android:backgroundTint="#757575"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="Close" />
-
-                    <!-- Visit date row -->
-                    <LinearLayout
-                        android:id="@+id/visitDateLayout"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_below="@id/siteNameTextView"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="4dp"
-                        android:gravity="center_vertical">
-
-                        <ImageView
-                            android:layout_width="10dp"
-                            android:layout_height="10dp"
-                            android:src="@drawable/ic_calendar"
-                            app:tint="#267AD9" />
-
-                        <TextView
-                            android:id="@+id/visitDateTextView"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="4dp"
-                            android:text="Visited: May 10, 2025"
-                            android:textColor="#757575"
-                            android:textSize="10sp"
-                            android:fontFamily="@font/harmonyos_sans_regular" />
-                    </LinearLayout>
-                </RelativeLayout>
-            </LinearLayout>
-
-            <!-- View Details Button -->
-            <Button
-                android:id="@+id/viewDetailsButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="10dp"
-                android:textStyle="bold"
-                android:layout_marginTop="4dp"
-                android:text="View Details"
-                android:backgroundTint="@color/light_blue"
-                android:textColor="#FFFFFF"
-                android:background="@drawable/submit_button_background"
-                android:fontFamily="@font/harmonyos_sans_regular" />
-        </LinearLayout>
+                android:orientation="vertical"
+                android:paddingBottom="12dp">
+
+                <!-- Row: image + info -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="12dp"
+                    android:paddingEnd="32dp"
+                    android:gravity="center_vertical">
+
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/siteImageView"
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:scaleType="centerCrop"
+                        app:shapeAppearanceOverlay="@style/RoundedImageView14dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="#EEEEEE"
+                        android:src="@drawable/noimage" />
+
+                    <!-- Site info -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:orientation="vertical">
+
+                        <!-- Site name -->
+                        <TextView
+                            android:id="@+id/siteNameTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Eiffel Tower"
+                            android:textColor="#333333"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:fontFamily="@font/harmonyos_sans_black"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
+
+                        <!-- Visit date row -->
+                        <LinearLayout
+                            android:id="@+id/visitDateLayout"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="4dp"
+                            android:gravity="center_vertical">
+
+                            <ImageView
+                                android:layout_width="10dp"
+                                android:layout_height="10dp"
+                                android:src="@drawable/ic_calendar"
+                                app:tint="#267AD9" />
+
+                            <TextView
+                                android:id="@+id/visitDateTextView"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="4dp"
+                                android:text="Visited: May 10, 2025"
+                                android:textColor="#757575"
+                                android:textSize="10sp"
+                                android:fontFamily="@font/harmonyos_sans_regular" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- View Details Button -->
+                <Button
+                    android:id="@+id/viewDetailsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="10dp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp"
+                    android:text="View Details"
+                    android:backgroundTint="@color/light_blue"
+                    android:textColor="#FFFFFF"
+                    android:background="@drawable/submit_button_background"
+                    android:fontFamily="@font/harmonyos_sans_regular" />
+            </LinearLayout>
+
+            <!-- Close button positioned at top-right corner of the card -->
+            <ImageView
+                android:id="@+id/closeButton"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="top|end"
+                android:layout_margin="8dp"
+                android:src="@drawable/ic_close"
+                android:backgroundTint="#757575"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="4dp"
+                android:contentDescription="Close" />
+        </FrameLayout>
     </androidx.cardview.widget.CardView>
 </LinearLayout>
