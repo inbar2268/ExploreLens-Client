@@ -25,6 +25,7 @@ class ResetPasswordFragment : Fragment() {
     private lateinit var authRepository: AuthRepository
     private var isNewPasswordVisible = false
     private var isConfirmPasswordVisible = false
+    private lateinit var email: String
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -33,6 +34,10 @@ class ResetPasswordFragment : Fragment() {
     ): View {
         _binding = FragmentResetPasswordBinding.inflate(inflater, container, false)
         authRepository = AuthRepository(requireContext())
+
+        // Get the email from arguments
+        email = arguments?.getString("email") ?: ""
+
         return binding.root
     }
 
@@ -93,15 +98,13 @@ class ResetPasswordFragment : Fragment() {
 
     private fun validateResetPasswordFields(): Boolean {
         val token = binding.etToken.text.toString().trim()
-        val newPassword = binding.etNewPassword.text.toString()
-        val confirmPassword = binding.etConfirmPassword.text.toString()
+        val newPassword = binding.etNewPassword.text.toString().trim()
+        val confirmPassword = binding.etConfirmPassword.text.toString().trim()
         var isValid = true
 
         if (token.isEmpty()) {
             binding.etToken.error = "Token is required"
             isValid = false
-        } else {
-            binding.etToken.error = null // Clear error if not empty
         }
 
         if (newPassword.isEmpty()) {
@@ -109,11 +112,10 @@ class ResetPasswordFragment : Fragment() {
             binding.tvShowNewPassword.visibility = View.INVISIBLE
             isValid = false
         } else if (newPassword.length < 6) {
-            binding.etNewPassword.error = "Password is required"
+            binding.etNewPassword.error = "Password must be at least 6 characters"
             binding.tvShowNewPassword.visibility = View.INVISIBLE
             isValid = false
         } else {
-            binding.etNewPassword.error = null // Clear error if not empty
             binding.tvShowNewPassword.visibility = View.VISIBLE
         }
 
@@ -121,15 +123,12 @@ class ResetPasswordFragment : Fragment() {
             binding.etConfirmPassword.error = "Confirm password is required"
             binding.tvShowConfirmPassword.visibility = View.INVISIBLE
             isValid = false
-        } else {
-            binding.etConfirmPassword.error = null // Clear error if not empty
-            binding.tvShowConfirmPassword.visibility = View.VISIBLE
-        }
-
-        if (newPassword != confirmPassword) {
+        } else if (newPassword != confirmPassword) {
             binding.etConfirmPassword.error = "Passwords do not match"
             binding.tvShowConfirmPassword.visibility = View.INVISIBLE
             isValid = false
+        } else {
+            binding.tvShowConfirmPassword.visibility = View.VISIBLE
         }
 
         return isValid
@@ -137,12 +136,12 @@ class ResetPasswordFragment : Fragment() {
 
     private fun performPasswordReset() {
         val token = binding.etToken.text.toString().trim()
-        val newPassword = binding.etNewPassword.text.toString()
+        val newPassword = binding.etNewPassword.text.toString().trim()
 
         LoadingManager.showLoading(requireActivity())
 
         viewLifecycleOwner.lifecycleScope.launch {
-            val result = authRepository.resetPassword(token, newPassword)
+            val result = authRepository.resetPassword(email, token, newPassword)
             LoadingManager.hideLoading()
 
             result.fold(
@@ -153,7 +152,6 @@ class ResetPasswordFragment : Fragment() {
                 onFailure = { exception ->
                     val errorMessage = exception.message ?: "Failed to reset password"
                     ToastHelper.showShortToast(context, errorMessage)
-                    // Visibility of show/hide is handled in validation
                 }
             )
         }

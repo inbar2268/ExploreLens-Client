@@ -1,4 +1,4 @@
-package com.example.explorelens.adapters.siteHistory
+package com.example.explorelens.ui.site
 
 import android.util.Log
 import androidx.lifecycle.LifecycleOwner

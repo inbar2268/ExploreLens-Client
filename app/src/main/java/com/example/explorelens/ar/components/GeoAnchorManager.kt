@@ -145,7 +145,6 @@ class GeoAnchorManager(
             withContext(Dispatchers.Main) {
                 result.onSuccess { places ->
                     Log.d(TAG, "Received ${places.size} places")
-                    callback?.showSnackbar("Received ${places.size} places")
                     callback?.onPlacesReceived(places)
                     lastFetchedLocation = currentLocation
 
@@ -166,8 +165,8 @@ class GeoAnchorManager(
 
     private fun createMockPointsOfInterest(): List<PointOfInterest> {
         // Using Hod Hasharon coordinates as a base for mock data
-        val baseLat = 31.928281
-        val baseLng = 34.784952
+        val baseLat = 32.142924
+        val baseLng = 34.887320
 
         val mockPlaces = listOf(
             PointOfInterest(

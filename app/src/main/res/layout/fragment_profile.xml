@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/swipeRefresh"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fontFamily="@font/harmonyos_sans_regular">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -97,9 +98,9 @@
                 <TextView
                     android:id="@+id/usernameText"
                     android:layout_width="wrap_content"
-                    android:fontFamily="@font/harmonyos_sans_black"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
+                    android:fontFamily="@font/harmonyos_sans_black"
                     android:text="Username"
                     android:textColor="#000000"
                     android:textSize="20sp"
@@ -140,8 +141,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_marginTop="24dp"
-                    android:text="Explore Summary"
                     android:fontFamily="@font/harmonyos_sans_black"
+                    android:text="Explore Summary"
                     android:textColor="#000000"
                     android:textSize="14sp"
                     android:textStyle="bold"
@@ -186,9 +187,9 @@
                                 <ImageView
                                     android:layout_width="match_parent"
                                     android:layout_height="match_parent"
+                                    android:alpha="0.9"
                                     android:scaleType="centerCrop"
-                                    android:src="@drawable/percentage_background"
-                                    android:alpha="0.9" />
+                                    android:src="@drawable/percentage_background" />
 
                                 <!-- Dark overlay for better text visibility -->
                                 <View
@@ -203,34 +204,34 @@
                                     android:layout_alignParentBottom="true"
                                     android:layout_centerHorizontal="true"
                                     android:layout_marginBottom="16dp"
-                                    android:orientation="vertical"
-                                    android:gravity="center">
+                                    android:gravity="center"
+                                    android:orientation="vertical">
 
                                     <TextView
                                         android:id="@+id/percentageValue"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="--"
-                                        android:textColor="#FFFFFF"
                                         android:fontFamily="@font/harmonyos_sans_black"
-                                        android:textSize="28sp"
-                                        android:textStyle="bold"
                                         android:shadowColor="#000000"
                                         android:shadowDx="1"
                                         android:shadowDy="1"
-                                        android:shadowRadius="3" />
+                                        android:shadowRadius="3"
+                                        android:text="--"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="28sp"
+                                        android:textStyle="bold" />
 
                                     <TextView
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="of the world"
                                         android:fontFamily="@font/harmonyos_sans_regular"
-                                        android:textColor="#FFFFFF"
-                                        android:textSize="12sp"
                                         android:shadowColor="#000000"
                                         android:shadowDx="1"
                                         android:shadowDy="1"
-                                        android:shadowRadius="2" />
+                                        android:shadowRadius="2"
+                                        android:text="of the world"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp" />
                                 </LinearLayout>
                             </RelativeLayout>
                         </androidx.cardview.widget.CardView>
@@ -255,9 +256,9 @@
                                 <ImageView
                                     android:layout_width="match_parent"
                                     android:layout_height="match_parent"
+                                    android:alpha="0.9"
                                     android:scaleType="centerCrop"
-                                    android:src="@drawable/countries_background"
-                                    android:alpha="0.9" />
+                                    android:src="@drawable/countries_background" />
 
                                 <!-- Dark overlay for better text visibility -->
                                 <View
@@ -272,34 +273,34 @@
                                     android:layout_alignParentBottom="true"
                                     android:layout_centerHorizontal="true"
                                     android:layout_marginBottom="16dp"
-                                    android:orientation="vertical"
-                                    android:gravity="center">
+                                    android:gravity="center"
+                                    android:orientation="vertical">
 
                                     <TextView
                                         android:id="@+id/countryValue"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="--"
-                                        android:textColor="#FFFFFF"
-                                        android:textSize="28sp"
-                                        android:textStyle="bold"
                                         android:fontFamily="@font/harmonyos_sans_black"
                                         android:shadowColor="#000000"
                                         android:shadowDx="1"
                                         android:shadowDy="1"
-                                        android:shadowRadius="3" />
+                                        android:shadowRadius="3"
+                                        android:text="--"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="28sp"
+                                        android:textStyle="bold" />
 
                                     <TextView
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="countries visited"
-                                        android:textColor="#FFFFFF"
-                                        android:textSize="12sp"
-                                        android:shadowColor="#000000"
                                         android:fontFamily="@font/harmonyos_sans_regular"
+                                        android:shadowColor="#000000"
                                         android:shadowDx="1"
                                         android:shadowDy="1"
-                                        android:shadowRadius="2" />
+                                        android:shadowRadius="2"
+                                        android:text="countries visited"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp" />
                                 </LinearLayout>
                             </RelativeLayout>
                         </androidx.cardview.widget.CardView>
@@ -311,8 +312,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
-                        android:visibility="gone"
-                        android:elevation="8dp" />
+                        android:elevation="8dp"
+                        android:visibility="gone" />
 
                 </FrameLayout>
 
@@ -323,10 +324,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
                     android:layout_marginTop="32dp"
-                    android:text="World Map - Countries Visited"
                     android:fontFamily="@font/harmonyos_sans_black"
+                    android:text="World Map - Countries Visited"
                     android:textColor="#000000"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/statisticsSection" />

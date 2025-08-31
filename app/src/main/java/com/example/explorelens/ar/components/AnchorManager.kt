@@ -2,14 +2,13 @@ package com.example.explorelens.ar.components
 
 import android.util.Log
 import com.example.explorelens.ArActivity
-import com.example.explorelens.Model
 import com.example.explorelens.ar.ArActivityView
 import com.example.explorelens.data.model.SiteDetails.SiteDetails
 import com.example.explorelens.data.model.siteDetectionData.ImageAnalyzedResult
 import com.example.explorelens.data.model.siteDetectionData.SiteInformation
 import com.example.explorelens.data.repository.SiteDetailsRepository
-import com.example.explorelens.model.ARLabeledAnchor
-import com.example.explorelens.model.Snapshot
+import com.example.explorelens.data.model.siteDetectionData.ARLabeledAnchor
+import com.example.explorelens.data.model.siteDetectionData.Snapshot
 import com.google.ar.core.*
 import kotlinx.coroutines.*
 import java.util.*
@@ -270,7 +269,7 @@ public class AnchorManager(
     }
 
     private fun getAllAnchors() {
-        Model.shared.getAlArLabeledAnchors { fetchedAnchors ->
+        ARAnchorsRepository.shared.getAlArLabeledAnchors { fetchedAnchors ->
             synchronized(arLabeledAnchors) {
                 arLabeledAnchors.clear()
                 arLabeledAnchors.addAll(fetchedAnchors)
@@ -279,7 +278,7 @@ public class AnchorManager(
     }
 
     private fun addAnchorToDatabase(anchor: ARLabeledAnchor) {
-        Model.shared.addArLabelAnchor(anchor) {
+        ARAnchorsRepository.shared.addArLabelAnchor(anchor) {
             getAllAnchors()
         }
     }

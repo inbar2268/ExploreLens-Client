@@ -3,7 +3,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.Image
 import android.util.Log
-import com.example.android.camera.utils.YuvToRgbConverter
+import com.example.explorelens.extensions.YuvToRgbConverter
 import java.io.File
 import java.io.FileOutputStream
 

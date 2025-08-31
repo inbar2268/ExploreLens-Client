@@ -5,6 +5,7 @@
     style="@style/Widget.Material3.SideSheet.Modal"
     android:layout_width="wrap_content"
     android:layout_height="match_parent"
+    android:fontFamily="@font/harmonyos_sans_regular"
     app:layout_behavior="com.google.android.material.sidesheet.SideSheetBehavior">
 
     <androidx.cardview.widget.CardView
@@ -33,26 +34,26 @@
                     android:id="@+id/filter_title_container"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
                     android:layout_alignParentStart="true"
-                    android:layout_centerVertical="true">
+                    android:layout_centerVertical="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
                     <ImageView
                         android:layout_width="20dp"
                         android:layout_height="20dp"
+                        android:layout_marginEnd="8dp"
                         android:src="@drawable/ic_filter"
-                        app:tint="@color/light_blue"
-                        android:layout_marginEnd="8dp" />
+                        app:tint="@color/light_blue" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/harmonyos_sans_regular"
                         android:text="FILTER"
                         android:textColor="@color/light_blue"
                         android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:fontFamily="@font/harmonyos_sans_regular" />
+                        android:textStyle="bold" />
 
                 </LinearLayout>
 
@@ -62,14 +63,14 @@
                     android:layout_height="24dp"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
-                    android:padding="5dp"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:contentDescription="Close"
                     android:focusable="true"
-                    android:stateListAnimator="@null"
+                    android:padding="5dp"
                     android:src="@drawable/ic_close"
-                    app:tint="@color/light_blue"/>
+                    android:stateListAnimator="@null"
+                    app:tint="@color/light_blue" />
 
             </RelativeLayout>
 
@@ -114,14 +115,14 @@
                     android:layout_height="40dp"
                     android:layout_marginEnd="8dp"
                     android:layout_weight="1"
+                    android:fontFamily="@font/harmonyos_sans_regular"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
                     android:text="CLEAR ALL"
                     android:textColor="@color/light_blue"
                     android:textSize="12sp"
                     android:textStyle="bold"
-                    android:fontFamily="@font/harmonyos_sans_regular"
-                    app:cornerRadius="8dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp" />
+                    app:cornerRadius="8dp" />
 
                 <Button
                     android:id="@+id/applyButtonSideSheet"
@@ -130,14 +131,14 @@
                     android:layout_weight="1"
                     android:background="@drawable/bg_button_primary"
                     android:backgroundTint="@color/light_blue"
+                    android:fontFamily="@font/harmonyos_sans_regular"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:stateListAnimator="@null"
                     android:text="APPLY"
                     android:textColor="@android:color/white"
                     android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:fontFamily="@font/harmonyos_sans_regular"
-                    android:insetTop="0dp"
-                    android:stateListAnimator="@null"
-                    android:insetBottom="0dp" />
+                    android:textStyle="bold" />
 
             </LinearLayout>
 

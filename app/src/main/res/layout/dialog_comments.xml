@@ -7,6 +7,7 @@
     android:layout_height="wrap_content"
     app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
+    android:fontFamily="@font/harmonyos_sans_regular"
     android:background="@android:color/transparent">
 
     <LinearLayout

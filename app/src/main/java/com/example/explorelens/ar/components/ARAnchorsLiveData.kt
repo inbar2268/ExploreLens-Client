@@ -1,10 +1,11 @@
-package com.example.explorelens.model
+package com.example.explorelens.ar.components
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.example.explorelens.data.model.siteDetectionData.ARLabeledAnchor
 import java.util.concurrent.CopyOnWriteArrayList
 
-object ARAnchorsManager {
+object ARAnchorsLiveData {
 
     private val anchors = CopyOnWriteArrayList<ARLabeledAnchor>()
 

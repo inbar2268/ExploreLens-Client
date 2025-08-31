@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.ListAdapter
 import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.repository.SiteDetailsRepository
 import com.example.explorelens.databinding.ItemSiteHistoryBinding
+import com.example.explorelens.ui.site.SiteHistoryViewHolder
 
 class SiteHistoryAdapter(
     private val onItemClick: (SiteHistory) -> Unit,

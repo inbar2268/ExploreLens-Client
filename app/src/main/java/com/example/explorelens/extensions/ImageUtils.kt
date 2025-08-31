@@ -1,5 +1,5 @@
 
-package com.example.explorelens.ar.classification.utils
+package com.example.explorelens.extensions
 
 import android.graphics.Bitmap
 import android.graphics.Matrix

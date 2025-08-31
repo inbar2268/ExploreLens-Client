@@ -16,7 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.explorelens.ArActivity
 import com.example.explorelens.BuildConfig
 import com.example.explorelens.R
-import com.example.explorelens.adapters.ChatAdapter
+import com.example.explorelens.adapters.chat.ChatAdapter
 import com.example.explorelens.databinding.FragmentChatBinding
 import com.example.explorelens.data.model.chat.ChatMessage
 import com.example.explorelens.data.model.chat.ChatCompletionRequest
