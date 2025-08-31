@@ -49,6 +49,9 @@ class ChatFragment : Fragment() {
     // Track if we're in AR mode (no bottom navigation)
     private var isInArMode = false
 
+    // Store original bottom margin for restoration
+    private var originalBottomMargin = 0
+
     private val defaultWelcomeMessage = "Welcome to HistoryGuide! I can provide information about historical sites and monuments. What would you like to know about?"
     private val siteSpecificWelcomeMessage = "Welcome to HistoryGuide! I'm your virtual guide for %s. What would you like to know about this historical site?"
     private val personalizedWelcomeMessage = "Hi %s! Welcome to HistoryGuide. I'm your virtual guide for %s. What would you like to know about this historical site?"
@@ -131,12 +134,17 @@ class ChatFragment : Fragment() {
     private fun configureArWindowForKeyboard() {
         try {
             val activity = requireActivity()
-            // Ensure the window can adjust for soft input
+            // Use same window configuration as main activity - ADJUST_RESIZE
+            // Also ensure the activity is not in fullscreen immersive mode when keyboard opens
             activity.window.setSoftInputMode(
                 android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
                         android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
             )
-            Log.d("ChatFragment", "Configured AR window for keyboard input")
+
+            // Ensure the window can be resized properly
+            activity.window.statusBarColor = android.graphics.Color.TRANSPARENT
+
+            Log.d("ChatFragment", "Configured AR window for keyboard input with ADJUST_RESIZE")
         } catch (e: Exception) {
             Log.e("ChatFragment", "Error configuring AR window: ${e.message}")
         }
@@ -147,11 +155,13 @@ class ChatFragment : Fragment() {
 
         if (isInArMode) {
             // In AR mode, no bottom navigation, so no bottom margin needed
-            layoutParams.bottomMargin = 0
+            originalBottomMargin = 0
+            layoutParams.bottomMargin = originalBottomMargin
             Log.d("ChatFragment", "Set bottom margin to 0 for AR mode")
         } else {
             // Regular mode with bottom navigation
-            layoutParams.bottomMargin = (56 * resources.displayMetrics.density).toInt()
+            originalBottomMargin = (56 * resources.displayMetrics.density).toInt()
+            layoutParams.bottomMargin = originalBottomMargin
             Log.d("ChatFragment", "Set bottom margin to 56dp for regular mode")
         }
 
@@ -194,81 +204,97 @@ class ChatFragment : Fragment() {
             bottomNavigationView?.visibility = View.VISIBLE
         }
 
+        // Use the activity's window decorView for more accurate measurements
+        val decorView = requireActivity().window.decorView
         keyboardListener = ViewTreeObserver.OnGlobalLayoutListener {
             if (_binding == null) return@OnGlobalLayoutListener
 
-            val rootView = binding.root
-            val heightDiff = rootView.rootView.height - rootView.height
+            val rect = android.graphics.Rect()
+            decorView.getWindowVisibleDisplayFrame(rect)
+            val screenHeight = decorView.height
+            val keypadHeight = screenHeight - rect.bottom
 
-            // Debug: Log height difference
-            Log.d("ChatFragment", "Height diff: $heightDiff, isInArMode: $isInArMode")
+            // Debug: Log height measurements
+            Log.d("ChatFragment", "Screen height: $screenHeight, Visible bottom: ${rect.bottom}, Keyboard height: $keypadHeight")
 
-            // Increase threshold and add more robust detection
-            if (heightDiff > 300) { // Keyboard is shown
-                Log.d("ChatFragment", "Keyboard shown")
-
-                if (!isInArMode) {
-                    // Only hide bottom nav if we're not in AR mode
-                    bottomNavigationView?.visibility = View.GONE
-
-                    // Remove bottom margin when keyboard is shown
-                    (binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
-                        bottomMargin = 0
-                        binding.inputContainer.layoutParams = this
-                    }
-                } else {
-                    // In AR mode, adjust the layout to accommodate keyboard
-                    // Move input container up by keyboard height minus some padding
-                    val keyboardHeight = heightDiff
-                    val adjustedHeight = keyboardHeight - (16 * resources.displayMetrics.density).toInt() // 16dp padding
-
-                    Log.d("ChatFragment", "AR mode keyboard adjustment: $adjustedHeight")
-
-                    (binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
-                        bottomMargin = adjustedHeight
-                        binding.inputContainer.layoutParams = this
-                    }
-
-                    // Also adjust the RecyclerView to ensure content is visible
-                    binding.recyclerView.setPadding(
-                        0, 0, 0,
-                        adjustedHeight + resources.getDimensionPixelSize(R.dimen.recycler_bottom_padding)
-                    )
-
-                    // Scroll to bottom to show latest messages
-                    binding.recyclerView.post {
-                        scrollToBottomImmediately()
-                    }
-                }
+            // More reliable keyboard detection
+            if (keypadHeight > screenHeight * 0.15) { // Keyboard is shown (15% of screen height threshold)
+                Log.d("ChatFragment", "Keyboard shown with height: $keypadHeight")
+                handleKeyboardShown(keypadHeight)
             } else { // Keyboard is hidden
                 Log.d("ChatFragment", "Keyboard hidden")
-
-                if (!isInArMode) {
-                    // Only show bottom nav if we're not in AR mode
-                    bottomNavigationView?.visibility = View.VISIBLE
-
-                    // Restore bottom margin for bottom navigation
-                    (binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
-                        bottomMargin = (56 * resources.displayMetrics.density).toInt()
-                        binding.inputContainer.layoutParams = this
-                    }
-                } else {
-                    // In AR mode, reset to original position
-                    (binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
-                        bottomMargin = 0
-                        binding.inputContainer.layoutParams = this
-                    }
-
-                    // Reset RecyclerView padding
-                    binding.recyclerView.setPadding(
-                        0, 0, 0,
-                        resources.getDimensionPixelSize(R.dimen.recycler_bottom_padding)
-                    )
-                }
+                handleKeyboardHidden()
             }
         }
 
-        binding.root.viewTreeObserver.addOnGlobalLayoutListener(keyboardListener)
+        decorView.viewTreeObserver.addOnGlobalLayoutListener(keyboardListener)
+    }
+
+    private fun handleKeyboardShown(keyboardHeight: Int) {
+        // Use the same behavior for both AR mode and regular mode
+        if (!isInArMode) {
+            // Regular mode - hide bottom nav
+            bottomNavigationView?.visibility = View.GONE
+        }
+
+        // Apply bottom margin adjustment to lift the input container above keyboard
+        val layoutParams = binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+
+        if (isInArMode) {
+            // In AR mode, add significant margin to ensure input is visible above keyboard
+            // Add extra margin to account for system bars and ensure visibility
+            layoutParams.bottomMargin = keyboardHeight + (16 * resources.displayMetrics.density).toInt()
+        } else {
+            // Regular mode - remove margin as usual
+            layoutParams.bottomMargin = 0
+        }
+
+        binding.inputContainer.layoutParams = layoutParams
+
+        // Add moderate bottom padding to RecyclerView - just enough to keep messages above input container
+        val recyclerPaddingBottom = if (isInArMode) {
+            // Only add padding for the input container height + small buffer, not the full keyboard height
+            (80 * resources.displayMetrics.density).toInt() // Same as regular mode
+        } else {
+            (80 * resources.displayMetrics.density).toInt() // Standard padding for regular mode
+        }
+
+        binding.recyclerView.setPadding(
+            binding.recyclerView.paddingLeft,
+            binding.recyclerView.paddingTop,
+            binding.recyclerView.paddingRight,
+            recyclerPaddingBottom
+        )
+
+        // Scroll to bottom to show latest messages
+        binding.recyclerView.post {
+            scrollToBottomImmediately()
+        }
+
+        Log.d("ChatFragment", "Keyboard shown - AR mode: $isInArMode, keyboard height: $keyboardHeight, input margin: ${layoutParams.bottomMargin}, recycler padding: $recyclerPaddingBottom")
+    }
+
+    private fun handleKeyboardHidden() {
+        // Use the same behavior for both AR mode and regular mode
+        if (!isInArMode) {
+            // Regular mode - show bottom nav
+            bottomNavigationView?.visibility = View.VISIBLE
+        }
+
+        // Restore original layout for both modes
+        val layoutParams = binding.inputContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+        layoutParams.bottomMargin = originalBottomMargin
+        binding.inputContainer.layoutParams = layoutParams
+
+        // Restore original RecyclerView padding
+        binding.recyclerView.setPadding(
+            binding.recyclerView.paddingLeft,
+            binding.recyclerView.paddingTop,
+            binding.recyclerView.paddingRight,
+            resources.getDimensionPixelSize(R.dimen.recycler_bottom_padding)
+        )
+
+        Log.d("ChatFragment", "Keyboard hidden - restored original layout for both modes")
     }
 
     private fun loadUserDataAndShowWelcome() {
@@ -549,9 +575,9 @@ class ChatFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
 
-        // Remove the keyboard listener BEFORE setting binding to null
+        // Remove the keyboard listener from the correct view (always from decorView now)
         keyboardListener?.let {
-            binding.root.viewTreeObserver.removeOnGlobalLayoutListener(it)
+            requireActivity().window.decorView.viewTreeObserver.removeOnGlobalLayoutListener(it)
         }
         keyboardListener = null
 
