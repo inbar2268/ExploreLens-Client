@@ -1,5 +1,4 @@
-
-package com.example.android.camera.utils
+package com.example.explorelens.extensions
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -130,12 +129,12 @@ class YuvToRgbConverter(context: Context) {
       val planeCrop = if (planeIndex == 0) {
         imageCrop
       } else {
-        Rect(
-          imageCrop.left / 2,
-          imageCrop.top / 2,
-          imageCrop.right / 2,
-          imageCrop.bottom / 2
-        )
+          Rect(
+              imageCrop.left / 2,
+              imageCrop.top / 2,
+              imageCrop.right / 2,
+              imageCrop.bottom / 2
+          )
       }
 
       val planeWidth = planeCrop.width()

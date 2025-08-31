@@ -1,26 +1,27 @@
-package com.example.explorelens
+package com.example.explorelens.ar.components
 
 import android.os.Looper
 import androidx.core.os.HandlerCompat
-import com.example.explorelens.model.ARAnchorsManager
-import com.example.explorelens.model.ARLabeledAnchor
+import com.example.explorelens.data.model.siteDetectionData.ARLabeledAnchor
 import java.util.concurrent.Executors
+
 
 typealias ARLabeledAnchorsCallback = (List<ARLabeledAnchor>) -> Unit
 typealias EmptyCallback = () -> Unit
 
-class Model private constructor() {
+
+class ARAnchorsRepository private constructor() {
 
     private var mainHandler = HandlerCompat.createAsync(Looper.getMainLooper())
     private var executor = Executors.newSingleThreadExecutor()
 
     companion object {
-        val shared = Model()
+        val shared = ARAnchorsRepository()
     }
 
     fun getAlArLabeledAnchors(callback: ARLabeledAnchorsCallback) {
         executor.execute {
-            val arLabeledAnchors = ARAnchorsManager.getAllAnchors()
+            val arLabeledAnchors = ARAnchorsLiveData.getAllAnchors()
             mainHandler.post {
                 callback(arLabeledAnchors)
             }
@@ -30,7 +31,7 @@ class Model private constructor() {
 
     fun addArLabelAnchors(anchors: List<ARLabeledAnchor>, callback: EmptyCallback) {
         executor.execute {
-            ARAnchorsManager.addAnchors(anchors)
+            ARAnchorsLiveData.addAnchors(anchors)
             mainHandler.post {
                 callback()
             }
@@ -40,7 +41,7 @@ class Model private constructor() {
 
     fun addArLabelAnchor(anchor: ARLabeledAnchor, callback: EmptyCallback) {
         executor.execute {
-            ARAnchorsManager.addAnchor(anchor) // נניח שאת יוצרת פונקציה חדשה addAnchor בתוך ARAnchorsManager
+            ARAnchorsLiveData.addAnchor(anchor)
             mainHandler.post {
                 callback()
             }
@@ -49,7 +50,7 @@ class Model private constructor() {
 
     fun deleteArLabeledAnchor(label: String, callback: EmptyCallback) {
         executor.execute {
-            ARAnchorsManager.deleteAnchor(label)
+            ARAnchorsLiveData.deleteAnchor(label)
             mainHandler.post {
                 callback()
             }

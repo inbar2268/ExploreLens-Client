@@ -1,4 +1,4 @@
-package com.example.explorelens.data.db
+package com.example.explorelens.data.db.user
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow

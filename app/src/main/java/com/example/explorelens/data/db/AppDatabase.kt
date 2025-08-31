@@ -13,6 +13,8 @@ import com.example.explorelens.data.db.siteHistory.SiteHistory
 import com.example.explorelens.data.db.siteHistory.SiteHistoryDao
 import com.example.explorelens.data.db.statistics.UserStatistics
 import com.example.explorelens.data.db.statistics.UserStatisticsDao
+import com.example.explorelens.data.db.user.User
+import com.example.explorelens.data.db.user.UserDao
 
 /**
  * Main database for the application

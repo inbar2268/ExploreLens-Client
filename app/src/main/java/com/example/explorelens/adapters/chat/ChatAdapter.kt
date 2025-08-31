@@ -1,4 +1,4 @@
-package com.example.explorelens.adapters
+package com.example.explorelens.adapters.chat
 
 import android.animation.ObjectAnimator
 import android.view.LayoutInflater

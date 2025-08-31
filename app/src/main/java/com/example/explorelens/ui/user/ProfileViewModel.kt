@@ -6,7 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
-import com.example.explorelens.data.db.User
+import com.example.explorelens.data.db.user.User
 import com.example.explorelens.data.repository.AuthRepository
 import com.example.explorelens.data.repository.Resource
 import com.example.explorelens.data.repository.UserRepository

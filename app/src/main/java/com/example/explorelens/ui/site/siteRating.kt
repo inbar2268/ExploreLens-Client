@@ -1,6 +1,6 @@
 package com.example.explorelens.ui.site
 /**
- * Model class for site ratings
+ * ARAnchorsRepository class for site ratings
  */
 data class SiteRating(
     val siteId: String,

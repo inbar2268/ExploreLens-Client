@@ -668,7 +668,6 @@ class SiteDetailsFragment : Fragment(), TextToSpeech.OnInitListener {
                             )
 
                             if (result.isSuccess) {
-                                ToastHelper.showShortToast(ctx, "comment submit")
                                 commentInput.text.clear()
 
                                 val newReview = result.getOrNull()
