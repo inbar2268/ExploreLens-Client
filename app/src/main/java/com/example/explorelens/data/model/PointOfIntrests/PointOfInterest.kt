@@ -1,6 +1,8 @@
 package com.example.explorelens.data.model.PointOfIntrests
 
 import com.google.gson.annotations.SerializedName
+import com.example.explorelens.data.db.places.Review
+
 
 data class PointOfInterest(
     @SerializedName("place_id") val id: String,
@@ -13,6 +15,10 @@ data class PointOfInterest(
     @SerializedName("business_status") val businessStatus: String,
     @SerializedName("opening_hours") val openingHours: OpeningHours,
     @SerializedName("elevation") val elevation: Double,
+    @SerializedName("editorial_summary") val editorialSummary: String?,
+    @SerializedName("website") val website: String?,
+    @SerializedName("price_level") val priceLevel: Int?,
+    @SerializedName("reviews") val reviews: List<Review>?
     )
 
 

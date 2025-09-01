@@ -101,6 +101,7 @@
                                 android:id="@+id/placeName"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
+                                android:layout_marginRight="10sp"
                                 android:layout_weight="1"
                                 android:fontFamily="@font/harmonyos_sans_black"
                                 android:lineSpacingMultiplier="1.1"

@@ -239,16 +239,16 @@ class NearbyPlacesRepository(private val context: Context) {
             longitude = pointOfInterest.location.lng,
             rating = pointOfInterest.rating,
             type = pointOfInterest.type,
-            editorialSummary = null, // PointOfInterest doesn't have this field
-            website = null, // PointOfInterest doesn't have this field
-            priceLevel = null, // PointOfInterest doesn't have this field
+            editorialSummary = pointOfInterest.editorialSummary,
+            website = pointOfInterest.website,
+            priceLevel = pointOfInterest.priceLevel,
             elevation = pointOfInterest.elevation,
             address = pointOfInterest.address,
             phoneNumber = pointOfInterest.phoneNumber,
             businessStatus = pointOfInterest.businessStatus,
             openNow = pointOfInterest.openingHours?.openNow,
             weekdayText = pointOfInterest.openingHours?.weekdayText,
-            reviews = null, // PointOfInterest doesn't have reviews
+            reviews = pointOfInterest.reviews,
             lastUpdated = System.currentTimeMillis()
         )
     }
