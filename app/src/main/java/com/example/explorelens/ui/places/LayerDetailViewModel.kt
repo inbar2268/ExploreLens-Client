@@ -70,7 +70,7 @@ class LayerDetailViewModel(application: Application) : AndroidViewModel(applicat
                     )
                 }
                 is Resource.Error -> {
-                    resultLiveData.value = PlaceDetailState.Error(resource.message ?: "Unknown error")
+                    resultLiveData.value = PlaceDetailState.Error("couldn't load nearby places: network error" ?: "Unknown error")
                 }
             }
 

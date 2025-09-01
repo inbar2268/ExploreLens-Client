@@ -195,7 +195,7 @@ class AuthRepository(private val context: Context) {
                 }
             } else {
                 val errorMsg = parseErrorMessage(response)
-                Log.e(TAG, "Error changing password: $errorMsg")
+                Log.e(TAG, "Error changing password: network error")
                 Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {

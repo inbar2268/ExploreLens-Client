@@ -68,8 +68,7 @@ class ForgotPasswordFragment : Fragment() {
                     findNavController().navigate(R.id.action_forgotPasswordFragment_to_resetPasswordFragment, bundle)
                 },
                 onFailure = { exception ->
-                    val errorMessage = exception.message ?: "Failed to send password reset email"
-                    ToastHelper.showShortToast(context, errorMessage)
+                    ToastHelper.showShortToast(context, "Failed to send password reset email")
                 }
             )
         }

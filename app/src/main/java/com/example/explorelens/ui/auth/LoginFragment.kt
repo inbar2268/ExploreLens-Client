@@ -159,8 +159,16 @@ class LoginFragment : Fragment() {
                     ToastHelper.showShortToast(context, "Login successful")
                     (requireActivity() as MainActivity).launchArActivity()
                 } else {
-                    Log.d(TAG, "Login failed: ${result.exceptionOrNull()?.message}")
-                    ToastHelper.showShortToast(context, "Login failed: ${result.exceptionOrNull()?.message}")
+                    val exception = result.exceptionOrNull()
+                    val message = exception?.message ?: "Unknown error"
+                    Log.d(TAG, "Login failed: $message")
+
+                    // Check if the error message indicates a network issue
+                    if (message.contains("Unable to resolve host", ignoreCase = true)) {
+                        ToastHelper.showShortToast(context, "Login failed: network error")
+                    } else {
+                        ToastHelper.showShortToast(context, "Login failed: $message")
+                    }
                 }
             }
         } else{

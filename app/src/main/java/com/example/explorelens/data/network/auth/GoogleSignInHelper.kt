@@ -68,7 +68,7 @@ class GoogleSignInHelper(private val fragment: Fragment, private val authReposit
 
         } catch (e: ApiException) {
             Log.w(TAG, "Google sign in failed", e)
-            ToastHelper.showShortToast(fragment.context, "Google Sign-In failed: ${e.statusCode}");
+            ToastHelper.showShortToast(fragment.context, "Google Sign-In failed: network error");
         }
     }
 
@@ -97,7 +97,7 @@ class GoogleSignInHelper(private val fragment: Fragment, private val authReposit
             }
         } catch (e: Exception) {
             hideLoading()
-            Log.e(TAG, "Error launching Google Sign-In: ${e.message}")
+            Log.e(TAG, "Error launching Google Sign-In")
             ToastHelper.showShortToast(fragment.context, "Failed to start Google Sign-In");
         }
     }
@@ -126,7 +126,7 @@ class GoogleSignInHelper(private val fragment: Fragment, private val authReposit
                 } else {
                     val errorPrefix = if (isRegistration) "Google registration" else "Google login"
                     Log.e(TAG, "$errorPrefix failed: ${result.exceptionOrNull()?.message}")
-                    ToastHelper.showShortToast(fragment.context, "$errorPrefix failed: ${result.exceptionOrNull()?.message}");
+                    ToastHelper.showShortToast(fragment.context, "$errorPrefix failed: network error");
                     val exception = result.exceptionOrNull()
                     Log.e(TAG, "Google sign-in failed: ${exception?.message}", exception)
                 }
