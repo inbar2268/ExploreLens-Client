@@ -140,6 +140,42 @@ class TextTextureCache(private val context: Context) {
     isAntiAlias = true
   }
 
+  private fun truncateTextToFit(text: String, paint: Paint, maxWidth: Float): String {
+    if (paint.measureText(text) <= maxWidth) {
+      return text
+    }
+
+    val ellipsis = "..."
+    val ellipsisWidth = paint.measureText(ellipsis)
+
+    var truncatedText = ""
+    var currentWidth = 0f
+
+    for (i in text.indices) {
+      val charWidth = paint.measureText(text.substring(i, i + 1))
+      if (currentWidth + charWidth + ellipsisWidth <= maxWidth) {
+        currentWidth += charWidth
+        truncatedText += text[i]
+      } else {
+        break
+      }
+    }
+
+    if (truncatedText.isEmpty()) {
+      val firstWord = text.split(" ")[0]
+      if (paint.measureText(firstWord) > maxWidth) {
+        // Truncate the word itself
+        for (i in firstWord.indices) {
+          if (paint.measureText(firstWord.substring(0, i + 1) + ellipsis) > maxWidth) {
+            return firstWord.substring(0, i) + ellipsis
+          }
+        }
+      }
+    }
+
+    return truncatedText.trim() + ellipsis
+  }
+
   private fun generateBitmapFromString(string: String): Bitmap {
     Log.d(TAG, "Generating iPhone-style texture for: $string")
 
@@ -157,17 +193,14 @@ class TextTextureCache(private val context: Context) {
 
     val canvas = Canvas(bitmap)
 
-    // Calculate text bounds
-    val labelBounds = Rect()
-    labelPaint.getTextBounds(label, 0, label.length, labelBounds)
+    val containerPadding = 20f
+    val textPadding = 40f
 
-    // Define padding and container
-    val padding = 20f
     val containerRect = RectF(
-      padding,
-      padding,
-      w - padding,
-      h - padding
+      containerPadding,
+      containerPadding,
+      w - containerPadding,
+      h - containerPadding
     )
 
     // Draw shadow first (behind the container)
@@ -197,11 +230,28 @@ class TextTextureCache(private val context: Context) {
     // Draw inner glow for depth
     val innerRect = RectF(containerRect)
     canvas.drawRoundRect(innerRect, cornerRadius - 3, cornerRadius - 3, innerFramePaint)
-
     innerRect.inset(1f, 1f)
     canvas.drawRoundRect(innerRect, cornerRadius - 1, cornerRadius - 1, innerGlowPaint)
 
-    // Calculate text positioning - position label lower as requested
+
+    // Calculate the CORRECT maximum width for the text, using the internal textPadding
+    val maxLabelTextWidth = containerRect.width() - (2 * textPadding)
+    val scaledLabelPaint = Paint(labelPaint)
+
+    // Start with the default size
+    var currentTextSize = labelPaint.textSize
+    scaledLabelPaint.textSize = currentTextSize
+
+    // Find the optimal font size by reducing it until the text fits
+    while (scaledLabelPaint.measureText(label) > maxLabelTextWidth && currentTextSize > 30f) {
+      currentTextSize -= 1f
+      scaledLabelPaint.textSize = currentTextSize
+    }
+
+    // Calculate text positioning with the SCALED paint
+    val labelBounds = Rect()
+    scaledLabelPaint.getTextBounds(label, 0, label.length, labelBounds)
+
     val topOffset = 60f // Increased from 40f to move label lower
     val labelY = if (description.isEmpty()) {
       // If no description, center the label
@@ -211,18 +261,21 @@ class TextTextureCache(private val context: Context) {
       containerRect.top + topOffset + labelBounds.height()
     }
 
-    // Draw label text with slight text shadow for depth
-    val textShadowPaint = Paint(labelPaint).apply {
+    // Draw label text using the SCALED paint
+    val textShadowPaint = Paint(scaledLabelPaint).apply {
       color = Color.argb(30, 0, 0, 0)
     }
     canvas.drawText(label, w / 2f + 1f, labelY + 1f, textShadowPaint)
-    canvas.drawText(label, w / 2f, labelY, labelPaint)
+    canvas.drawText(label, w / 2f, labelY, scaledLabelPaint)
 
-    // Draw description if it exists - with more space now
+    // --- END OF CORRECTED FONT SCALING AND DRAWING LOGIC ---
+
+    // Draw description if it exists
     if (description.isNotEmpty()) {
       val firstLine = extractFirstSentencesCompletely(description)
-      val availableWidth = w - (2 * padding + 40f)
-      val formattedText = formatTextToFit(firstLine, descPaint, availableWidth, true)
+      // Use the same consistent width calculation for the description
+      val availableDescWidth = containerRect.width() - (2 * textPadding)
+      val formattedText = formatTextToFit(firstLine, descPaint, availableDescWidth, true)
 
       val descBounds = Rect()
       descPaint.getTextBounds(formattedText, 0, formattedText.length, descBounds)
