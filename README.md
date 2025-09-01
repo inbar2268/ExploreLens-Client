@@ -27,13 +27,33 @@ Whether you're on a planned city tour or a spontaneous walk, ExploreLens lets yo
 ### 1. Create OAuth 2.0 Client ID
 
 This step is crucial for authenticating with Google services, such as Google Sign-In.
+### 1. Create OAuth 2.0 Client ID
+
+This step is crucial for authenticating with Google services, such as Google Sign-In.
 
 1. Navigate to the [Google Cloud Console](https://console.cloud.google.com/)
 2. Select your existing project or create a new one
 3. Go to **APIs & Services > Credentials**
 4. Click **"+ CREATE CREDENTIALS"** and choose **"OAuth client ID"**
-5. Select **Android** as the application type
-6. Provide your app's package name (e.g., `com.example.explorelens`) and your SHA-1 certificate fingerprint
+5. Select **Web application** as the application type
+6. Under **Authorized redirect URIs**, add your backend server URL
+7. Once created, Google will provide you with a **Client ID** string
+
+### 2. Create and Configure Google API Key
+
+An API key is essential for your app to access various Google services like Maps and Places.
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your project
+3. Navigate to **APIs & Services > Credentials**
+4. Click **"+ CREATE CREDENTIALS"** and select **"API Key"**
+5. After generation, click **"Restrict Key"** to enhance security
+
+#### 2.1 Application Restrictions
+- Under **"Application restrictions"**, select **"Android apps"**
+- Click **"+ Add package name and fingerprint"**
+- Enter your app's package name and SHA-1 certificate fingerprint
+
 
 You can obtain your SHA-1 fingerprint by running the following command in your terminal from your project's root directory:
 
@@ -49,30 +69,14 @@ Alias: AndroidDebugKey
 SHA1: A1:B2:C3:D4:E5:F6:78:90:AB:CD:EF:12:34:56:78:90:12:34:56:78
 ```
 
-7. Once created, Google will provide you with a Client ID string
-
-### 2. Create and Configure Google API Key
-
-An API key is essential for your app to access various Google services like Maps and Places.
-
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
-2. Select your project
-3. Navigate to **APIs & Services > Credentials**
-4. Click **"+ CREATE CREDENTIALS"** and select **"API Key"**
-5. After generation, click **"Restrict Key"** to enhance security
-
-#### Application Restrictions
-- Under **"Application restrictions"**, select **"Android apps"**
-- Click **"+ Add package name and fingerprint"**
-- Enter your app's package name and SHA-1 certificate fingerprint
-
-#### API Restrictions
+#### 2.2 API Restrictions
 - Under **"API restrictions"**, select **"Restrict key"**
 - Select the following APIs from the dropdown:
     - Places API (New)
     - Places API
     - Maps SDK for Android
     - ARCore API
+    - Maps Elevation API
 
 6. Click **"OK"** then **"Save"** to apply changes
 
