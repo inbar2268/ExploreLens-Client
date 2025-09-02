@@ -136,12 +136,19 @@ class RegisterFragment : Fragment() {
                 ToastHelper.showShortToast(context, "Registration successful")
                 (requireActivity() as MainActivity).launchArActivity()
             } else {
-                Log.d(TAG, "Registration failed: ${result.exceptionOrNull()?.message}")
-                ToastHelper.showShortToast(
-                    context, "Registration failed: ${result.exceptionOrNull()?.message}"
-                )
+                val exception = result.exceptionOrNull()
+                val message = exception?.message ?: "Unknown error"
+                Log.d(TAG, "Registration failed: $message")
+
+                // Check if the error message contains "Unable to resolve host"
+                if (message.contains("Unable to resolve host", ignoreCase = true)) {
+                    ToastHelper.showShortToast(context, "Registration failed: network error")
+                } else {
+                    ToastHelper.showShortToast(context, "Registration failed: $message")
+                }
             }
         }
+
     }
 
     private fun validateInputs(name: String, email: String, password: String): Boolean {

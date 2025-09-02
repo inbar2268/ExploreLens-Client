@@ -196,7 +196,7 @@ public class SnapshotManager(
 
                 result.onFailure { error ->
                     Log.e(TAG, "Analysis failed: ${error.localizedMessage}")
-                    callback?.onSnapshotError("Error analyzing the image: ${error.message}")
+                    callback?.onSnapshotError("Error analyzing the image: network error")
                 }
             }
         } catch (e: Exception) {

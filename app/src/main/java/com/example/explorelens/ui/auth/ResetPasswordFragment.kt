@@ -151,7 +151,7 @@ class ResetPasswordFragment : Fragment() {
                 },
                 onFailure = { exception ->
                     val errorMessage = exception.message ?: "Failed to reset password"
-                    ToastHelper.showShortToast(context, errorMessage)
+                    ToastHelper.showShortToast(context, "Failed to reset password: network error")
                 }
             )
         }

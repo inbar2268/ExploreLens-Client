@@ -156,7 +156,7 @@ class GeoAnchorManager(
 
                 result.onFailure { error ->
                     Log.e(TAG, "Error fetching places: ${error.localizedMessage}")
-                    val errorMessage = "Couldn't load nearby places: ${error.message}"
+                    val errorMessage = "Couldn't load nearby places: network error"
                     callback?.onPlacesError(errorMessage)
                 }
             }
